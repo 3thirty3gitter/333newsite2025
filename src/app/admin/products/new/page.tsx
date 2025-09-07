@@ -23,6 +23,7 @@ const formSchema = z.object({
   longDescription: z.string().min(20, 'Long description must be at least 20 characters'),
   price: z.coerce.number().min(0.01, 'Price must be a positive number'),
   category: z.string().min(2, 'Category is required'),
+  variantType: z.string().optional(),
 });
 
 export default function NewProductPage() {
@@ -59,12 +60,21 @@ export default function NewProductPage() {
       longDescription: '',
       price: 0,
       category: '',
+      variantType: '',
     },
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
-      await addProduct(values);
+      const productData = {
+        name: values.name,
+        description: values.description,
+        longDescription: values.longDescription,
+        price: values.price,
+        category: values.category,
+        variants: values.variantType ? [{ type: values.variantType, options: [] }] : [],
+      };
+      await addProduct(productData);
       toast({
         title: 'Product Created',
         description: `The product "${values.name}" has been successfully created.`,
@@ -178,6 +188,29 @@ export default function NewProductPage() {
                     )}
                 />
               </div>
+
+               <Card>
+                <CardHeader>
+                    <CardTitle>Variants</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="grid md:grid-cols-2 gap-8">
+                        <FormField
+                            control={form.control}
+                            name="variantType"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Variant Type</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="e.g., Color, Size" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </div>
+                </CardContent>
+               </Card>
 
               <div className="flex justify-end gap-4">
                  <Button type="button" variant="outline" onClick={() => router.back()}>

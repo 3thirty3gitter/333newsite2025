@@ -6,7 +6,18 @@ export type Product = {
   price: number;
   image: string;
   category: string;
+  variants: Variant[];
 };
+
+export type Variant = {
+    type: string;
+    options: VariantOption[];
+}
+
+export type VariantOption = {
+    value: string;
+    priceModifier: number;
+}
 
 export type CartItem = {
   product: Product;
