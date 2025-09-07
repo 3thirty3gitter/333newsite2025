@@ -12,3 +12,8 @@ export type CartItem = {
   product: Product;
   quantity: number;
 };
+
+export type Category = {
+  id: string;
+  name: string;
+};

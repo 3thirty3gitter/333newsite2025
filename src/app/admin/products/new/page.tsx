@@ -12,7 +12,10 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft } from 'lucide-react';
-import { addProduct } from '@/lib/data';
+import { addProduct, getCategories } from '@/lib/data';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useEffect, useState } from 'react';
+import type { Category } from '@/lib/types';
 
 const formSchema = z.object({
   name: z.string().min(2, 'Name is required'),
@@ -25,6 +28,28 @@ const formSchema = z.object({
 export default function NewProductPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
+
+
+  useEffect(() => {
+    async function fetchCategories() {
+      try {
+        const fetchedCategories = await getCategories();
+        setCategories(fetchedCategories);
+      } catch (error) {
+        console.error("Failed to fetch categories", error);
+        toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Could not load categories.',
+        });
+      } finally {
+        setIsLoadingCategories(false);
+      }
+    }
+    fetchCategories();
+  }, [toast]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -129,17 +154,28 @@ export default function NewProductPage() {
                   )}
                 />
                 <FormField
-                  control={form.control}
-                  name="category"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Category</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., Footwear" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                    control={form.control}
+                    name="category"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Category</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingCategories}>
+                            <FormControl>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select a category" />
+                            </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                            {categories.map((category) => (
+                                <SelectItem key={category.id} value={category.name}>
+                                {category.name}
+                                </SelectItem>
+                            ))}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                        </FormItem>
+                    )}
                 />
               </div>
 

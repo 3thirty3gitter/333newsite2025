@@ -1,6 +1,6 @@
 import { db } from './firebase';
 import { collection, getDocs, addDoc, doc, getDoc } from 'firebase/firestore';
-import type { Product } from './types';
+import type { Product, Category } from './types';
 
 export async function getProducts(): Promise<Product[]> {
   const productsCol = collection(db, 'products');
@@ -28,4 +28,17 @@ export async function addProduct(product: Omit<Product, 'id' | 'image'> & { imag
   };
   const docRef = await addDoc(productsCol, newProduct);
   return docRef.id;
+}
+
+export async function getCategories(): Promise<Category[]> {
+    const categoriesCol = collection(db, 'categories');
+    const categorySnapshot = await getDocs(categoriesCol);
+    const categoryList = categorySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category));
+    return categoryList.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export async function addCategory(category: Omit<Category, 'id'>): Promise<string> {
+    const categoriesCol = collection(db, 'categories');
+    const docRef = await addDoc(categoriesCol, category);
+    return docRef.id;
 }
