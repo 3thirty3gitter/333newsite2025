@@ -129,7 +129,7 @@ export default function NewProductPage() {
         };
     });
     replaceInventory(newInventory);
-  }, [generatedCombinations, basePrice, replaceInventory, inventoryFields]);
+  }, [generatedCombinations, basePrice, replaceInventory]);
 
   const handleAddOption = (variantIndex: number) => {
     const optionValue = newOptions[variantIndex]?.trim();
@@ -490,5 +490,3 @@ export default function NewProductPage() {
     </div>
   );
 }
-
-    

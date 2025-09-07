@@ -160,7 +160,7 @@ export default function EditProductPage() {
         };
     });
     replaceInventory(newInventory);
-  }, [generatedCombinations, basePrice, replaceInventory, inventoryFields, isLoadingProduct]);
+  }, [generatedCombinations, basePrice, replaceInventory, isLoadingProduct]);
 
   const handleAddOption = (variantIndex: number) => {
     const optionValue = newOptions[variantIndex]?.trim();
@@ -621,5 +621,3 @@ export default function EditProductPage() {
     </div>
   );
 }
-
-    
