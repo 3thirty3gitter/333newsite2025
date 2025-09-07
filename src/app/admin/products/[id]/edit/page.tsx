@@ -47,6 +47,7 @@ export default function EditProductPage() {
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const [isLoadingProduct, setIsLoadingProduct] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const productId = params.id as string;
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -389,12 +390,25 @@ export default function EditProductPage() {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete this product from the database.
+                    This action cannot be undone. This will permanently delete this product.
+                    To confirm, please type <strong>delete</strong> below.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
+                <div className="my-2">
+                    <Input 
+                        type="text"
+                        placeholder="delete"
+                        value={deleteConfirmation}
+                        onChange={(e) => setDeleteConfirmation(e.target.value)}
+                        className="border-destructive focus-visible:ring-destructive"
+                    />
+                </div>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDelete} disabled={isDeleting}>
+                  <AlertDialogCancel onClick={() => setDeleteConfirmation('')}>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleDelete}
+                    disabled={isDeleting || deleteConfirmation !== 'delete'}
+                  >
                     {isDeleting ? 'Deleting...' : 'Continue'}
                   </AlertDialogAction>
                 </AlertDialogFooter>
