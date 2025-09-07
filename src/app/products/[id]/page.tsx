@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
-import { getProductById, getProducts } from '@/lib/data';
+import { getProductById } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/context/CartProvider';
 import { useHistory } from '@/context/HistoryProvider';
@@ -12,6 +12,7 @@ import { ProductRecommendations } from '@/components/products/ProductRecommendat
 import { Separator } from '@/components/ui/separator';
 import type { Product } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ProductImageGallery } from '@/components/products/ProductImageGallery';
 
 type ProductPageProps = {
   params: {
@@ -43,7 +44,15 @@ export default function ProductPage({ params }: ProductPageProps) {
     return (
        <div className="container mx-auto max-w-6xl px-4 py-8 md:py-12">
         <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
-          <Skeleton className="aspect-square w-full rounded-lg" />
+          <div>
+            <Skeleton className="aspect-square w-full rounded-lg" />
+            <div className="mt-4 grid grid-cols-5 gap-4">
+              <Skeleton className="aspect-square w-full rounded-lg" />
+              <Skeleton className="aspect-square w-full rounded-lg" />
+              <Skeleton className="aspect-square w-full rounded-lg" />
+              <Skeleton className="aspect-square w-full rounded-lg" />
+            </div>
+          </div>
           <div className="flex flex-col space-y-4">
             <Skeleton className="h-6 w-1/4" />
             <Skeleton className="h-10 w-3/4" />
@@ -66,16 +75,7 @@ export default function ProductPage({ params }: ProductPageProps) {
   return (
     <div className="container mx-auto max-w-6xl px-4 py-8 md:py-12">
       <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
-        <div className="aspect-square w-full relative overflow-hidden rounded-lg shadow-lg">
-          <Image
-            src={product.images[0]}
-            alt={product.name}
-            fill
-            className="object-cover"
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            data-ai-hint="product image"
-          />
-        </div>
+        <ProductImageGallery images={product.images} />
         <div className="flex flex-col">
           <div className="mb-2">
             <span className="text-sm font-medium text-primary bg-primary/10 py-1 px-3 rounded-full">
