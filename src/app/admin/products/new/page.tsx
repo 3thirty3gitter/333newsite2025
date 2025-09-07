@@ -11,7 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, useForm
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, PlusCircle, Trash2, X, GripVertical, Upload } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Trash2, X, GripVertical, Upload, Image as ImageIcon } from 'lucide-react';
 import { addProduct, getCategories } from '@/lib/data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
@@ -200,6 +200,8 @@ export default function NewProductPage() {
     const file = event.target.files?.[0];
     if (file) {
       processAndSetImage(file);
+      // Reset file input to allow uploading the same file again
+      event.target.value = '';
     }
   };
 
@@ -476,6 +478,7 @@ export default function NewProductPage() {
                                                         onChange={handleImageChange}
                                                         className="hidden"
                                                         accept="image/*"
+                                                        multiple={false}
                                                     />
                                                     <div 
                                                         className="aspect-square w-full rounded-md border-2 border-dashed border-muted-foreground/40 flex items-center justify-center text-center cursor-pointer"
@@ -505,7 +508,7 @@ export default function NewProductPage() {
                                                 <Image src={imagePreviews[i + 1]} alt={`Product preview ${i + 2}`} fill className="object-cover rounded-md" />
                                             ) : (
                                                 <div className="w-full h-full flex items-center justify-center">
-                                                    <Upload className="h-6 w-6 text-muted-foreground" />
+                                                    <ImageIcon className="h-6 w-6 text-muted-foreground" />
                                                 </div>
                                             )}
                                         </div>
