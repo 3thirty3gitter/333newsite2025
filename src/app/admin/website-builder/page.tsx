@@ -18,6 +18,7 @@ import * as z from 'zod';
 import { Skeleton } from "@/components/ui/skeleton";
 import Image from "next/image";
 import { Separator } from "@/components/ui/separator";
+import { Label } from "@/components/ui/label";
 
 const menuItemSchema = z.object({
     label: z.string().min(1, "Label is required"),
