@@ -1,29 +1,34 @@
 'use client';
 
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Trash2 } from 'lucide-react';
 import { addProduct, getCategories } from '@/lib/data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useEffect, useState } from 'react';
 import type { Category } from '@/lib/types';
+
+const variantOptionSchema = z.object({
+  value: z.string().min(1, 'Value is required'),
+});
 
 const formSchema = z.object({
   name: z.string().min(2, 'Name is required'),
   description: z.string().min(10, 'Description must be at least 10 characters'),
   longDescription: z.string().min(20, 'Long description must be at least 20 characters'),
   price: z.coerce.number().min(0.01, 'Price must be a positive number'),
-  category: z.string().min(2, 'Category is required'),
+  category: z.string().min(1, 'Category is required'),
   variantType: z.string().optional(),
+  variantOptions: z.array(variantOptionSchema).optional(),
 });
 
 export default function NewProductPage() {
@@ -31,7 +36,6 @@ export default function NewProductPage() {
   const { toast } = useToast();
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
-
 
   useEffect(() => {
     async function fetchCategories() {
@@ -61,8 +65,16 @@ export default function NewProductPage() {
       price: 0,
       category: '',
       variantType: '',
+      variantOptions: [{ value: '' }],
     },
   });
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "variantOptions",
+  });
+
+  const variantType = form.watch('variantType');
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
@@ -72,7 +84,14 @@ export default function NewProductPage() {
         longDescription: values.longDescription,
         price: values.price,
         category: values.category,
-        variants: values.variantType ? [{ type: values.variantType, options: [] }] : [],
+        variants: values.variantType
+          ? [
+              {
+                type: values.variantType,
+                options: values.variantOptions?.map(opt => ({ value: opt.value, priceModifier: 0 })) || [],
+              },
+            ]
+          : [],
       };
       await addProduct(productData);
       toast({
@@ -80,7 +99,7 @@ export default function NewProductPage() {
         description: `The product "${values.name}" has been successfully created.`,
       });
       router.push('/admin/products');
-      router.refresh(); // To show the new product in the list
+      router.refresh();
     } catch (error) {
       console.error('Failed to create product:', error);
       toast({
@@ -157,7 +176,7 @@ export default function NewProductPage() {
                     <FormItem>
                       <FormLabel>Price</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="e.g., 129.99" {...field} />
+                        <Input type="number" step="0.01" placeholder="e.g., 129.99" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -192,23 +211,53 @@ export default function NewProductPage() {
                <Card>
                 <CardHeader>
                     <CardTitle>Variants</CardTitle>
+                    <CardDescription>
+                        Define product options like size or color. Leave the type blank to create a product with no variants.
+                    </CardDescription>
                 </CardHeader>
-                <CardContent>
-                    <div className="grid md:grid-cols-2 gap-8">
-                        <FormField
-                            control={form.control}
-                            name="variantType"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Variant Type</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="e.g., Color, Size" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                    </div>
+                <CardContent className="space-y-4">
+                    <FormField
+                        control={form.control}
+                        name="variantType"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Variant Type</FormLabel>
+                            <FormControl>
+                                <Input placeholder="e.g., Color, Size" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    {variantType && (
+                        <div className="space-y-4">
+                          <Label>Variant Options</Label>
+                           {fields.map((field, index) => (
+                            <FormField
+                                key={field.id}
+                                control={form.control}
+                                name={`variantOptions.${index}.value`}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <div className="flex items-center gap-2">
+                                        <FormControl>
+                                            <Input placeholder={`Option ${index + 1}`} {...field} />
+                                        </FormControl>
+                                        <Button type="button" variant="destructive" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1}>
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                                />
+                           ))}
+                           <Button type="button" variant="outline" size="sm" onClick={() => append({ value: '' })}>
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                Add Option
+                            </Button>
+                        </div>
+                    )}
                 </CardContent>
                </Card>
 
