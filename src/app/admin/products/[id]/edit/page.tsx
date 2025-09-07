@@ -6,19 +6,20 @@ import * as z from 'zod';
 import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, PlusCircle, Trash2, X, GripVertical } from 'lucide-react';
-import { getCategories, getProductById, updateProduct } from '@/lib/data';
+import { getCategories, getProductById, updateProduct, deleteProduct } from '@/lib/data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useEffect, useState } from 'react';
 import type { Category, Product } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 const variantOptionSchema = z.object({
   value: z.string().min(1, 'Value cannot be empty.'),
@@ -45,6 +46,7 @@ export default function EditProductPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const [isLoadingProduct, setIsLoadingProduct] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
   const productId = params.id as string;
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -155,6 +157,28 @@ export default function EditProductPage() {
       });
     }
   }
+
+  async function handleDelete() {
+    setIsDeleting(true);
+    try {
+      await deleteProduct(productId);
+      toast({
+        title: 'Product Deleted',
+        description: 'The product has been successfully deleted.',
+      });
+      router.push('/admin/products');
+      router.refresh();
+    } catch (error) {
+      console.error('Failed to delete product:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to delete product. Please try again.',
+      });
+      setIsDeleting(false);
+    }
+  }
+
 
   if (isLoadingProduct) {
     return (
@@ -352,14 +376,38 @@ export default function EditProductPage() {
                 ))}
             </CardContent>
           </Card>
-
-          <div className="flex justify-end gap-4">
+          
+          <div className="flex justify-between items-center gap-4">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button type="button" variant="destructive">
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Product
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete this product from the database.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDelete} disabled={isDeleting}>
+                    {isDeleting ? 'Deleting...' : 'Continue'}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+            <div className="flex gap-4">
               <Button type="button" variant="outline" onClick={() => router.back()}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={form.formState.isSubmitting}>
-              {form.formState.isSubmitting ? 'Saving...' : 'Save Changes'}
-            </Button>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
           </div>
         </form>
       </Form>

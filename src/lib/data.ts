@@ -1,5 +1,5 @@
 import { db } from './firebase';
-import { collection, getDocs, addDoc, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import type { Product, Category } from './types';
 
 export async function getProducts(): Promise<Product[]> {
@@ -33,6 +33,11 @@ export async function addProduct(product: Omit<Product, 'id' | 'image'> & { imag
 export async function updateProduct(id: string, product: Partial<Omit<Product, 'id'>>): Promise<void> {
   const docRef = doc(db, 'products', id);
   await updateDoc(docRef, product);
+}
+
+export async function deleteProduct(id: string): Promise<void> {
+  const docRef = doc(db, 'products', id);
+  await deleteDoc(docRef);
 }
 
 export async function getCategories(): Promise<Category[]> {
