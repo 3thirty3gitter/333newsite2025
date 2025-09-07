@@ -530,7 +530,7 @@ export default function EditProductPage() {
                                         <FormItem>
                                             <FormLabel className="sr-only">Product Image</FormLabel>
                                             <FormControl>
-                                                <>
+                                                <div>
                                                     <input
                                                         type="file"
                                                         ref={imageInputRef}
@@ -552,7 +552,7 @@ export default function EditProductPage() {
                                                             </div>
                                                         )}
                                                     </div>
-                                                </>
+                                                </div>
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>

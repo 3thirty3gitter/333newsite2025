@@ -435,7 +435,7 @@ export default function NewProductPage() {
                                         <FormItem>
                                             <FormLabel className="sr-only">Product Image</FormLabel>
                                             <FormControl>
-                                                <>
+                                                <div>
                                                     <input
                                                         type="file"
                                                         ref={imageInputRef}
@@ -457,7 +457,7 @@ export default function NewProductPage() {
                                                             </div>
                                                         )}
                                                     </div>
-                                                </>
+                                                </div>
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
