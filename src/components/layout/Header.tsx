@@ -15,10 +15,10 @@ export async function Header() {
 
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center">
+      <div className="container flex items-center py-2">
         <Link href="/" className="mr-6 flex items-center space-x-2">
           {logoUrl ? (
-            <Image src={logoUrl} alt="CommerceCraft Logo" width={logoWidth || 140} height={40} style={{ objectFit: 'contain', width: `${logoWidth || 140}px`, height: '40px' }} />
+            <Image src={logoUrl} alt="CommerceCraft Logo" width={logoWidth || 140} height={40} style={{ objectFit: 'contain', width: `${logoWidth || 140}px`, height: 'auto' }} />
           ) : (
             <>
                 <ShoppingBag className="h-6 w-6 text-primary" />
