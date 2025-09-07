@@ -1,15 +1,17 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
-import { products } from '@/lib/data';
+import { getProductById, getProducts } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/context/CartProvider';
 import { useHistory } from '@/context/HistoryProvider';
 import { ShoppingCart, Star } from 'lucide-react';
 import { ProductRecommendations } from '@/components/products/ProductRecommendations';
 import { Separator } from '@/components/ui/separator';
+import type { Product } from '@/lib/types';
+import { Skeleton } from '@/components/ui/skeleton';
 
 type ProductPageProps = {
   params: {
@@ -20,16 +22,45 @@ type ProductPageProps = {
 export default function ProductPage({ params }: ProductPageProps) {
   const { addToCart } = useCart();
   const { addToHistory } = useHistory();
-  const product = products.find((p) => p.id === params.id);
+  const [product, setProduct] = useState<Product | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (product) {
-      addToHistory(product.id);
+    async function fetchProduct() {
+      const fetchedProduct = await getProductById(params.id);
+      if (fetchedProduct) {
+        setProduct(fetchedProduct);
+        addToHistory(fetchedProduct.id);
+      } else {
+        notFound();
+      }
+      setLoading(false);
     }
-  }, [product, addToHistory]);
+    fetchProduct();
+  }, [params.id, addToHistory]);
+
+  if (loading) {
+    return (
+       <div className="container mx-auto max-w-6xl px-4 py-8 md:py-12">
+        <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
+          <Skeleton className="aspect-square w-full rounded-lg" />
+          <div className="flex flex-col space-y-4">
+            <Skeleton className="h-6 w-1/4" />
+            <Skeleton className="h-10 w-3/4" />
+            <Skeleton className="h-6 w-1/2" />
+            <Skeleton className="h-8 w-1/3" />
+            <Skeleton className="h-24 w-full" />
+            <div className="mt-auto pt-6">
+              <Skeleton className="h-12 w-full" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!product) {
-    notFound();
+    return notFound();
   }
 
   return (

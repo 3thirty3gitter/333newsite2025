@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useHistory } from '@/context/HistoryProvider';
 import { getProductRecommendations } from '@/ai/flows/product-recommendations';
-import { products } from '@/lib/data';
+import { getProducts } from '@/lib/data';
 import type { Product } from '@/lib/types';
 import { ProductCard } from './ProductCard';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
@@ -20,21 +20,28 @@ export function ProductRecommendations({ currentProductId }: ProductRecommendati
 
   useEffect(() => {
     async function fetchRecommendations() {
-      if (viewingHistory.length > 0) {
-        setIsLoading(true);
-        try {
-          const result = await getProductRecommendations({ viewingHistory });
-          const recommendedProducts = products.filter(p => 
-            result.recommendedProducts.includes(p.id) && p.id !== currentProductId
-          );
-          setRecommendations(recommendedProducts.slice(0, 6)); // Limit to 6 recommendations
-        } catch (error) {
-          console.error("Failed to fetch recommendations:", error);
-          setRecommendations([]);
-        } finally {
-          setIsLoading(false);
+      setIsLoading(true);
+      try {
+        const allProducts = await getProducts();
+        
+        if (viewingHistory.length > 0) {
+            const result = await getProductRecommendations({ viewingHistory });
+            const recommendedProducts = allProducts.filter(p => 
+              result.recommendedProducts.includes(p.id) && p.id !== currentProductId
+            );
+            setRecommendations(recommendedProducts.slice(0, 6)); // Limit to 6 recommendations
+        } else {
+            // Fallback: show some random products if no history
+            const fallbackProducts = allProducts
+              .filter(p => p.id !== currentProductId)
+              .sort(() => 0.5 - Math.random())
+              .slice(0, 4);
+            setRecommendations(fallbackProducts);
         }
-      } else {
+      } catch (error) {
+        console.error("Failed to fetch recommendations:", error);
+        setRecommendations([]); // On error, show no recommendations
+      } finally {
         setIsLoading(false);
       }
     }

@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft } from 'lucide-react';
+import { addProduct } from '@/lib/data';
 
 const formSchema = z.object({
   name: z.string().min(2, 'Name is required'),
@@ -36,14 +37,23 @@ export default function NewProductPage() {
     },
   });
 
-  // This is a placeholder. In a real app, you'd call an API to save the product.
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log('New product submitted:', values);
-    toast({
-      title: 'Product Created',
-      description: `The product "${values.name}" has been successfully created.`,
-    });
-    router.push('/admin/products');
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    try {
+      await addProduct(values);
+      toast({
+        title: 'Product Created',
+        description: `The product "${values.name}" has been successfully created.`,
+      });
+      router.push('/admin/products');
+      router.refresh(); // To show the new product in the list
+    } catch (error) {
+      console.error('Failed to create product:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to create product. Please try again.',
+      });
+    }
   }
 
   return (
@@ -137,7 +147,9 @@ export default function NewProductPage() {
                  <Button type="button" variant="outline" onClick={() => router.back()}>
                   Cancel
                 </Button>
-                <Button type="submit">Create Product</Button>
+                <Button type="submit" disabled={form.formState.isSubmitting}>
+                  {form.formState.isSubmitting ? 'Creating...' : 'Create Product'}
+                </Button>
               </div>
             </form>
           </Form>

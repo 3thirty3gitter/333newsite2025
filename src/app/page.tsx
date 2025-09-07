@@ -1,11 +1,13 @@
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { products } from '@/lib/data';
+import { getProducts } from '@/lib/data';
 import { ProductCard } from '@/components/products/ProductCard';
 import Link from 'next/link';
 import { Package } from 'lucide-react';
 
-export default function Home() {
+export default async function Home() {
+  const products = await getProducts();
+
   return (
     <div className="flex flex-col">
       <section className="relative w-full h-[60vh] min-h-[400px] flex items-center justify-center text-center bg-primary/10">
