@@ -601,8 +601,8 @@ export default function EditProductPage() {
                                 <div className="grid grid-cols-4 gap-2">
                                     {[...Array(4)].map((_, i) => (
                                         <div key={i} className="relative aspect-square bg-muted rounded-md flex items-center justify-center">
-                                            {imagePreviews[i + 1] ? (
-                                                    <Image src={imagePreviews[i+1]} alt={`Product preview ${i + 2}`} fill className="object-cover rounded-md" />
+                                            {imagePreviews[i] ? (
+                                                    <Image src={imagePreviews[i]} alt={`Product preview ${i + 1}`} fill className="object-cover rounded-md" />
                                             ) : (
                                                 <div className="w-full h-full flex items-center justify-center">
                                                     <ImageIcon className="h-6 w-6 text-muted-foreground" />
