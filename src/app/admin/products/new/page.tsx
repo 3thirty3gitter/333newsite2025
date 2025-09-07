@@ -11,7 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, useForm
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, PlusCircle, Trash2, X, GripVertical, Upload, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Trash2, X, GripVertical, Upload } from 'lucide-react';
 import { addProduct, getCategories } from '@/lib/data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
@@ -485,7 +485,7 @@ export default function NewProductPage() {
                                                             <Image src={imagePreviews[0]} alt="Product preview" width={600} height={600} className="object-cover rounded-md" />
                                                         ) : (
                                                             <div className="text-center text-muted-foreground">
-                                                                <ImageIcon className="mx-auto h-12 w-12" />
+                                                                <Upload className="mx-auto h-12 w-12" />
                                                                 <p className="mt-2">Drag and drop or</p>
                                                                 <Button variant="link" type="button" className="p-0 h-auto">click to upload</Button>
                                                             </div>

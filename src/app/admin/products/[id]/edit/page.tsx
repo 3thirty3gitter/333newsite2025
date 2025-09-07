@@ -11,7 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, PlusCircle, Trash2, X, GripVertical, ImageIcon, Upload } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Trash2, X, GripVertical, Upload } from 'lucide-react';
 import { getCategories, getProductById, updateProduct, deleteProduct } from '@/lib/data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useEffect, useState, useMemo, useRef } from 'react';
@@ -92,14 +92,14 @@ export default function EditProductPage() {
         
         if (fetchedProduct) {
           setProduct(fetchedProduct);
-          setImagePreviews(fetchedProduct.images);
+          setImagePreviews(fetchedProduct.images || []);
           form.reset({
             name: fetchedProduct.name,
             description: fetchedProduct.description,
             longDescription: fetchedProduct.longDescription,
             price: fetchedProduct.price,
             category: fetchedProduct.category,
-            images: fetchedProduct.images,
+            images: fetchedProduct.images || [],
             variants: fetchedProduct.variants?.map(v => ({
               type: v.type,
               options: v.options.map(o => ({ value: o.value }))
@@ -580,7 +580,7 @@ export default function EditProductPage() {
                                                             <Image src={imagePreviews[0]} alt="Product preview" width={600} height={600} className="object-cover rounded-md" />
                                                         ) : (
                                                             <div className="text-center text-muted-foreground">
-                                                                <ImageIcon className="mx-auto h-12 w-12" />
+                                                                <Upload className="mx-auto h-12 w-12" />
                                                                 <p className="mt-2">Drag and drop or</p>
                                                                 <Button variant="link" type="button" className="p-0 h-auto">click to upload</Button>
                                                             </div>
