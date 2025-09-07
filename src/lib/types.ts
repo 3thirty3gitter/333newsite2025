@@ -35,3 +35,9 @@ export type Category = {
   id: string;
   name: string;
 };
+
+export type ThemeSettings = {
+  palette: string;
+  headlineFont: string;
+  bodyFont: string;
+};
