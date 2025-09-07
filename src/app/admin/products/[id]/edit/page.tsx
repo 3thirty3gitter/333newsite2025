@@ -187,7 +187,7 @@ export default function EditProductPage() {
     }
   };
   
-  const processAndSetImage = (file: File, index: number) => {
+  const processAndSetImage = (file: File) => {
       const reader = new FileReader();
       reader.onload = (e) => {
         const img = document.createElement('img');
@@ -216,9 +216,8 @@ export default function EditProductPage() {
           const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
           
           const currentImages = form.getValues('images') || [];
-          const newImages = [...currentImages];
-          newImages[index] = dataUrl;
-
+          const newImages = [...currentImages, dataUrl];
+          
           setImagePreviews(newImages);
           form.setValue('images', newImages, { shouldDirty: true });
 
@@ -228,10 +227,10 @@ export default function EditProductPage() {
       reader.readAsDataURL(file);
   }
 
-  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>, index: number) => {
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      processAndSetImage(file, index);
+      processAndSetImage(file);
     }
   };
 
@@ -569,7 +568,7 @@ export default function EditProductPage() {
                                                     <input
                                                         type="file"
                                                         ref={imageInputRef}
-                                                        onChange={(e) => handleImageChange(e, 0)}
+                                                        onChange={handleImageChange}
                                                         className="hidden"
                                                         accept="image/*"
                                                     />
@@ -596,24 +595,14 @@ export default function EditProductPage() {
                                 
                                 <div className="grid grid-cols-4 gap-2">
                                     {[...Array(4)].map((_, i) => (
-                                        <div key={i} className="relative aspect-square bg-muted rounded-md flex items-center justify-center cursor-pointer"
-                                        >
-                                            <input
-                                                type="file"
-                                                onChange={(e) => handleImageChange(e, i + 1)}
-                                                className="hidden"
-                                                accept="image/*"
-                                                id={`image-upload-${i+1}`}
-                                            />
-                                             <label htmlFor={`image-upload-${i+1}`} className="w-full h-full absolute inset-0 cursor-pointer">
-                                                {imagePreviews[i + 1] ? (
-                                                     <Image src={imagePreviews[i+1]} alt={`Product preview ${i + 2}`} fill className="object-cover rounded-md" />
-                                                ) : (
-                                                    <div className="w-full h-full flex items-center justify-center">
-                                                        <Upload className="h-6 w-6 text-muted-foreground" />
-                                                    </div>
-                                                )}
-                                             </label>
+                                        <div key={i} className="relative aspect-square bg-muted rounded-md flex items-center justify-center">
+                                            {imagePreviews[i + 1] ? (
+                                                    <Image src={imagePreviews[i+1]} alt={`Product preview ${i + 2}`} fill className="object-cover rounded-md" />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center">
+                                                    <Upload className="h-6 w-6 text-muted-foreground" />
+                                                </div>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
