@@ -16,6 +16,7 @@ import { addProduct, getCategories } from '@/lib/data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useEffect, useState } from 'react';
 import type { Category } from '@/lib/types';
+import { Label } from '@/components/ui/label';
 
 const variantOptionSchema = z.object({
   value: z.string().min(1, 'Value is required'),
