@@ -7,17 +7,19 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, useFormField } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, PlusCircle, Trash2, X, GripVertical, Upload, Image as ImageIcon } from 'lucide-react';
 import { addProduct, getCategories } from '@/lib/data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import type { Category } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { cn } from '@/lib/utils';
 
 const variantOptionSchema = z.object({
   value: z.string().min(1, 'Value cannot be empty.'),
@@ -28,6 +30,12 @@ const variantSchema = z.object({
     options: z.array(variantOptionSchema).min(1, 'At least one option is required.'),
 });
 
+const inventoryItemSchema = z.object({
+    id: z.string(),
+    price: z.coerce.number().min(0, "Price can't be negative"),
+    stock: z.coerce.number().min(0, "Stock can't be negative"),
+});
+
 const formSchema = z.object({
   name: z.string().min(2, 'Name is required'),
   description: z.string().min(10, 'Description must be at least 10 characters'),
@@ -35,7 +43,10 @@ const formSchema = z.object({
   price: z.coerce.number().min(0.01, 'Price must be a positive number'),
   category: z.string().min(1, 'Category is required'),
   variants: z.array(variantSchema).optional(),
+  inventory: z.array(inventoryItemSchema).optional(),
 });
+
+type FormValues = z.infer<typeof formSchema>;
 
 export default function NewProductPage() {
   const router = useRouter();
@@ -62,7 +73,7 @@ export default function NewProductPage() {
     fetchCategories();
   }, [toast]);
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
@@ -71,6 +82,7 @@ export default function NewProductPage() {
       price: 0,
       category: '',
       variants: [],
+      inventory: [],
     },
   });
 
@@ -78,35 +90,46 @@ export default function NewProductPage() {
     control: form.control,
     name: "variants",
   });
+  
+  const { fields: inventoryFields, replace: replaceInventory } = useFieldArray({
+    control: form.control,
+    name: "inventory",
+  });
 
   const [newOptions, setNewOptions] = useState<string[]>([]);
   
   const watchedVariants = form.watch('variants');
+  const basePrice = form.watch('price');
 
   const generatedCombinations = useMemo(() => {
-    if (!watchedVariants || watchedVariants.length === 0) {
-      return [];
-    }
-    
-    const validVariants = watchedVariants.filter(v => v.type && v.options && v.options.length > 0);
-    if (validVariants.length === 0) {
+    const validVariants = watchedVariants?.filter(v => v.type && v.options && v.options.length > 0);
+    if (!validVariants || validVariants.length === 0) {
         return [];
     }
 
     const optionGroups = validVariants.map(v => v.options.map(o => o.value));
-
-    // Cartesian product function
     const cartesian = <T,>(...a: T[][]): T[][] => a.reduce((a, b) => a.flatMap(d => b.map(e => [d, e].flat())));
     
     return cartesian(...optionGroups);
   }, [watchedVariants]);
 
+  useEffect(() => {
+    const newInventory = generatedCombinations.map(combo => {
+        const comboId = Array.isArray(combo) ? combo.join('-') : combo;
+        const existingItem = inventoryFields.find(item => item.id === comboId);
+        return {
+            id: comboId,
+            price: existingItem?.price ?? basePrice ?? 0,
+            stock: existingItem?.stock ?? 0,
+        };
+    });
+    replaceInventory(newInventory);
+  }, [generatedCombinations, basePrice, inventoryFields, replaceInventory]);
 
   const handleAddOption = (variantIndex: number) => {
     const optionValue = newOptions[variantIndex]?.trim();
     if (optionValue) {
       const currentOptions = form.getValues(`variants.${variantIndex}.options`) || [];
-      // Prevent duplicate options
       if (currentOptions.some(o => o.value.toLowerCase() === optionValue.toLowerCase())) {
         toast({ variant: 'destructive', title: 'Duplicate Option', description: 'This option value already exists for this variant.' });
         return;
@@ -128,20 +151,9 @@ export default function NewProductPage() {
     }
   };
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: FormValues) {
     try {
-      const productData = {
-        name: values.name,
-        description: values.description,
-        longDescription: values.longDescription,
-        price: values.price,
-        category: values.category,
-        variants: values.variants?.map(v => ({
-            type: v.type,
-            options: v.options.map(o => ({ value: o.value, priceModifier: 0 }))
-        })) || []
-      };
-      await addProduct(productData);
+      await addProduct(values);
       toast({
         title: 'Product Created',
         description: `The product "${values.name}" has been successfully created.`,
@@ -224,7 +236,7 @@ export default function NewProductPage() {
                             name="price"
                             render={({ field }) => (
                                 <FormItem>
-                                <FormLabel>Price</FormLabel>
+                                <FormLabel>Base Price</FormLabel>
                                 <FormControl>
                                     <Input type="number" step="0.01" placeholder="e.g., 129.99" {...field} />
                                 </FormControl>
@@ -334,22 +346,59 @@ export default function NewProductPage() {
                         </CardContent>
                     </Card>
 
-                    {generatedCombinations.length > 0 && (
+                    {inventoryFields.length > 0 && (
                         <Card>
                             <CardHeader>
-                                <CardTitle>Inventory ({generatedCombinations.length})</CardTitle>
+                                <CardTitle>Inventory</CardTitle>
                                 <CardDescription>
-                                    All possible combinations of the variants for this product.
+                                    Manage price and stock for each variant combination.
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                                    {generatedCombinations.map((combo, i) => (
-                                        <Badge key={i} variant="outline" className="justify-center py-1">
-                                            {Array.isArray(combo) ? combo.join(' / ') : combo}
-                                        </Badge>
-                                    ))}
-                                </div>
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Variant</TableHead>
+                                            <TableHead className="w-[150px]">Price</TableHead>
+                                            <TableHead className="w-[100px]">Stock</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {inventoryFields.map((field, index) => (
+                                            <TableRow key={field.id}>
+                                                <TableCell className="font-medium">{field.id.split('-').join(' / ')}</TableCell>
+                                                <TableCell>
+                                                    <FormField
+                                                        control={form.control}
+                                                        name={`inventory.${index}.price`}
+                                                        render={({ field }) => (
+                                                            <FormItem>
+                                                                <FormControl>
+                                                                    <Input type="number" step="0.01" {...field} />
+                                                                </FormControl>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )}
+                                                    />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <FormField
+                                                        control={form.control}
+                                                        name={`inventory.${index}.stock`}
+                                                        render={({ field }) => (
+                                                            <FormItem>
+                                                                <FormControl>
+                                                                    <Input type="number" step="1" {...field} />
+                                                                </FormControl>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )}
+                                                    />
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
                             </CardContent>
                         </Card>
                     )}

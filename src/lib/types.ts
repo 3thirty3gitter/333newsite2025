@@ -7,6 +7,7 @@ export type Product = {
   image: string;
   category: string;
   variants: Variant[];
+  inventory: InventoryItem[];
 };
 
 export type Variant = {
@@ -16,7 +17,12 @@ export type Variant = {
 
 export type VariantOption = {
     value: string;
-    priceModifier: number;
+}
+
+export type InventoryItem = {
+    id: string; // Combination of variant values, e.g., "Small-Red"
+    price: number;
+    stock: number;
 }
 
 export type CartItem = {
