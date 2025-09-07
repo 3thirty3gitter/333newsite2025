@@ -124,7 +124,7 @@ export default function NewProductPage() {
         };
     });
     replaceInventory(newInventory);
-  }, [generatedCombinations, basePrice, inventoryFields, replaceInventory]);
+  }, [generatedCombinations, basePrice]);
 
   const handleAddOption = (variantIndex: number) => {
     const optionValue = newOptions[variantIndex]?.trim();
