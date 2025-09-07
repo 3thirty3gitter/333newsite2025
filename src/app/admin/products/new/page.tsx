@@ -14,12 +14,13 @@ import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, PlusCircle, Trash2, X, GripVertical, Upload, Image as ImageIcon } from 'lucide-react';
 import { addProduct, getCategories } from '@/lib/data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import type { Category } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
+import Image from 'next/image';
 
 const variantOptionSchema = z.object({
   value: z.string().min(1, 'Value cannot be empty.'),
@@ -42,6 +43,7 @@ const formSchema = z.object({
   longDescription: z.string().min(20, 'Long description must be at least 20 characters'),
   price: z.coerce.number().min(0.01, 'Price must be a positive number'),
   category: z.string().min(1, 'Category is required'),
+  image: z.string().optional(),
   variants: z.array(variantSchema).optional(),
   inventory: z.array(inventoryItemSchema).optional(),
 });
@@ -53,6 +55,8 @@ export default function NewProductPage() {
   const { toast } = useToast();
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchCategories() {
@@ -81,6 +85,7 @@ export default function NewProductPage() {
       longDescription: '',
       price: 0,
       category: '',
+      image: '',
       variants: [],
       inventory: [],
     },
@@ -124,7 +129,7 @@ export default function NewProductPage() {
         };
     });
     replaceInventory(newInventory);
-  }, [generatedCombinations, basePrice]);
+  }, [generatedCombinations, basePrice, replaceInventory, inventoryFields]);
 
   const handleAddOption = (variantIndex: number) => {
     const optionValue = newOptions[variantIndex]?.trim();
@@ -148,6 +153,19 @@ export default function NewProductPage() {
     if (currentOptions) {
         const newOptions = currentOptions.filter((_, i) => i !== optionIndex);
         update(variantIndex, { ...form.getValues(`variants.${variantIndex}`), options: newOptions });
+    }
+  };
+
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        setImagePreview(result);
+        form.setValue('image', result);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -410,13 +428,42 @@ export default function NewProductPage() {
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-4">
-                                <div className="aspect-square w-full rounded-md border-2 border-dashed border-muted-foreground/40 flex items-center justify-center">
-                                    <div className="text-center text-muted-foreground">
-                                        <ImageIcon className="mx-auto h-12 w-12" />
-                                        <p className="mt-2">Drag and drop or</p>
-                                        <Button variant="link" type="button" className="p-0 h-auto">click to upload</Button>
-                                    </div>
-                                </div>
+                                <FormField
+                                    control={form.control}
+                                    name="image"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel className="sr-only">Product Image</FormLabel>
+                                            <FormControl>
+                                                <>
+                                                    <input
+                                                        type="file"
+                                                        ref={imageInputRef}
+                                                        onChange={handleImageChange}
+                                                        className="hidden"
+                                                        accept="image/*"
+                                                    />
+                                                    <div 
+                                                        className="aspect-square w-full rounded-md border-2 border-dashed border-muted-foreground/40 flex items-center justify-center text-center cursor-pointer"
+                                                        onClick={() => imageInputRef.current?.click()}
+                                                    >
+                                                        {imagePreview ? (
+                                                            <Image src={imagePreview} alt="Product preview" fill className="object-cover rounded-md" />
+                                                        ) : (
+                                                            <div className="text-center text-muted-foreground">
+                                                                <ImageIcon className="mx-auto h-12 w-12" />
+                                                                <p className="mt-2">Drag and drop or</p>
+                                                                <Button variant="link" type="button" className="p-0 h-auto">click to upload</Button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </>
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                
                                 <div className="grid grid-cols-4 gap-2">
                                     {[...Array(4)].map((_, i) => (
                                         <div key={i} className="aspect-square bg-muted rounded-md flex items-center justify-center">
@@ -443,3 +490,5 @@ export default function NewProductPage() {
     </div>
   );
 }
+
+    

@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, PlusCircle, Trash2, X, GripVertical, ImageIcon, Upload } from 'lucide-react';
 import { getCategories, getProductById, updateProduct, deleteProduct } from '@/lib/data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import type { Category, Product } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -44,6 +44,7 @@ const formSchema = z.object({
   longDescription: z.string().min(20, 'Long description must be at least 20 characters'),
   price: z.coerce.number().min(0.01, 'Price must be a positive number'),
   category: z.string().min(1, 'Category is required'),
+  image: z.string().optional(),
   variants: z.array(variantSchema).optional(),
   inventory: z.array(inventoryItemSchema).optional(),
 });
@@ -61,6 +62,8 @@ export default function EditProductPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const productId = params.id as string;
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -70,6 +73,7 @@ export default function EditProductPage() {
       longDescription: '',
       price: 0,
       category: '',
+      image: '',
       variants: [],
       inventory: [],
     },
@@ -88,12 +92,14 @@ export default function EditProductPage() {
         
         if (fetchedProduct) {
           setProduct(fetchedProduct);
+          setImagePreview(fetchedProduct.image);
           form.reset({
             name: fetchedProduct.name,
             description: fetchedProduct.description,
             longDescription: fetchedProduct.longDescription,
             price: fetchedProduct.price,
             category: fetchedProduct.category,
+            image: fetchedProduct.image,
             variants: fetchedProduct.variants?.map(v => ({
               type: v.type,
               options: v.options.map(o => ({ value: o.value }))
@@ -142,6 +148,8 @@ export default function EditProductPage() {
   }, [watchedVariants]);
 
   useEffect(() => {
+    if (isLoadingProduct) return;
+
     const newInventory = generatedCombinations.map(combo => {
         const comboId = Array.isArray(combo) ? combo.join('-') : combo;
         const existingItem = inventoryFields.find(item => item.id === comboId);
@@ -152,7 +160,7 @@ export default function EditProductPage() {
         };
     });
     replaceInventory(newInventory);
-  }, [generatedCombinations, basePrice]);
+  }, [generatedCombinations, basePrice, replaceInventory, inventoryFields, isLoadingProduct]);
 
   const handleAddOption = (variantIndex: number) => {
     const optionValue = newOptions[variantIndex]?.trim();
@@ -176,6 +184,19 @@ export default function EditProductPage() {
     if (currentOptions) {
         const newOptions = currentOptions.filter((_, i) => i !== optionIndex);
         update(variantIndex, { ...form.getValues(`variants.${variantIndex}`), options: newOptions });
+    }
+  };
+
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        setImagePreview(result);
+        form.setValue('image', result);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -502,15 +523,41 @@ export default function EditProductPage() {
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-4">
-                                <div className="aspect-square w-full rounded-md relative overflow-hidden">
-                                     {product?.image ? (
-                                        <Image src={product.image} alt={product.name} fill className="object-cover" />
-                                     ) : (
-                                        <div className="bg-muted h-full w-full flex items-center justify-center">
-                                            <ImageIcon className="h-12 w-12 text-muted-foreground" />
-                                        </div>
-                                     )}
-                                </div>
+                                <FormField
+                                    control={form.control}
+                                    name="image"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel className="sr-only">Product Image</FormLabel>
+                                            <FormControl>
+                                                <>
+                                                    <input
+                                                        type="file"
+                                                        ref={imageInputRef}
+                                                        onChange={handleImageChange}
+                                                        className="hidden"
+                                                        accept="image/*"
+                                                    />
+                                                    <div 
+                                                        className="aspect-square w-full rounded-md border-2 border-dashed border-muted-foreground/40 flex items-center justify-center text-center cursor-pointer"
+                                                        onClick={() => imageInputRef.current?.click()}
+                                                    >
+                                                        {imagePreview ? (
+                                                            <Image src={imagePreview} alt="Product preview" fill className="object-cover rounded-md" />
+                                                        ) : (
+                                                            <div className="text-center text-muted-foreground">
+                                                                <ImageIcon className="mx-auto h-12 w-12" />
+                                                                <p className="mt-2">Drag and drop or</p>
+                                                                <Button variant="link" type="button" className="p-0 h-auto">click to upload</Button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </>
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
                                 <div className="grid grid-cols-4 gap-2">
                                     {[...Array(4)].map((_, i) => (
                                         <div key={i} className="aspect-square bg-muted rounded-md flex items-center justify-center">
@@ -574,3 +621,5 @@ export default function EditProductPage() {
     </div>
   );
 }
+
+    

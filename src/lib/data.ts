@@ -20,7 +20,7 @@ export async function getProductById(id: string): Promise<Product | null> {
   }
 }
 
-export async function addProduct(product: Omit<Product, 'id' | 'image'> & { image?: string }): Promise<string> {
+export async function addProduct(product: Omit<Product, 'id'>): Promise<string> {
   const productsCol = collection(db, 'products');
   const newProduct = {
     ...product,
@@ -52,3 +52,5 @@ export async function addCategory(category: Omit<Category, 'id'>): Promise<strin
     const docRef = await addDoc(categoriesCol, category);
     return docRef.id;
 }
+
+    
