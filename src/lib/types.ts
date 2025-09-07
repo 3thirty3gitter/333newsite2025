@@ -1,3 +1,4 @@
+
 export type Product = {
   id: string;
   name: string;
@@ -36,8 +37,16 @@ export type Category = {
   name: string;
 };
 
+export type MenuItem = {
+  label: string;
+  href: string;
+};
+
 export type ThemeSettings = {
   palette: string;
   headlineFont: string;
   bodyFont: string;
+  logoUrl?: string;
+  logoWidth?: number;
+  menuItems?: MenuItem[];
 };
