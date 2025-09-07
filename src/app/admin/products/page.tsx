@@ -23,10 +23,7 @@ export default async function AdminProductsPage() {
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Inventory</CardTitle>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           <Table>
             <TableHeader>
               <TableRow>
