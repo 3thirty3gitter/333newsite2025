@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, PlusCircle, Trash2, X, GripVertical, ImageIcon, Upload } from 'lucide-react';
 import { getCategories, getProductById, updateProduct, deleteProduct } from '@/lib/data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import type { Category, Product } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -104,19 +104,45 @@ export default function EditProductPage() {
     fetchData();
   }, [productId, form, toast, router]);
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, update } = useFieldArray({
     control: form.control,
     name: "variants",
   });
 
   const [newOptions, setNewOptions] = useState<string[]>([]);
+  
+  const watchedVariants = form.watch('variants');
+
+  const generatedCombinations = useMemo(() => {
+    if (!watchedVariants || watchedVariants.length === 0) {
+      return [];
+    }
+
+    const validVariants = watchedVariants.filter(v => v.type && v.options && v.options.length > 0);
+    if (validVariants.length === 0) {
+        return [];
+    }
+
+    const optionGroups = validVariants.map(v => v.options.map(o => o.value));
+
+    // Cartesian product function
+    const cartesian = <T,>(...a: T[][]): T[][] => a.reduce((a, b) => a.flatMap(d => b.map(e => [d, e].flat())));
+    
+    return cartesian(...optionGroups);
+  }, [watchedVariants]);
+
 
   const handleAddOption = (variantIndex: number) => {
     const optionValue = newOptions[variantIndex]?.trim();
     if (optionValue) {
       const currentOptions = form.getValues(`variants.${variantIndex}.options`) || [];
+      // Prevent duplicate options
+      if (currentOptions.some(o => o.value.toLowerCase() === optionValue.toLowerCase())) {
+        toast({ variant: 'destructive', title: 'Duplicate Option', description: 'This option value already exists for this variant.' });
+        return;
+      }
       const newOptionValues = [...currentOptions, { value: optionValue }];
-      form.setValue(`variants.${variantIndex}.options`, newOptionValues, { shouldValidate: true });
+      update(variantIndex, { ...form.getValues(`variants.${variantIndex}`), options: newOptionValues });
       
       const updatedNewOptions = [...newOptions];
       updatedNewOptions[variantIndex] = '';
@@ -128,7 +154,7 @@ export default function EditProductPage() {
     const currentOptions = form.getValues(`variants.${variantIndex}.options`);
     if (currentOptions) {
         const newOptions = currentOptions.filter((_, i) => i !== optionIndex);
-        form.setValue(`variants.${variantIndex}.options`, newOptions, { shouldValidate: true });
+        update(variantIndex, { ...form.getValues(`variants.${variantIndex}`), options: newOptions });
     }
   };
 
@@ -337,7 +363,7 @@ export default function EditProductPage() {
                             </div>
                             <Button type="button" variant="outline" onClick={() => append({ type: '', options: [] })}>
                                 <PlusCircle className="mr-2 h-4 w-4" />
-                                Add Variant
+                                Add Variant Type
                             </Button>
                         </CardHeader>
                         <CardContent className="space-y-6">
@@ -377,7 +403,7 @@ export default function EditProductPage() {
                                         </div>
                                         <div className="flex gap-2 mt-2">
                                             <Input
-                                                placeholder="Add an option (e.g., Red) and press Enter"
+                                                placeholder="Add an option (e.g., Red)"
                                                 value={newOptions[index] || ''}
                                                 onChange={(e) => {
                                                     const updatedNewOptions = [...newOptions];
@@ -400,6 +426,26 @@ export default function EditProductPage() {
                             ))}
                         </CardContent>
                     </Card>
+
+                    {generatedCombinations.length > 0 && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Inventory ({generatedCombinations.length})</CardTitle>
+                                <CardDescription>
+                                    All possible combinations of the variants for this product.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                                    {generatedCombinations.map((combo, i) => (
+                                        <Badge key={i} variant="outline" className="justify-center py-1">
+                                            {Array.isArray(combo) ? combo.join(' / ') : combo}
+                                        </Badge>
+                                    ))}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
                 </div>
 
                  <div className="md:col-span-1 space-y-8">
