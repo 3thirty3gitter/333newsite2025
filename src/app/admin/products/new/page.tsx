@@ -11,15 +11,21 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, PlusCircle, Trash2 } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Trash2, X, GripVertical } from 'lucide-react';
 import { addProduct, getCategories } from '@/lib/data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useEffect, useState } from 'react';
 import type { Category } from '@/lib/types';
-import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 
 const variantOptionSchema = z.object({
-  value: z.string().min(1, 'Value is required'),
+  value: z.string().min(1, 'Value cannot be empty.'),
+});
+
+const variantSchema = z.object({
+    type: z.string().min(1, 'Type cannot be empty.'),
+    options: z.array(variantOptionSchema).min(1, 'At least one option is required.'),
 });
 
 const formSchema = z.object({
@@ -28,8 +34,7 @@ const formSchema = z.object({
   longDescription: z.string().min(20, 'Long description must be at least 20 characters'),
   price: z.coerce.number().min(0.01, 'Price must be a positive number'),
   category: z.string().min(1, 'Category is required'),
-  variantType: z.string().optional(),
-  variantOptions: z.array(variantOptionSchema).optional(),
+  variants: z.array(variantSchema).optional(),
 });
 
 export default function NewProductPage() {
@@ -65,17 +70,37 @@ export default function NewProductPage() {
       longDescription: '',
       price: 0,
       category: '',
-      variantType: '',
-      variantOptions: [{ value: '' }],
+      variants: [],
     },
   });
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
-    name: "variantOptions",
+    name: "variants",
   });
 
-  const variantType = form.watch('variantType');
+  const [newOptions, setNewOptions] = useState<string[]>([]);
+
+  const handleAddOption = (variantIndex: number) => {
+    const optionValue = newOptions[variantIndex]?.trim();
+    if (optionValue) {
+      const currentOptions = form.getValues(`variants.${variantIndex}.options`) || [];
+      const newOptionValues = [...currentOptions, { value: optionValue }];
+      form.setValue(`variants.${variantIndex}.options`, newOptionValues, { shouldValidate: true });
+      
+      const updatedNewOptions = [...newOptions];
+      updatedNewOptions[variantIndex] = '';
+      setNewOptions(updatedNewOptions);
+    }
+  };
+
+  const handleRemoveOption = (variantIndex: number, optionIndex: number) => {
+    const currentOptions = form.getValues(`variants.${variantIndex}.options`);
+    if (currentOptions) {
+        const newOptions = currentOptions.filter((_, i) => i !== optionIndex);
+        form.setValue(`variants.${variantIndex}.options`, newOptions, { shouldValidate: true });
+    }
+  };
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
@@ -85,14 +110,10 @@ export default function NewProductPage() {
         longDescription: values.longDescription,
         price: values.price,
         category: values.category,
-        variants: values.variantType
-          ? [
-              {
-                type: values.variantType,
-                options: values.variantOptions?.map(opt => ({ value: opt.value, priceModifier: 0 })) || [],
-              },
-            ]
-          : [],
+        variants: values.variants?.map(v => ({
+            type: v.type,
+            options: v.options.map(o => ({ value: o.value, priceModifier: 0 }))
+        })) || []
       };
       await addProduct(productData);
       toast({
@@ -123,13 +144,13 @@ export default function NewProductPage() {
         <h1 className="text-3xl font-headline font-bold">Add New Product</h1>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Product Details</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          <Card>
+            <CardHeader>
+              <CardTitle>Product Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
               <FormField
                 control={form.control}
                 name="name"
@@ -208,72 +229,93 @@ export default function NewProductPage() {
                     )}
                 />
               </div>
+            </CardContent>
+          </Card>
 
-               <Card>
-                <CardHeader>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+                <div>
                     <CardTitle>Variants</CardTitle>
                     <CardDescription>
-                        Define product options like size or color. Leave the type blank to create a product with no variants.
+                        Add options like size or color. Products with no variants are considered single-SKU.
                     </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <FormField
-                        control={form.control}
-                        name="variantType"
-                        render={({ field }) => (
+                </div>
+                <Button type="button" variant="outline" onClick={() => append({ type: '', options: [] })}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Add Variant
+                </Button>
+            </CardHeader>
+            <CardContent className="space-y-6">
+                {fields.length > 0 && <Separator />}
+                {fields.map((field, index) => (
+                <div key={field.id} className="grid grid-cols-[auto_1fr] items-start gap-4">
+                    <GripVertical className="h-5 w-5 text-muted-foreground mt-9 cursor-grab" />
+                    <div className="p-4 border rounded-md space-y-4 relative">
+                        <Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2 h-6 w-6" onClick={() => remove(index)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                        <FormField
+                            control={form.control}
+                            name={`variants.${index}.type`}
+                            render={({ field }) => (
                             <FormItem>
-                            <FormLabel>Variant Type</FormLabel>
-                            <FormControl>
-                                <Input placeholder="e.g., Color, Size" {...field} />
-                            </FormControl>
-                            <FormMessage />
+                                <FormLabel>Variant Type</FormLabel>
+                                <FormControl>
+                                <Input placeholder="e.g., Size, Color" {...field} />
+                                </FormControl>
+                                <FormMessage />
                             </FormItem>
-                        )}
-                    />
-                    {variantType && (
-                        <div className="space-y-4">
-                          <Label>Variant Options</Label>
-                           {fields.map((field, index) => (
-                            <FormField
-                                key={field.id}
-                                control={form.control}
-                                name={`variantOptions.${index}.value`}
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <div className="flex items-center gap-2">
-                                        <FormControl>
-                                            <Input placeholder={`Option ${index + 1}`} {...field} />
-                                        </FormControl>
-                                        <Button type="button" variant="destructive" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1}>
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    </div>
-                                    <FormMessage />
-                                    </FormItem>
-                                )}
-                                />
-                           ))}
-                           <Button type="button" variant="outline" size="sm" onClick={() => append({ value: '' })}>
-                                <PlusCircle className="mr-2 h-4 w-4" />
-                                Add Option
-                            </Button>
-                        </div>
-                    )}
-                </CardContent>
-               </Card>
+                            )}
+                        />
 
-              <div className="flex justify-end gap-4">
-                 <Button type="button" variant="outline" onClick={() => router.back()}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={form.formState.isSubmitting}>
-                  {form.formState.isSubmitting ? 'Creating...' : 'Create Product'}
-                </Button>
-              </div>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
+                        <FormItem>
+                            <FormLabel>Options</FormLabel>
+                            <div className="flex flex-wrap gap-2">
+                                {form.watch(`variants.${index}.options`)?.map((option, optionIndex) => (
+                                    <Badge key={optionIndex} variant="secondary" className="flex items-center gap-1.5 pl-3 pr-1.5 py-1 text-sm">
+                                        {option.value}
+                                        <button type="button" onClick={() => handleRemoveOption(index, optionIndex)} className="rounded-full hover:bg-muted-foreground/20 p-0.5">
+                                            <X className="h-3 w-3" />
+                                        </button>
+                                    </Badge>
+                                ))}
+                            </div>
+                            <div className="flex gap-2 mt-2">
+                                <Input
+                                    placeholder="Add an option (e.g., Red) and press Enter"
+                                    value={newOptions[index] || ''}
+                                    onChange={(e) => {
+                                        const updatedNewOptions = [...newOptions];
+                                        updatedNewOptions[index] = e.target.value;
+                                        setNewOptions(updatedNewOptions);
+                                    }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            handleAddOption(index);
+                                        }
+                                    }}
+                                />
+                                <Button type="button" variant="outline" onClick={() => handleAddOption(index)}>Add</Button>
+                            </div>
+                            <FormMessage>{form.formState.errors.variants?.[index]?.options?.message}</FormMessage>
+                        </FormItem>
+                    </div>
+                </div>
+                ))}
+            </CardContent>
+          </Card>
+
+          <div className="flex justify-end gap-4">
+              <Button type="button" variant="outline" onClick={() => router.back()}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={form.formState.isSubmitting}>
+              {form.formState.isSubmitting ? 'Creating...' : 'Create Product'}
+            </Button>
+          </div>
+        </form>
+      </Form>
     </div>
   );
 }
