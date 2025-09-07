@@ -4,7 +4,7 @@ export type Product = {
   description: string;
   longDescription: string;
   price: number;
-  image: string;
+  images: string[];
   category: string;
   variants: Variant[];
   inventory: InventoryItem[];

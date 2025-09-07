@@ -43,7 +43,7 @@ const formSchema = z.object({
   longDescription: z.string().min(20, 'Long description must be at least 20 characters'),
   price: z.coerce.number().min(0.01, 'Price must be a positive number'),
   category: z.string().min(1, 'Category is required'),
-  image: z.string().optional(),
+  images: z.array(z.string()).optional(),
   variants: z.array(variantSchema).optional(),
   inventory: z.array(inventoryItemSchema).optional(),
 });
@@ -56,7 +56,7 @@ export default function NewProductPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const imageInputRef = useRef<HTMLInputElement>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
 
   useEffect(() => {
     async function fetchCategories() {
@@ -85,7 +85,7 @@ export default function NewProductPage() {
       longDescription: '',
       price: 0,
       category: '',
-      image: '',
+      images: [],
       variants: [],
       inventory: [],
     },
@@ -156,9 +156,7 @@ export default function NewProductPage() {
     }
   };
 
-  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
+  const processAndSetImage = (file: File, index: number) => {
       const reader = new FileReader();
       reader.onload = (e) => {
         const img = document.createElement('img');
@@ -185,12 +183,24 @@ export default function NewProductPage() {
           const ctx = canvas.getContext('2d');
           ctx?.drawImage(img, 0, 0, width, height);
           const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-          setImagePreview(dataUrl);
-          form.setValue('image', dataUrl);
+          
+          const currentImages = form.getValues('images') || [];
+          const newImages = [...currentImages];
+          newImages[index] = dataUrl;
+
+          setImagePreviews(newImages);
+          form.setValue('images', newImages, { shouldDirty: true });
+
         };
         img.src = e.target?.result as string;
       };
       reader.readAsDataURL(file);
+  }
+
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>, index: number) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      processAndSetImage(file, index);
     }
   };
 
@@ -455,16 +465,16 @@ export default function NewProductPage() {
                             <div className="space-y-4">
                                 <FormField
                                     control={form.control}
-                                    name="image"
+                                    name="images"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel className="sr-only">Product Image</FormLabel>
+                                            <FormLabel className="sr-only">Product Images</FormLabel>
                                             <FormControl>
                                                 <div>
                                                     <input
                                                         type="file"
                                                         ref={imageInputRef}
-                                                        onChange={handleImageChange}
+                                                        onChange={(e) => handleImageChange(e, 0)}
                                                         className="hidden"
                                                         accept="image/*"
                                                     />
@@ -472,8 +482,8 @@ export default function NewProductPage() {
                                                         className="aspect-square w-full rounded-md border-2 border-dashed border-muted-foreground/40 flex items-center justify-center text-center cursor-pointer"
                                                         onClick={() => imageInputRef.current?.click()}
                                                     >
-                                                        {imagePreview ? (
-                                                            <Image src={imagePreview} alt="Product preview" width={600} height={600} className="object-cover rounded-md" />
+                                                        {imagePreviews[0] ? (
+                                                            <Image src={imagePreviews[0]} alt="Product preview" width={600} height={600} className="object-cover rounded-md" />
                                                         ) : (
                                                             <div className="text-center text-muted-foreground">
                                                                 <ImageIcon className="mx-auto h-12 w-12" />
@@ -491,8 +501,25 @@ export default function NewProductPage() {
                                 
                                 <div className="grid grid-cols-4 gap-2">
                                     {[...Array(4)].map((_, i) => (
-                                        <div key={i} className="aspect-square bg-muted rounded-md flex items-center justify-center">
-                                            <Upload className="h-6 w-6 text-muted-foreground" />
+                                        <div key={i} className="relative aspect-square bg-muted rounded-md flex items-center justify-center cursor-pointer"
+                                            onClick={() => imageInputRef.current?.click()}
+                                        >
+                                             <input
+                                                type="file"
+                                                onChange={(e) => handleImageChange(e, i + 1)}
+                                                className="hidden"
+                                                accept="image/*"
+                                                id={`image-upload-${i+1}`}
+                                            />
+                                             <label htmlFor={`image-upload-${i+1}`} className="w-full h-full absolute inset-0 cursor-pointer">
+                                                {imagePreviews[i + 1] ? (
+                                                     <Image src={imagePreviews[i+1]} alt={`Product preview ${i + 2}`} fill className="object-cover rounded-md" />
+                                                ) : (
+                                                    <div className="w-full h-full flex items-center justify-center">
+                                                        <Upload className="h-6 w-6 text-muted-foreground" />
+                                                    </div>
+                                                )}
+                                             </label>
                                         </div>
                                     ))}
                                 </div>

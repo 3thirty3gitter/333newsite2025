@@ -68,7 +68,7 @@ export default function ProductPage({ params }: ProductPageProps) {
       <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
         <div className="aspect-square w-full relative overflow-hidden rounded-lg shadow-lg">
           <Image
-            src={product.image}
+            src={product.images[0]}
             alt={product.name}
             fill
             className="object-cover"

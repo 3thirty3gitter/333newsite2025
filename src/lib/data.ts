@@ -2,10 +2,26 @@ import { db } from './firebase';
 import { collection, getDocs, addDoc, doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import type { Product, Category } from './types';
 
+function toProduct(doc: any): Product {
+    const data = doc.data();
+    let images: string[] = [];
+    if (data.images && Array.isArray(data.images)) {
+        images = data.images;
+    } else if (data.image) {
+        images = [data.image];
+    }
+
+    return {
+        id: doc.id,
+        ...data,
+        images: images,
+    } as Product;
+}
+
 export async function getProducts(): Promise<Product[]> {
   const productsCol = collection(db, 'products');
   const productSnapshot = await getDocs(productsCol);
-  const productList = productSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+  const productList = productSnapshot.docs.map(toProduct);
   return productList;
 }
 
@@ -14,7 +30,7 @@ export async function getProductById(id: string): Promise<Product | null> {
   const docSnap = await getDoc(docRef);
 
   if (docSnap.exists()) {
-    return { id: docSnap.id, ...docSnap.data() } as Product;
+    return toProduct(docSnap);
   } else {
     return null;
   }
@@ -22,10 +38,10 @@ export async function getProductById(id: string): Promise<Product | null> {
 
 export async function addProduct(product: Omit<Product, 'id'>): Promise<string> {
   const productsCol = collection(db, 'products');
-  const newProduct = {
-    ...product,
-    image: product.image || `https://picsum.photos/600/600?random=${Math.floor(Math.random() * 1000)}`,
-  };
+  const newProduct = { ...product };
+  if (!newProduct.images || newProduct.images.length === 0) {
+      newProduct.images = [`https://picsum.photos/600/600?random=${Math.floor(Math.random() * 1000)}`];
+  }
   const docRef = await addDoc(productsCol, newProduct);
   return docRef.id;
 }
