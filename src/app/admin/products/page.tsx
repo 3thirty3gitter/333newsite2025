@@ -5,8 +5,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { getProducts } from '@/lib/data';
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
-import { MoreHorizontal, PlusCircle } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { MoreHorizontal, PlusCircle, Eye } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 
 export default async function AdminProductsPage() {
   const products = await getProducts();
@@ -68,6 +68,12 @@ export default async function AdminProductsPage() {
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuItem asChild>
                           <Link href={`/admin/products/${product.id}/edit`}>Edit</Link>
+                        </DropdownMenuItem>
+                         <DropdownMenuItem asChild>
+                            <a href={`/products/${product.id}`} target="_blank" rel="noopener noreferrer" className="flex items-center">
+                                <Eye className="mr-2 h-4 w-4" />
+                                Preview
+                            </a>
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
