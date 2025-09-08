@@ -1,6 +1,6 @@
 'use client';
 
-import { getCategories, updateCategory, deleteCategory } from "@/lib/data";
+import { getCategories, deleteCategory } from "@/lib/data";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AddCollectionForm } from "@/components/admin/AddCollectionForm";
@@ -10,17 +10,14 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Edit, Trash2 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import Link from "next/link";
+import Image from "next/image";
 
 export default function CollectionsPage() {
   const [collections, setCollections] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [editingCollection, setEditingCollection] = useState<Category | null>(null);
   const [deletingCollection, setDeletingCollection] = useState<Category | null>(null);
-  const [updatedName, setUpdatedName] = useState("");
   const { toast } = useToast();
 
   const fetchCollections = async () => {
@@ -33,23 +30,6 @@ export default function CollectionsPage() {
   useEffect(() => {
     fetchCollections();
   }, []);
-
-  const handleEditClick = (collection: Category) => {
-    setEditingCollection(collection);
-    setUpdatedName(collection.name);
-  };
-
-  const handleUpdate = async () => {
-    if (!editingCollection || !updatedName.trim()) return;
-    try {
-      await updateCategory(editingCollection.id, updatedName.trim());
-      toast({ title: "Success", description: "Collection updated successfully." });
-      setEditingCollection(null);
-      fetchCollections();
-    } catch (error) {
-      toast({ variant: "destructive", title: "Error", description: "Failed to update collection." });
-    }
-  };
 
   const handleDelete = async () => {
     if (!deletingCollection) return;
@@ -79,6 +59,7 @@ export default function CollectionsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-16 hidden sm:table-cell">Image</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead className="w-[50px]"><span className="sr-only">Actions</span></TableHead>
                   </TableRow>
@@ -86,11 +67,21 @@ export default function CollectionsPage() {
                 <TableBody>
                   {isLoading ? (
                     <TableRow>
-                      <TableCell colSpan={2} className="text-center text-muted-foreground">Loading...</TableCell>
+                      <TableCell colSpan={3} className="text-center text-muted-foreground">Loading...</TableCell>
                     </TableRow>
                   ) : collections.length > 0 ? (
                     collections.map((category) => (
                       <TableRow key={category.id}>
+                        <TableCell className="hidden sm:table-cell">
+                           <Image
+                              alt={category.name}
+                              className="aspect-square rounded-md object-cover"
+                              height="48"
+                              src={category.imageUrl || `https://picsum.photos/48/48?random=${category.id}`}
+                              width="48"
+                              data-ai-hint="collection image"
+                            />
+                        </TableCell>
                         <TableCell className="font-medium">{category.name}</TableCell>
                         <TableCell>
                            <DropdownMenu>
@@ -101,9 +92,11 @@ export default function CollectionsPage() {
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent>
                                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                    <DropdownMenuItem onSelect={() => handleEditClick(category)}>
+                                    <DropdownMenuItem asChild>
+                                      <Link href={`/admin/collections/${category.id}/edit`}>
                                         <Edit className="mr-2 h-4 w-4" />
                                         <span>Edit</span>
+                                      </Link>
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onSelect={() => setDeletingCollection(category)} className="text-destructive">
                                         <Trash2 className="mr-2 h-4 w-4" />
@@ -116,7 +109,7 @@ export default function CollectionsPage() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={2} className="text-center text-muted-foreground">No collections found.</TableCell>
+                      <TableCell colSpan={3} className="text-center text-muted-foreground">No collections found.</TableCell>
                     </TableRow>
                   )}
                 </TableBody>
@@ -125,27 +118,7 @@ export default function CollectionsPage() {
           </Card>
         </div>
       </div>
-
-      {/* Edit Dialog */}
-      <Dialog open={!!editingCollection} onOpenChange={() => setEditingCollection(null)}>
-        <DialogContent>
-            <DialogHeader>
-                <DialogTitle>Edit Collection</DialogTitle>
-            </DialogHeader>
-            <div className="py-4">
-                <Label htmlFor="collection-name">Collection Name</Label>
-                <Input id="collection-name" value={updatedName} onChange={(e) => setUpdatedName(e.target.value)} />
-            </div>
-            <DialogFooter>
-                <DialogClose asChild>
-                    <Button variant="outline">Cancel</Button>
-                </DialogClose>
-                <Button onClick={handleUpdate}>Save Changes</Button>
-            </DialogFooter>
-        </DialogContent>
-      </Dialog>
       
-
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deletingCollection} onOpenChange={() => setDeletingCollection(null)}>
         <AlertDialogContent>

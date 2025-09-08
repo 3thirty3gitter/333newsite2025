@@ -63,35 +63,49 @@ export async function getCategories(): Promise<Category[]> {
     return categoryList.sort((a, b) => a.name.localeCompare(b.name));
 }
 
+export async function getCategoryById(id: string): Promise<Category | null> {
+  const docRef = doc(db, 'categories', id);
+  const docSnap = await getDoc(docRef);
+
+  if (docSnap.exists()) {
+    return { id: docSnap.id, ...docSnap.data() } as Category;
+  } else {
+    return null;
+  }
+}
+
 export async function addCategory(category: Omit<Category, 'id'>): Promise<string> {
     const categoriesCol = collection(db, 'categories');
     const docRef = await addDoc(categoriesCol, category);
     return docRef.id;
 }
 
-export async function updateCategory(id: string, newName: string): Promise<void> {
+export async function updateCategory(id: string, categoryData: Partial<Omit<Category, 'id'>>): Promise<void> {
     const docRef = doc(db, 'categories', id);
     const oldCategorySnap = await getDoc(docRef);
     if (!oldCategorySnap.exists()) {
         throw new Error("Category not found");
     }
     const oldName = oldCategorySnap.data().name;
+    const newName = categoryData.name;
 
-    // Update category name
-    await updateDoc(docRef, { name: newName });
+    // Update category document
+    await updateDoc(docRef, categoryData);
 
-    // Update products that use this category
-    const productsRef = collection(db, 'products');
-    const q = query(productsRef, where("category", "==", oldName));
-    const querySnapshot = await getDocs(q);
-    
-    const batch = [];
-    querySnapshot.forEach((productDoc) => {
-        const productRef = doc(db, 'products', productDoc.id);
-        batch.push(updateDoc(productRef, { category: newName }));
-    });
+    // If the name changed, update products that use this category
+    if (newName && oldName !== newName) {
+        const productsRef = collection(db, 'products');
+        const q = query(productsRef, where("category", "==", oldName));
+        const querySnapshot = await getDocs(q);
+        
+        const batch = [];
+        querySnapshot.forEach((productDoc) => {
+            const productRef = doc(db, 'products', productDoc.id);
+            batch.push(updateDoc(productRef, { category: newName }));
+        });
 
-    await Promise.all(batch);
+        await Promise.all(batch);
+    }
 }
 
 export async function deleteCategory(id: string): Promise<void> {
