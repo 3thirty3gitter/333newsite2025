@@ -11,16 +11,22 @@ export const ImageWithTextSection = ({ section }: { section: PageSection }) => {
     const { title, text, imageUrl, buttonLabel, buttonHref, imagePosition } = section.props;
     
     return (
-        <section className="bg-muted/50 w-full py-12 md:py-24 lg:py-32">
+        <section className="bg-background w-full py-12 md:py-24 lg:py-32">
             <div className="container grid items-center gap-8 px-4 md:px-6 lg:grid-cols-2 lg:gap-16">
                 <div className={cn("relative aspect-video overflow-hidden rounded-xl", imagePosition === 'right' && 'lg:order-last')}>
-                     <Image
-                        src={imageUrl}
-                        alt={title}
-                        fill
-                        className="object-cover"
-                        data-ai-hint="lifestyle product"
-                    />
+                     {imageUrl ? (
+                        <Image
+                            src={imageUrl}
+                            alt={title || 'Image with text background'}
+                            fill
+                            className="object-cover"
+                            data-ai-hint="lifestyle product"
+                        />
+                     ) : (
+                        <div className="bg-muted w-full h-full flex items-center justify-center">
+                            <p className="text-muted-foreground">Placeholder Image</p>
+                        </div>
+                     )}
                 </div>
                 <div className="space-y-4">
                     <h2 className="text-3xl font-headline font-bold tracking-tighter sm:text-4xl md:text-5xl">{title}</h2>

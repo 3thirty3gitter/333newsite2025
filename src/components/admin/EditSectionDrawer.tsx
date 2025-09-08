@@ -16,6 +16,10 @@ import { FeaturedProductsSection } from '../sections/FeaturedProductsSection';
 import { Slider } from '../ui/slider';
 import { getCategories, getProducts } from '@/lib/data';
 import { CollectionsSection } from '../sections/CollectionsSection';
+import { FaqSection } from '../sections/FaqSection';
+import { ImageWithTextSection } from '../sections/ImageWithTextSection';
+import { TestimonialsSection } from '../sections/TestimonialsSection';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 interface EditSectionDrawerProps {
   isOpen: boolean;
@@ -34,6 +38,12 @@ const SectionPreview = ({ section, products, categories }: { section: PageSectio
             return <FeaturedProductsSection section={section} products={products} />;
         case 'collections':
             return <CollectionsSection section={section} categories={categories} />;
+        case 'faq':
+            return <FaqSection section={section} />;
+        case 'image-with-text':
+            return <ImageWithTextSection section={section} />;
+        case 'testimonials':
+            return <TestimonialsSection section={section} />;
         default:
             return (
                 <div className="flex items-center justify-center h-48 bg-muted rounded-md">
@@ -98,7 +108,7 @@ const HeroForm = ({ control, setValue, watch }: { control: any, setValue: any, w
                     onClick={() => imageInputRef.current?.click()}
                 >
                     {imageUrl ? (
-                        <Image src={imageUrl} alt="Hero background preview" fill className="object-cover rounded-md" />
+                        <Image src={imageUrl} alt="Hero background preview" fill className="object-cover rounded-md" data-ai-hint="abstract background" />
                     ) : (
                         <div className="text-center text-muted-foreground">
                             <Upload className="mx-auto h-12 w-12" />
@@ -211,6 +221,69 @@ const CollectionsForm = ({ control }: { control: any }) => {
     );
 };
 
+const ImageWithTextForm = ({ control, setValue, watch }: { control: any, setValue: any, watch: any }) => {
+    const imageUrl = watch('imageUrl');
+    const imageInputRef = useRef<HTMLInputElement>(null);
+
+    const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                setValue('imageUrl', e.target?.result as string, { shouldDirty: true });
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    return (
+        <div className="space-y-4">
+            <FormField
+                control={control}
+                name="title"
+                render={({ field }) => <FormItem><FormLabel>Title</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>}
+            />
+            <FormField
+                control={control}
+                name="text"
+                render={({ field }) => <FormItem><FormLabel>Text</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>}
+            />
+             <div>
+                <Label>Image</Label>
+                <div className="mt-2">
+                    <input type="file" ref={imageInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" />
+                    <div className="aspect-video w-full rounded-md border-2 border-dashed border-muted-foreground/40 flex items-center justify-center text-center cursor-pointer relative" onClick={() => imageInputRef.current?.click()}>
+                        {imageUrl ? <Image src={imageUrl} alt="Preview" fill className="object-cover rounded-md" data-ai-hint="lifestyle product" /> : <div className="text-center text-muted-foreground"><Upload className="mx-auto h-12 w-12" /><p className="mt-2">Click to upload</p></div>}
+                    </div>
+                </div>
+            </div>
+            <FormField
+                control={control}
+                name="buttonLabel"
+                render={({ field }) => <FormItem><FormLabel>Button Label</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>}
+            />
+            <FormField
+                control={control}
+                name="buttonHref"
+                render={({ field }) => <FormItem><FormLabel>Button Link</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>}
+            />
+             <FormField
+                control={control}
+                name="imagePosition"
+                render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Image Position</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                            <SelectContent><SelectItem value="left">Left</SelectItem><SelectItem value="right">Right</SelectItem></SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                )}
+            />
+        </div>
+    );
+};
 
 const SectionForm = ({ section, control, setValue, watch }: { section: PageSection, control: any, setValue: any, watch: any }) => {
     switch (section.type) {
@@ -220,6 +293,8 @@ const SectionForm = ({ section, control, setValue, watch }: { section: PageSecti
             return <FeaturedProductsForm control={control} watch={watch} />;
         case 'collections':
             return <CollectionsForm control={control} />;
+        case 'image-with-text':
+            return <ImageWithTextForm control={control} setValue={setValue} watch={watch}/>;
         default:
             return <p>This section type cannot be edited yet.</p>;
     }
@@ -239,10 +314,10 @@ export function EditSectionDrawer({ isOpen, onClose, section, onSave }: EditSect
             setIsLoading(true);
             try {
                 if (section.type === 'featured-products') {
-                    const [productsData] = await Promise.all([getProducts()]);
+                    const productsData = await getProducts();
                     setProducts(productsData);
                 } else if (section.type === 'collections') {
-                     const [categoriesData] = await Promise.all([getCategories()]);
+                    const categoriesData = await getCategories();
                     setCategories(categoriesData);
                 }
             } catch (error) {
@@ -251,8 +326,10 @@ export function EditSectionDrawer({ isOpen, onClose, section, onSave }: EditSect
                 setIsLoading(false);
             }
         }
-        loadData();
-    }, [section.type]);
+        if (isOpen) {
+          loadData();
+        }
+    }, [section.type, isOpen]);
 
     const watchedProps = form.watch();
 
@@ -281,7 +358,7 @@ export function EditSectionDrawer({ isOpen, onClose, section, onSave }: EditSect
                         <Label className="mb-2 text-sm font-medium">Controls</Label>
                         <div className="p-4 border rounded-lg overflow-y-auto">
                             <Form {...form}>
-                                <form onSubmit={form.handleSubmit(onSubmit)} id="section-edit-form">
+                                <form onSubmit={form.handleSubmit(onSubmit)} id="section-edit-form" className="space-y-6">
                                     <SectionForm section={section} control={form.control} setValue={form.setValue} watch={form.watch} />
                                 </form>
                             </Form>
@@ -290,8 +367,14 @@ export function EditSectionDrawer({ isOpen, onClose, section, onSave }: EditSect
                     <div className="flex flex-col">
                         <Label className="mb-2 text-sm font-medium">Live Preview</Label>
                         <div className="border rounded-lg overflow-y-auto relative bg-background">
-                           <div className="transform scale-[0.8] origin-top">
-                             <SectionPreview section={previewSection} products={products} categories={categories} />
+                           <div className="transform scale-[0.85] origin-top">
+                                {isLoading ? (
+                                    <div className="flex items-center justify-center h-48">
+                                        <p className="text-muted-foreground">Loading preview...</p>
+                                    </div>
+                                ) : (
+                                    <SectionPreview section={previewSection} products={products} categories={categories} />
+                                )}
                            </div>
                         </div>
                     </div>

@@ -10,7 +10,7 @@ type FaqItem = {
 }
 
 export const FaqSection = ({ section }: { section: PageSection }) => {
-    const { title, subtitle, items } = section.props;
+    const { title, subtitle, items = [] } = section.props;
     
     return (
         <section className="bg-background w-full py-12 md:py-24 lg:py-32">
@@ -25,7 +25,7 @@ export const FaqSection = ({ section }: { section: PageSection }) => {
                     <Accordion type="single" collapsible className="w-full">
                         {items.map((item: FaqItem, index: number) => (
                             <AccordionItem key={index} value={`item-${index}`}>
-                                <AccordionTrigger className="text-lg font-medium">{item.question}</AccordionTrigger>
+                                <AccordionTrigger className="text-lg font-medium text-left">{item.question}</AccordionTrigger>
                                 <AccordionContent className="text-base text-muted-foreground">
                                     {item.answer}
                                 </AccordionContent>

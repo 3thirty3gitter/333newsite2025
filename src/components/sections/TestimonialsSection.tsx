@@ -14,7 +14,7 @@ type Testimonial = {
 }
 
 export const TestimonialsSection = ({ section }: { section: PageSection }) => {
-    const { title, subtitle, testimonials } = section.props;
+    const { title, subtitle, testimonials = [] } = section.props;
     
     return (
         <section className="bg-muted/50 w-full py-12 md:py-24 lg:py-32">
