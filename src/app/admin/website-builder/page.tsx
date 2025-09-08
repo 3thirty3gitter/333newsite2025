@@ -172,6 +172,9 @@ export default function WebsiteBuilderPage() {
                                                         <SelectContent>
                                                             <SelectItem value="standard">Standard</SelectItem>
                                                             <SelectItem value="centered">Centered</SelectItem>
+                                                            <SelectItem value="split">Split Navigation</SelectItem>
+                                                            <SelectItem value="minimalist">Minimalist</SelectItem>
+                                                            <SelectItem value="logo-top">Logo Top / Nav Below</SelectItem>
                                                         </SelectContent>
                                                     </Select>
                                                     <FormMessage />

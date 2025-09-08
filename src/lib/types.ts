@@ -49,5 +49,5 @@ export type ThemeSettings = {
   logoUrl?: string;
   logoWidth?: number;
   menuItems?: MenuItem[];
-  headerType?: 'standard' | 'centered';
+  headerType?: 'standard' | 'centered' | 'split' | 'minimalist' | 'logo-top';
 };
