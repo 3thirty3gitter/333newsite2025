@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getThemeSettings, updateThemeSettings } from "@/lib/settings";
 import { MenuItem, PageSection, SectionType, ThemeSettings } from "@/lib/types";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { GripVertical, Plus, Trash2, Upload, LayoutTemplate } from "lucide-react";
+import { GripVertical, Plus, Trash2, Upload, LayoutTemplate, Pencil } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import * as z from 'zod';
@@ -22,6 +22,7 @@ import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { EditSectionDrawer } from "@/components/admin/EditSectionDrawer";
 
 const menuItemSchema = z.object({
     label: z.string().min(1, "Label is required"),
@@ -124,6 +125,7 @@ export default function WebsiteBuilderPage() {
     const [isSaving, startTransition] = useTransition();
     const [previewKey, setPreviewKey] = useState(0);
     const imageInputRef = useRef<HTMLInputElement>(null);
+    const [editingSection, setEditingSection] = useState<{ section: PageSection; index: number } | null>(null);
 
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
@@ -141,7 +143,7 @@ export default function WebsiteBuilderPage() {
         name: "menuItems",
     });
 
-    const { fields: sectionFields, append: appendSection, remove: removeSection } = useFieldArray({
+    const { fields: sectionFields, append: appendSection, remove: removeSection, update: updateSection } = useFieldArray({
       control: form.control,
       name: "sections",
     });
@@ -206,6 +208,12 @@ export default function WebsiteBuilderPage() {
       };
       appendSection(newSection);
     }
+
+    const handleSaveSection = (index: number, newProps: any) => {
+        const currentSection = form.getValues(`sections.${index}`);
+        updateSection(index, { ...currentSection, props: newProps });
+        setEditingSection(null);
+    }
     
     const logoUrl = form.watch('logoUrl');
 
@@ -229,6 +237,7 @@ export default function WebsiteBuilderPage() {
     }
 
   return (
+    <>
     <Form {...form}>
         <div className="h-full flex flex-col">
             <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col">
@@ -387,6 +396,10 @@ export default function WebsiteBuilderPage() {
                                                         <p className="font-medium capitalize">{field.type.replace('-', ' ')}</p>
                                                         <p className="text-xs text-muted-foreground">ID: {field.id}</p>
                                                     </div>
+                                                    <Button type="button" variant="outline" size="sm" onClick={() => setEditingSection({ section: field, index })}>
+                                                        <Pencil className="mr-2 h-3 w-3" />
+                                                        Edit
+                                                    </Button>
                                                     <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => removeSection(index)}>
                                                         <Trash2 className="h-4 w-4 text-destructive" />
                                                     </Button>
@@ -431,5 +444,15 @@ export default function WebsiteBuilderPage() {
             </form>
         </div>
     </Form>
+    
+    {editingSection && (
+        <EditSectionDrawer
+            isOpen={!!editingSection}
+            onClose={() => setEditingSection(null)}
+            section={editingSection.section}
+            onSave={(newProps) => handleSaveSection(editingSection.index, newProps)}
+        />
+    )}
+    </>
   );
 }
