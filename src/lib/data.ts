@@ -3,6 +3,7 @@ import { db, storage } from './firebase';
 import { collection, getDocs, addDoc, doc, getDoc, updateDoc, deleteDoc, query, where, writeBatch } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
 import type { Product, Collection } from './types';
+import { generateFilename } from '@/ai/flows/generate-filename';
 
 function toProduct(doc: any): Product {
     const data = doc.data();
@@ -20,16 +21,27 @@ function toProduct(doc: any): Product {
     } as Product;
 }
 
-export async function uploadImageAndGetURL(dataUrl: string, folder: string): Promise<string> {
-    const fileName = `${folder}/${Date.now()}-${Math.random().toString(36).substring(2)}.jpg`;
+export async function uploadImageAndGetURL(dataUrl: string, folder: string, fileNameContext?: string): Promise<string> {
+    
+    let fileName = `${folder}/${Date.now()}-${Math.random().toString(36).substring(2)}.jpg`;
+    
+    if (fileNameContext) {
+        try {
+            const result = await generateFilename({ context: fileNameContext });
+            if (result.filename) {
+                fileName = `${folder}/${result.filename}`;
+            }
+        } catch(e) {
+            console.error("Failed to generate filename, falling back to random.", e);
+        }
+    }
+    
     const storageRef = ref(storage, fileName);
     
-    // Upload the data URL string
     const snapshot = await uploadString(storageRef, dataUrl, 'data_url', {
         contentType: 'image/jpeg'
     });
 
-    // Get the download URL
     const downloadURL = await getDownloadURL(snapshot.ref);
     return downloadURL;
 }

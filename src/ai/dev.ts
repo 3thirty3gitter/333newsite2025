@@ -4,3 +4,4 @@ config();
 import '@/ai/flows/product-recommendations.ts';
 import '@/ai/flows/generate-collection-description.ts';
 import '@/ai/flows/generate-image.ts';
+import '@/ai/flows/generate-filename.ts';

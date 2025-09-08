@@ -24,7 +24,7 @@ import { generateImage } from '@/ai/flows/generate-image';
 interface GenerateImageDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onImageGenerated: (imageUrl: string) => void;
+  onImageGenerated: (imageUrl: string, prompt: string) => void;
   promptSuggestion?: string;
 }
 
@@ -47,14 +47,14 @@ export function GenerateImageDialog({ isOpen, onClose, onImageGenerated, promptS
     if (promptSuggestion) {
       form.setValue('prompt', promptSuggestion);
     }
-  }, [promptSuggestion, form]);
+  }, [promptSuggestion, form, isOpen]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsGenerating(true);
     try {
       const result = await generateImage({ prompt: values.prompt });
       if (result.imageUrl) {
-        onImageGenerated(result.imageUrl);
+        onImageGenerated(result.imageUrl, values.prompt);
         onClose();
         form.reset();
       } else {
@@ -74,10 +74,10 @@ export function GenerateImageDialog({ isOpen, onClose, onImageGenerated, promptS
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
-        if (!open) {
-            form.reset({ prompt: '' });
+        if (!isGenerating) {
+            form.reset({ prompt: promptSuggestion || '' });
+            onClose();
         }
-        onClose();
     }}>
       <DialogContent>
         <DialogHeader>

@@ -82,7 +82,7 @@ export default function EditCollectionPage() {
   }, [collectionId, form, toast, router]);
 
   
-  const processAndUploadImage = async (fileOrDataUrl: File | string) => {
+  const processAndUploadImage = async (fileOrDataUrl: File | string, context: string) => {
     setIsUploading(true);
     try {
         let dataUrl: string;
@@ -96,7 +96,7 @@ export default function EditCollectionPage() {
             });
         }
         
-        const uploadedUrl = await uploadImageAndGetURL(dataUrl, 'collections');
+        const uploadedUrl = await uploadImageAndGetURL(dataUrl, 'collections', context);
         setImagePreview(uploadedUrl);
         form.setValue('imageUrl', uploadedUrl, { shouldDirty: true });
 
@@ -110,14 +110,17 @@ export default function EditCollectionPage() {
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      processAndUploadImage(file);
+    const collectionName = form.getValues('name');
+    if (file && collectionName) {
+      processAndUploadImage(file, collectionName);
       event.target.value = '';
+    } else if (!collectionName) {
+        toast({ variant: "destructive", title: "Name required", description: "Please provide a collection name first." });
     }
   };
   
-  const handleGeneratedImage = (imageUrl: string) => {
-    processAndUploadImage(imageUrl);
+  const handleGeneratedImage = (imageUrl: string, prompt: string) => {
+    processAndUploadImage(imageUrl, prompt);
     toast({
         title: 'Image Generated',
         description: 'The AI-powered image will be uploaded.',
