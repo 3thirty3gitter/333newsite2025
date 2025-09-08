@@ -87,8 +87,8 @@ export default function EditCollectionPage() {
         const img = document.createElement('img');
         img.onload = () => {
           const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 400;
-          const MAX_HEIGHT = 300;
+          const MAX_WIDTH = 600;
+          const MAX_HEIGHT = 450;
           let width = img.width;
           let height = img.height;
 
