@@ -1,5 +1,5 @@
 import { db } from './firebase';
-import { collection, getDocs, addDoc, doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, getDoc, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
 import type { Product, Category } from './types';
 
 function toProduct(doc: any): Product {
@@ -69,4 +69,32 @@ export async function addCategory(category: Omit<Category, 'id'>): Promise<strin
     return docRef.id;
 }
 
+export async function updateCategory(id: string, newName: string): Promise<void> {
+    const docRef = doc(db, 'categories', id);
+    const oldCategorySnap = await getDoc(docRef);
+    if (!oldCategorySnap.exists()) {
+        throw new Error("Category not found");
+    }
+    const oldName = oldCategorySnap.data().name;
+
+    // Update category name
+    await updateDoc(docRef, { name: newName });
+
+    // Update products that use this category
+    const productsRef = collection(db, 'products');
+    const q = query(productsRef, where("category", "==", oldName));
+    const querySnapshot = await getDocs(q);
     
+    const batch = [];
+    querySnapshot.forEach((productDoc) => {
+        const productRef = doc(db, 'products', productDoc.id);
+        batch.push(updateDoc(productRef, { category: newName }));
+    });
+
+    await Promise.all(batch);
+}
+
+export async function deleteCategory(id: string): Promise<void> {
+  const docRef = doc(db, 'categories', id);
+  await deleteDoc(docRef);
+}

@@ -3,7 +3,6 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -15,8 +14,11 @@ const formSchema = z.object({
   name: z.string().min(2, 'Collection name must be at least 2 characters'),
 });
 
-export function AddCollectionForm() {
-  const router = useRouter();
+interface AddCollectionFormProps {
+    onCollectionAdded: () => void;
+}
+
+export function AddCollectionForm({ onCollectionAdded }: AddCollectionFormProps) {
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -34,7 +36,7 @@ export function AddCollectionForm() {
         description: `The collection "${values.name}" has been successfully created.`,
       });
       form.reset();
-      router.refresh(); // To show the new category in the list
+      onCollectionAdded(); // Callback to refresh the list
     } catch (error) {
       console.error('Failed to create collection:', error);
       toast({
