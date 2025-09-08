@@ -52,7 +52,7 @@ export const FeaturedProductsSection = ({ section, products: initialProducts }: 
             {section.props.subtitle}
           </p>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8 justify-center">
           {products.slice(0, productCount).map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
