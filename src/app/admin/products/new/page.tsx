@@ -12,8 +12,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, useForm
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, PlusCircle, Trash2, X, GripVertical, Upload, Image as ImageIcon } from 'lucide-react';
-import { addProduct, getCollections } from '@/lib/data';
+import { ArrowLeft, PlusCircle, Trash2, X, GripVertical, Upload, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { addProduct, getCollections, uploadImageAndGetURL } from '@/lib/data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import type { Collection } from '@/lib/types';
@@ -56,6 +56,7 @@ export default function NewProductPage() {
   const { toast } = useToast();
   const [collections, setCollections] = useState<Collection[]>([]);
   const [isLoadingCollections, setIsLoadingCollections] = useState(true);
+  const [isUploading, setIsUploading] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
 
@@ -157,51 +158,35 @@ export default function NewProductPage() {
     }
   };
 
-  const processAndSetImage = (file: File) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = document.createElement('img');
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 400;
-          const MAX_HEIGHT = 400;
-          let width = img.width;
-          let height = img.height;
+  const processAndUploadImage = async (file: File) => {
+    setIsUploading(true);
+    try {
+        const dataUrl = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target?.result as string);
+            reader.readAsDataURL(file);
+        });
+        
+        const uploadedUrl = await uploadImageAndGetURL(dataUrl, 'products');
 
-          if (width > height) {
-            if (width > MAX_WIDTH) {
-              height *= MAX_WIDTH / width;
-              width = MAX_WIDTH;
-            }
-          } else {
-            if (height > MAX_HEIGHT) {
-              width *= MAX_HEIGHT / height;
-              height = MAX_HEIGHT;
-            }
-          }
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx?.drawImage(img, 0, 0, width, height);
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-          
-          const currentImages = form.getValues('images') || [];
-          const newImages = [...currentImages, dataUrl];
+        const currentImages = form.getValues('images') || [];
+        const newImages = [...currentImages, uploadedUrl];
 
-          setImagePreviews(newImages);
-          form.setValue('images', newImages, { shouldDirty: true });
+        setImagePreviews(newImages);
+        form.setValue('images', newImages, { shouldDirty: true });
 
-        };
-        img.src = e.target?.result as string;
-      };
-      reader.readAsDataURL(file);
-  }
+    } catch (error) {
+        console.error("Image upload failed:", error);
+        toast({ variant: "destructive", title: "Upload Failed", description: "Could not upload the image." });
+    } finally {
+        setIsUploading(false);
+    }
+  };
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      processAndSetImage(file);
-      // Reset file input to allow uploading the same file again
+      processAndUploadImage(file);
       event.target.value = '';
     }
   };
@@ -485,7 +470,12 @@ export default function NewProductPage() {
                                                         className="aspect-square w-full rounded-md border-2 border-dashed border-muted-foreground/40 flex items-center justify-center text-center cursor-pointer"
                                                         onClick={() => imageInputRef.current?.click()}
                                                     >
-                                                        {imagePreviews[0] ? (
+                                                        {isUploading ? (
+                                                            <div className="text-center text-muted-foreground">
+                                                                <Loader2 className="mx-auto h-12 w-12 animate-spin" />
+                                                                <p className="mt-2">Uploading...</p>
+                                                            </div>
+                                                        ) : imagePreviews[0] ? (
                                                             <Image src={imagePreviews[0]} alt="Product preview" width={400} height={400} className="object-cover rounded-md" />
                                                         ) : (
                                                             <div className="text-center text-muted-foreground">
@@ -525,7 +515,7 @@ export default function NewProductPage() {
                 <Button type="button" variant="outline" onClick={() => router.back()}>
                 Cancel
                 </Button>
-                <Button type="submit" disabled={form.formState.isSubmitting}>
+                <Button type="submit" disabled={form.formState.isSubmitting || isUploading}>
                 {form.formState.isSubmitting ? 'Creating...' : 'Create Product'}
                 </Button>
             </div>

@@ -10,16 +10,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { Collection, PageSection, Product } from '@/lib/types';
 import Image from 'next/image';
-import { Upload } from 'lucide-react';
+import { Upload, Loader2 } from 'lucide-react';
 import { HeroSection } from '../sections/HeroSection';
 import { FeaturedProductsSection } from '../sections/FeaturedProductsSection';
 import { Slider } from '../ui/slider';
-import { getCollections, getProducts } from '@/lib/data';
+import { getCollections, getProducts, uploadImageAndGetURL } from '@/lib/data';
 import { CollectionsSection } from '../sections/CollectionsSection';
 import { FaqSection } from '../sections/FaqSection';
 import { ImageWithTextSection } from '../sections/ImageWithTextSection';
 import { TestimonialsSection } from '../sections/TestimonialsSection';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { useToast } from '@/hooks/use-toast';
 
 interface EditSectionDrawerProps {
   isOpen: boolean;
@@ -53,51 +54,37 @@ const SectionPreview = ({ section, products, collections }: { section: PageSecti
     }
 }
 
-const processImage = (file: File, callback: (dataUrl: string) => void) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        const img = document.createElement('img');
-        img.onload = () => {
-            const canvas = document.createElement('canvas');
-            const MAX_WIDTH = 1200;
-            const MAX_HEIGHT = 800;
-            let width = img.width;
-            let height = img.height;
+const processAndUploadImage = async (file: File, callback: (url: string) => void) => {
+    const dataUrl = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target?.result as string);
+        reader.readAsDataURL(file);
+    });
 
-            if (width > height) {
-                if (width > MAX_WIDTH) {
-                    height *= MAX_WIDTH / width;
-                    width = MAX_WIDTH;
-                }
-            } else {
-                if (height > MAX_HEIGHT) {
-                    width *= MAX_HEIGHT / height;
-                    height = MAX_HEIGHT;
-                }
-            }
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            ctx?.drawImage(img, 0, 0, width, height);
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-            callback(dataUrl);
-        };
-        img.src = e.target?.result as string;
-    };
-    reader.readAsDataURL(file);
+    const uploadedUrl = await uploadImageAndGetURL(dataUrl, 'sections');
+    callback(uploadedUrl);
 };
 
 
 const HeroForm = ({ control, setValue, watch }: { control: any, setValue: any, watch: any }) => {
     const imageUrl = watch('imageUrl');
     const imageInputRef = useRef<HTMLInputElement>(null);
+    const [isUploading, setIsUploading] = useState(false);
+    const { toast } = useToast();
 
-    const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (file) {
-            processImage(file, (dataUrl) => {
-                setValue('imageUrl', dataUrl, { shouldDirty: true });
-            });
+            setIsUploading(true);
+            try {
+                await processAndUploadImage(file, (url) => {
+                    setValue('imageUrl', url, { shouldDirty: true });
+                });
+            } catch (err) {
+                toast({ variant: 'destructive', title: 'Upload failed' });
+            } finally {
+                setIsUploading(false);
+            }
         }
     };
     
@@ -140,7 +127,9 @@ const HeroForm = ({ control, setValue, watch }: { control: any, setValue: any, w
                     className="aspect-video w-full rounded-md border-2 border-dashed border-muted-foreground/40 flex items-center justify-center text-center cursor-pointer relative"
                     onClick={() => imageInputRef.current?.click()}
                 >
-                    {imageUrl ? (
+                    {isUploading ? (
+                        <Loader2 className="h-8 w-8 animate-spin" />
+                    ) : imageUrl ? (
                         <Image src={imageUrl} alt="Hero background preview" fill className="object-cover rounded-md" data-ai-hint="abstract background" />
                     ) : (
                         <div className="text-center text-muted-foreground">
@@ -257,13 +246,22 @@ const CollectionsForm = ({ control }: { control: any }) => {
 const ImageWithTextForm = ({ control, setValue, watch }: { control: any, setValue: any, watch: any }) => {
     const imageUrl = watch('imageUrl');
     const imageInputRef = useRef<HTMLInputElement>(null);
+    const [isUploading, setIsUploading] = useState(false);
+    const { toast } = useToast();
 
-    const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (file) {
-             processImage(file, (dataUrl) => {
-                setValue('imageUrl', dataUrl, { shouldDirty: true });
-            });
+            setIsUploading(true);
+            try {
+                await processAndUploadImage(file, (url) => {
+                    setValue('imageUrl', url, { shouldDirty: true });
+                });
+            } catch (err) {
+                toast({ variant: 'destructive', title: 'Upload failed' });
+            } finally {
+                setIsUploading(false);
+            }
         }
     };
 
@@ -284,7 +282,13 @@ const ImageWithTextForm = ({ control, setValue, watch }: { control: any, setValu
                 <div className="mt-2">
                     <input type="file" ref={imageInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" />
                     <div className="aspect-video w-full rounded-md border-2 border-dashed border-muted-foreground/40 flex items-center justify-center text-center cursor-pointer relative" onClick={() => imageInputRef.current?.click()}>
-                        {imageUrl ? <Image src={imageUrl} alt="Preview" fill className="object-cover rounded-md" data-ai-hint="lifestyle product" /> : <div className="text-center text-muted-foreground"><Upload className="mx-auto h-12 w-12" /><p className="mt-2">Click to upload</p></div>}
+                        {isUploading ? (
+                            <Loader2 className="h-8 w-8 animate-spin" />
+                        ) : imageUrl ? (
+                            <Image src={imageUrl} alt="Preview" fill className="object-cover rounded-md" data-ai-hint="lifestyle product" />
+                        ) : (
+                            <div className="text-center text-muted-foreground"><Upload className="mx-auto h-12 w-12" /><p className="mt-2">Click to upload</p></div>
+                        )}
                     </div>
                 </div>
             </div>

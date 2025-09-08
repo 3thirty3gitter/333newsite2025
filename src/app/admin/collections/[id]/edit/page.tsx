@@ -12,8 +12,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Upload, Image as ImageIcon, Sparkles } from 'lucide-react';
-import { getCollectionById, updateCollection } from '@/lib/data';
+import { ArrowLeft, Upload, Image as ImageIcon, Sparkles, Loader2 } from 'lucide-react';
+import { getCollectionById, updateCollection, uploadImageAndGetURL } from '@/lib/data';
 import { useEffect, useState, useRef } from 'react';
 import type { Collection } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -36,6 +36,7 @@ export default function EditCollectionPage() {
   const [collection, setCollection] = useState<Collection | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const collectionId = params.id as string;
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -81,56 +82,45 @@ export default function EditCollectionPage() {
   }, [collectionId, form, toast, router]);
 
   
-  const processAndSetImage = (file: File) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = document.createElement('img');
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 600;
-          const MAX_HEIGHT = 450;
-          let width = img.width;
-          let height = img.height;
+  const processAndUploadImage = async (fileOrDataUrl: File | string) => {
+    setIsUploading(true);
+    try {
+        let dataUrl: string;
+        if (typeof fileOrDataUrl === 'string') {
+            dataUrl = fileOrDataUrl;
+        } else {
+            dataUrl = await new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target?.result as string);
+                reader.readAsDataURL(fileOrDataUrl);
+            });
+        }
+        
+        const uploadedUrl = await uploadImageAndGetURL(dataUrl, 'collections');
+        setImagePreview(uploadedUrl);
+        form.setValue('imageUrl', uploadedUrl, { shouldDirty: true });
 
-          if (width > height) {
-            if (width > MAX_WIDTH) {
-              height *= MAX_WIDTH / width;
-              width = MAX_WIDTH;
-            }
-          } else {
-            if (height > MAX_HEIGHT) {
-              width *= MAX_HEIGHT / height;
-              height = MAX_HEIGHT;
-            }
-          }
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx?.drawImage(img, 0, 0, width, height);
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-          
-          setImagePreview(dataUrl);
-          form.setValue('imageUrl', dataUrl, { shouldDirty: true });
-        };
-        img.src = e.target?.result as string;
-      };
-      reader.readAsDataURL(file);
-  }
+    } catch (error) {
+        console.error("Image upload failed:", error);
+        toast({ variant: "destructive", title: "Upload Failed", description: "Could not upload the image." });
+    } finally {
+        setIsUploading(false);
+    }
+  };
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      processAndSetImage(file);
+      processAndUploadImage(file);
       event.target.value = '';
     }
   };
   
   const handleGeneratedImage = (imageUrl: string) => {
-    setImagePreview(imageUrl);
-    form.setValue('imageUrl', imageUrl, { shouldDirty: true });
+    processAndUploadImage(imageUrl);
     toast({
         title: 'Image Generated',
-        description: 'The AI-powered image has been set.',
+        description: 'The AI-powered image will be uploaded.',
     });
   }
 
@@ -312,7 +302,12 @@ export default function EditCollectionPage() {
                                                         className="aspect-video w-full rounded-md border-2 border-dashed border-muted-foreground/40 flex items-center justify-center text-center cursor-pointer"
                                                         onClick={() => imageInputRef.current?.click()}
                                                     >
-                                                        {imagePreview ? (
+                                                        {isUploading ? (
+                                                            <div className="text-center text-muted-foreground">
+                                                                <Loader2 className="mx-auto h-12 w-12 animate-spin" />
+                                                                <p className="mt-2">Uploading...</p>
+                                                            </div>
+                                                        ) : imagePreview ? (
                                                             <NextImage src={imagePreview} alt="Collection preview" width={400} height={300} className="object-cover rounded-md" />
                                                         ) : (
                                                             <div className="text-center text-muted-foreground">
@@ -338,7 +333,7 @@ export default function EditCollectionPage() {
                 <Button type="button" variant="outline" onClick={() => router.back()}>
                     Cancel
                 </Button>
-                <Button type="submit" disabled={form.formState.isSubmitting || isGenerating}>
+                <Button type="submit" disabled={form.formState.isSubmitting || isGenerating || isUploading}>
                     {form.formState.isSubmitting ? 'Saving...' : 'Save Changes'}
                 </Button>
             </div>

@@ -1,6 +1,7 @@
 
-import { db } from './firebase';
+import { db, storage } from './firebase';
 import { collection, getDocs, addDoc, doc, getDoc, updateDoc, deleteDoc, query, where, writeBatch } from 'firebase/firestore';
+import { ref, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
 import type { Product, Collection } from './types';
 
 function toProduct(doc: any): Product {
@@ -17,6 +18,20 @@ function toProduct(doc: any): Product {
         ...data,
         images: images,
     } as Product;
+}
+
+export async function uploadImageAndGetURL(dataUrl: string, folder: string): Promise<string> {
+    const fileName = `${folder}/${Date.now()}-${Math.random().toString(36).substring(2)}.jpg`;
+    const storageRef = ref(storage, fileName);
+    
+    // Upload the data URL string
+    const snapshot = await uploadString(storageRef, dataUrl, 'data_url', {
+        contentType: 'image/jpeg'
+    });
+
+    // Get the download URL
+    const downloadURL = await getDownloadURL(snapshot.ref);
+    return downloadURL;
 }
 
 export async function getProducts(): Promise<Product[]> {

@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getThemeSettings, updateThemeSettings } from "@/lib/settings";
 import { MenuItem, Page, PageSection, SectionType, ThemeSettings } from "@/lib/types";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { GripVertical, Plus, Trash2, Upload, LayoutTemplate, Pencil, Home, File, Settings } from "lucide-react";
+import { GripVertical, Plus, Trash2, Upload, LayoutTemplate, Pencil, Home, File, Settings, Loader2 } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import * as z from 'zod';
@@ -25,6 +25,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { EditSectionDrawer } from "@/components/admin/EditSectionDrawer";
 import { cn } from "@/lib/utils";
 import { AddPageDialog } from "@/components/admin/AddPageDialog";
+import { uploadImageAndGetURL } from "@/lib/data";
 
 const menuItemSchema = z.object({
     label: z.string().min(1, "Label is required"),
@@ -139,6 +140,7 @@ export default function WebsiteBuilderPage() {
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, startTransition] = useTransition();
+    const [isUploading, setIsUploading] = useState(false);
     const [previewKey, setPreviewKey] = useState(0);
     const imageInputRef = useRef<HTMLInputElement>(null);
     const [editingSection, setEditingSection] = useState<{ pageIndex: number; section: PageSection; sectionIndex: number } | null>(null);
@@ -193,7 +195,6 @@ export default function WebsiteBuilderPage() {
     }, [form, toast]);
     
     const reloadPreview = (path: string = '/') => {
-        // A bit of a hack to force iframe reload. We could also send a message.
         const iframe = document.querySelector('iframe');
         if (iframe) {
             iframe.src = `${path}?_=${new Date().getTime()}`;
@@ -217,45 +218,30 @@ export default function WebsiteBuilderPage() {
         });
     }
 
-    const processAndSetImage = (file: File) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const img = document.createElement('img');
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                const MAX_WIDTH = 400;
-                const MAX_HEIGHT = 100;
-                let width = img.width;
-                let height = img.height;
+    const processAndUploadImage = async (file: File) => {
+      setIsUploading(true);
+      try {
+          const dataUrl = await new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onload = (e) => resolve(e.target?.result as string);
+              reader.readAsDataURL(file);
+          });
+          
+          const uploadedUrl = await uploadImageAndGetURL(dataUrl, 'logos');
+          form.setValue('logoUrl', uploadedUrl, { shouldDirty: true });
 
-                if (width > height) {
-                    if (width > MAX_WIDTH) {
-                        height *= MAX_WIDTH / width;
-                        width = MAX_WIDTH;
-                    }
-                } else {
-                    if (height > MAX_HEIGHT) {
-                        width *= MAX_HEIGHT / height;
-                        height = MAX_HEIGHT;
-                    }
-                }
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext('2d');
-                ctx?.drawImage(img, 0, 0, width, height);
-                const dataUrl = canvas.toDataURL('image/png', 0.7); // Use PNG for logos to preserve transparency
-                
-                form.setValue('logoUrl', dataUrl, { shouldDirty: true });
-            };
-            img.src = e.target?.result as string;
-        };
-        reader.readAsDataURL(file);
+      } catch (error) {
+          console.error("Image upload failed:", error);
+          toast({ variant: "destructive", title: "Upload Failed", description: "Could not upload the image." });
+      } finally {
+          setIsUploading(false);
+      }
     };
 
     const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (file) {
-            processAndSetImage(file);
+            processAndUploadImage(file);
         }
     };
     
@@ -322,7 +308,7 @@ export default function WebsiteBuilderPage() {
                        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                          <div className="flex items-center justify-between p-4 border-b">
                             <h1 className="text-xl font-headline font-bold">Website Editor</h1>
-                            <Button type="submit" disabled={isSaving}>
+                            <Button type="submit" disabled={isSaving || isUploading}>
                                 {isSaving ? 'Saving...' : 'Save Changes'}
                             </Button>
                          </div>
@@ -392,7 +378,12 @@ export default function WebsiteBuilderPage() {
                                                                 className="hidden"
                                                                 accept="image/*"
                                                             />
-                                                            {logoUrl ? (
+                                                            {isUploading ? (
+                                                                <div className="text-center text-muted-foreground">
+                                                                    <Loader2 className="mx-auto h-8 w-8 animate-spin" />
+                                                                    <p className="mt-2 text-sm">Uploading...</p>
+                                                                </div>
+                                                            ) : logoUrl ? (
                                                                 <Image src={logoUrl} alt="Logo preview" fill className="object-contain p-4" />
                                                             ) : (
                                                                 <div className="text-center text-muted-foreground p-4">
