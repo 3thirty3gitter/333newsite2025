@@ -9,9 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
 import { getThemeSettings, updateThemeSettings } from "@/lib/settings";
-import { MenuItem, ThemeSettings } from "@/lib/types";
+import { MenuItem, PageSection, ThemeSettings } from "@/lib/types";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { GripVertical, Plus, Trash2, Upload } from "lucide-react";
+import { GripVertical, Plus, Trash2, Upload, LayoutTemplate } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import * as z from 'zod';
@@ -26,11 +26,18 @@ const menuItemSchema = z.object({
     href: z.string().min(1, "URL is required"),
 });
 
+const pageSectionSchema = z.object({
+  id: z.string(),
+  type: z.string(),
+  props: z.record(z.any()),
+});
+
 const formSchema = z.object({
     logoUrl: z.string().optional(),
     logoWidth: z.number().min(20).max(300),
     menuItems: z.array(menuItemSchema),
     headerType: z.string().optional(),
+    sections: z.array(pageSectionSchema).optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -49,12 +56,18 @@ export default function WebsiteBuilderPage() {
             logoWidth: 140,
             menuItems: [],
             headerType: 'standard',
+            sections: [],
         },
     });
 
-    const { fields, append, remove } = useFieldArray({
+    const { fields: menuFields, append: appendMenu, remove: removeMenu } = useFieldArray({
         control: form.control,
         name: "menuItems",
+    });
+
+    const { fields: sectionFields, append: appendSection, remove: removeSection } = useFieldArray({
+      control: form.control,
+      name: "sections",
     });
 
     useEffect(() => {
@@ -67,6 +80,7 @@ export default function WebsiteBuilderPage() {
                     logoWidth: settings.logoWidth || 140,
                     menuItems: settings.menuItems || [{ label: 'Home', href: '/' }, { label: 'All Products', href: '/products' }],
                     headerType: settings.headerType || 'standard',
+                    sections: settings.sections || [],
                 });
             } catch (error) {
                 toast({ variant: 'destructive', title: 'Error', description: 'Could not load theme settings.' });
@@ -152,7 +166,7 @@ export default function WebsiteBuilderPage() {
                             </CardHeader>
                     </Card>
                     <div className="p-6 flex-1">
-                            <Accordion type="single" collapsible defaultValue="item-1" className="w-full">
+                            <Accordion type="multiple" defaultValue={['item-1']} className="w-full">
                                 <AccordionItem value="item-1">
                                     <AccordionTrigger className="font-semibold text-lg">Header</AccordionTrigger>
                                     <AccordionContent className="space-y-6 pt-4">
@@ -233,12 +247,12 @@ export default function WebsiteBuilderPage() {
                                         <div>
                                             <div className="flex items-center justify-between mb-2">
                                                 <Label>Navigation Menu</Label>
-                                                <Button type="button" size="sm" variant="outline" onClick={() => append({ label: '', href: '' })}>
+                                                <Button type="button" size="sm" variant="outline" onClick={() => appendMenu({ label: '', href: '' })}>
                                                     <Plus className="mr-2 h-4 w-4" /> Add Link
                                                 </Button>
                                             </div>
                                             <div className="space-y-3">
-                                                {fields.map((field, index) => (
+                                                {menuFields.map((field, index) => (
                                                     <Card key={field.id} className="p-3">
                                                          <div className="flex items-start gap-2">
                                                             <GripVertical className="h-5 w-5 text-muted-foreground mt-8 cursor-grab" />
@@ -266,7 +280,7 @@ export default function WebsiteBuilderPage() {
                                                                     )}
                                                                 />
                                                             </div>
-                                                            <Button type="button" variant="ghost" size="icon" className="h-8 w-8 mt-6" onClick={() => remove(index)}>
+                                                            <Button type="button" variant="ghost" size="icon" className="h-8 w-8 mt-6" onClick={() => removeMenu(index)}>
                                                                 <Trash2 className="h-4 w-4 text-destructive" />
                                                             </Button>
                                                         </div>
@@ -276,6 +290,32 @@ export default function WebsiteBuilderPage() {
                                         </div>
 
                                     </AccordionContent>
+                                </AccordionItem>
+                                <AccordionItem value="item-2">
+                                  <AccordionTrigger className="font-semibold text-lg">Page Sections</AccordionTrigger>
+                                  <AccordionContent className="space-y-6 pt-4">
+                                      <div className="space-y-3">
+                                          {sectionFields.map((field, index) => (
+                                            <Card key={field.id} className="p-3">
+                                                <div className="flex items-center gap-3">
+                                                    <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab" />
+                                                    <div className="flex-1">
+                                                        <p className="font-medium capitalize">{field.type.replace('-', ' ')}</p>
+                                                        <p className="text-xs text-muted-foreground">ID: {field.id}</p>
+                                                    </div>
+                                                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8">
+                                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                                    </Button>
+                                                </div>
+                                            </Card>
+                                          ))}
+                                      </div>
+
+                                      <Button type="button" variant="outline" className="w-full">
+                                        <Plus className="mr-2 h-4 w-4" /> Add Section
+                                      </Button>
+
+                                  </AccordionContent>
                                 </AccordionItem>
                             </Accordion>
                     </div>

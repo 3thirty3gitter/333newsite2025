@@ -1,4 +1,5 @@
 
+
 export type Product = {
   id: string;
   name: string;
@@ -42,6 +43,14 @@ export type MenuItem = {
   href: string;
 };
 
+export type PageSection = {
+  id: string;
+  type: 'hero' | 'featured-products';
+  props: {
+    [key: string]: any;
+  };
+}
+
 export type ThemeSettings = {
   palette: string;
   headlineFont: string;
@@ -50,4 +59,5 @@ export type ThemeSettings = {
   logoWidth?: number;
   menuItems?: MenuItem[];
   headerType?: 'standard' | 'centered' | 'split' | 'minimalist' | 'logo-top';
+  sections?: PageSection[];
 };
