@@ -3,7 +3,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetClose } from '@/components/ui/sheet';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
@@ -135,27 +135,27 @@ export function EditSectionDrawer({ isOpen, onClose, section, onSave }: EditSect
     };
 
     return (
-        <Sheet open={isOpen} onOpenChange={onClose}>
-            <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto">
+        <Dialog open={isOpen} onOpenChange={onClose}>
+            <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
                 <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full">
-                        <SheetHeader>
-                            <SheetTitle>Edit Section: <span className="capitalize">{section.type.replace('-', ' ')}</span></SheetTitle>
-                        </SheetHeader>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col">
+                        <DialogHeader>
+                            <DialogTitle>Edit Section: <span className="capitalize">{section.type.replace('-', ' ')}</span></DialogTitle>
+                        </DialogHeader>
 
-                        <div className="flex-1 py-6">
+                        <div className="py-6">
                             <SectionForm section={section} control={form.control} setValue={form.setValue} watch={form.watch} />
                         </div>
                         
-                        <SheetFooter>
-                            <SheetClose asChild>
+                        <DialogFooter>
+                            <DialogClose asChild>
                                 <Button type="button" variant="outline">Cancel</Button>
-                            </SheetClose>
+                            </DialogClose>
                             <Button type="submit">Save Changes</Button>
-                        </SheetFooter>
+                        </DialogFooter>
                     </form>
                 </Form>
-            </SheetContent>
-        </Sheet>
+            </DialogContent>
+        </Dialog>
     );
 }
