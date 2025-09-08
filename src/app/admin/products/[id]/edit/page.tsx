@@ -12,10 +12,10 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, PlusCircle, Trash2, X, GripVertical, Upload, Image as ImageIcon } from 'lucide-react';
-import { getCategories, getProductById, updateProduct, deleteProduct } from '@/lib/data';
+import { getCollections, getProductById, updateProduct, deleteProduct } from '@/lib/data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useEffect, useState, useMemo, useRef } from 'react';
-import type { Category, Product } from '@/lib/types';
+import type { Collection, Product } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -56,8 +56,8 @@ export default function EditProductPage() {
   const params = useParams();
   const { toast } = useToast();
   const [product, setProduct] = useState<Product | null>(null);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
+  const [collections, setCollections] = useState<Collection[]>([]);
+  const [isLoadingCollections, setIsLoadingCollections] = useState(true);
   const [isLoadingProduct, setIsLoadingProduct] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
@@ -83,11 +83,11 @@ export default function EditProductPage() {
     async function fetchData() {
       if (!productId) return;
       setIsLoadingProduct(true);
-      setIsLoadingCategories(true);
+      setIsLoadingCollections(true);
       try {
-        const [fetchedProduct, fetchedCategories] = await Promise.all([
+        const [fetchedProduct, fetchedCollections] = await Promise.all([
           getProductById(productId),
-          getCategories()
+          getCollections()
         ]);
         
         if (fetchedProduct) {
@@ -112,13 +112,13 @@ export default function EditProductPage() {
           toast({ variant: 'destructive', title: 'Error', description: 'Product not found.' });
           router.push('/admin/products');
         }
-        setCategories(fetchedCategories);
+        setCollections(fetchedCollections);
       } catch (error) {
         console.error("Failed to fetch data", error);
         toast({ variant: 'destructive', title: 'Error', description: 'Could not load product data.' });
       } finally {
         setIsLoadingProduct(false);
-        setIsLoadingCategories(false);
+        setIsLoadingCollections(false);
       }
     }
     fetchData();
@@ -399,17 +399,17 @@ export default function EditProductPage() {
                                 name="category"
                                 render={({ field }) => (
                                     <FormItem>
-                                    <FormLabel>Category</FormLabel>
-                                    <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingCategories}>
+                                    <FormLabel>Collection</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingCollections}>
                                         <FormControl>
                                         <SelectTrigger>
-                                            <SelectValue placeholder="Select a category" />
+                                            <SelectValue placeholder="Select a collection" />
                                         </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
-                                        {categories.map((category) => (
-                                            <SelectItem key={category.id} value={category.name}>
-                                            {category.name}
+                                        {collections.map((collection) => (
+                                            <SelectItem key={collection.id} value={collection.name}>
+                                            {collection.name}
                                             </SelectItem>
                                         ))}
                                         </SelectContent>

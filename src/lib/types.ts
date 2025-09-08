@@ -33,7 +33,7 @@ export type CartItem = {
   variant?: VariantOption;
 };
 
-export type Category = {
+export type Collection = {
   id: string;
   name: string;
   description?: string;

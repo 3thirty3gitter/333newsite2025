@@ -13,9 +13,9 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Upload, Image as ImageIcon, Sparkles } from 'lucide-react';
-import { getCategoryById, updateCategory } from '@/lib/data';
+import { getCollectionById, updateCollection } from '@/lib/data';
 import { useEffect, useState, useRef } from 'react';
-import type { Category } from '@/lib/types';
+import type { Collection } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import NextImage from 'next/image';
 import { generateCollectionDescription } from '@/ai/flows/generate-collection-description';
@@ -33,10 +33,10 @@ export default function EditCollectionPage() {
   const router = useRouter();
   const params = useParams();
   const { toast } = useToast();
-  const [collection, setCollection] = useState<Category | null>(null);
+  const [collection, setCollection] = useState<Collection | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
-  const categoryId = params.id as string;
+  const collectionId = params.id as string;
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isImageGeneratorOpen, setIsImageGeneratorOpen] = useState(false);
@@ -52,10 +52,10 @@ export default function EditCollectionPage() {
 
   useEffect(() => {
     async function fetchData() {
-      if (!categoryId) return;
+      if (!collectionId) return;
       setIsLoading(true);
       try {
-        const fetchedCollection = await getCategoryById(categoryId);
+        const fetchedCollection = await getCollectionById(collectionId);
         
         if (fetchedCollection) {
           setCollection(fetchedCollection);
@@ -78,7 +78,7 @@ export default function EditCollectionPage() {
       }
     }
     fetchData();
-  }, [categoryId, form, toast, router]);
+  }, [collectionId, form, toast, router]);
 
   
   const processAndSetImage = (file: File) => {
@@ -169,7 +169,7 @@ export default function EditCollectionPage() {
 
   async function onSubmit(values: FormValues) {
     try {
-      await updateCategory(categoryId, values);
+      await updateCollection(collectionId, values);
       toast({
         title: 'Collection Updated',
         description: `The collection "${values.name}" has been successfully updated.`,

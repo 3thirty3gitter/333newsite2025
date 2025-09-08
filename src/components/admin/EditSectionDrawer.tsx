@@ -8,13 +8,13 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import type { Category, PageSection, Product } from '@/lib/types';
+import type { Collection, PageSection, Product } from '@/lib/types';
 import Image from 'next/image';
 import { Upload } from 'lucide-react';
 import { HeroSection } from '../sections/HeroSection';
 import { FeaturedProductsSection } from '../sections/FeaturedProductsSection';
 import { Slider } from '../ui/slider';
-import { getCategories, getProducts } from '@/lib/data';
+import { getCollections, getProducts } from '@/lib/data';
 import { CollectionsSection } from '../sections/CollectionsSection';
 import { FaqSection } from '../sections/FaqSection';
 import { ImageWithTextSection } from '../sections/ImageWithTextSection';
@@ -30,14 +30,14 @@ interface EditSectionDrawerProps {
   onSave: (newProps: any) => void;
 }
 
-const SectionPreview = ({ section, products, categories }: { section: PageSection, products: Product[], categories: Category[] }) => {
+const SectionPreview = ({ section, products, collections }: { section: PageSection, products: Product[], collections: Collection[] }) => {
     switch (section.type) {
         case 'hero':
             return <HeroSection section={section} />;
         case 'featured-products':
             return <FeaturedProductsSection section={section} products={products} />;
         case 'collections':
-            return <CollectionsSection section={section} categories={categories} />;
+            return <CollectionsSection section={section} collections={collections} />;
         case 'faq':
             return <FaqSection section={section} />;
         case 'image-with-text':
@@ -306,7 +306,7 @@ export function EditSectionDrawer({ isOpen, onClose, section, onSave }: EditSect
     });
     
     const [products, setProducts] = useState<Product[]>([]);
-    const [categories, setCategories] = useState<Category[]>([]);
+    const [collections, setCollections] = useState<Collection[]>([]);
     const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
@@ -317,8 +317,8 @@ export function EditSectionDrawer({ isOpen, onClose, section, onSave }: EditSect
                     const productsData = await getProducts();
                     setProducts(productsData);
                 } else if (section.type === 'collections') {
-                    const categoriesData = await getCategories();
-                    setCategories(categoriesData);
+                    const collectionsData = await getCollections();
+                    setCollections(collectionsData);
                 }
             } catch (error) {
                 console.error("Failed to load data for section preview", error);
@@ -373,7 +373,7 @@ export function EditSectionDrawer({ isOpen, onClose, section, onSave }: EditSect
                                         <p className="text-muted-foreground">Loading preview...</p>
                                     </div>
                                 ) : (
-                                    <SectionPreview section={previewSection} products={products} categories={categories} />
+                                    <SectionPreview section={previewSection} products={products} collections={collections} />
                                 )}
                            </div>
                         </div>

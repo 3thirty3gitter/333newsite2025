@@ -1,11 +1,11 @@
 'use client';
 
-import { getCategories, deleteCategory } from "@/lib/data";
+import { getCollections, deleteCollection } from "@/lib/data";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AddCollectionForm } from "@/components/admin/AddCollectionForm";
 import { useEffect, useState } from "react";
-import type { Category } from "@/lib/types";
+import type { Collection } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Edit, Trash2 } from "lucide-react";
@@ -15,14 +15,14 @@ import Link from "next/link";
 import Image from "next/image";
 
 export default function CollectionsPage() {
-  const [collections, setCollections] = useState<Category[]>([]);
+  const [collections, setCollections] = useState<Collection[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [deletingCollection, setDeletingCollection] = useState<Category | null>(null);
+  const [deletingCollection, setDeletingCollection] = useState<Collection | null>(null);
   const { toast } = useToast();
 
   const fetchCollections = async () => {
     setIsLoading(true);
-    const fetchedCollections = await getCategories();
+    const fetchedCollections = await getCollections();
     setCollections(fetchedCollections);
     setIsLoading(false);
   };
@@ -34,7 +34,7 @@ export default function CollectionsPage() {
   const handleDelete = async () => {
     if (!deletingCollection) return;
     try {
-      await deleteCategory(deletingCollection.id);
+      await deleteCollection(deletingCollection.id);
       toast({ title: "Success", description: "Collection deleted successfully." });
       setDeletingCollection(null);
       fetchCollections();
@@ -70,19 +70,19 @@ export default function CollectionsPage() {
                       <TableCell colSpan={3} className="text-center text-muted-foreground">Loading...</TableCell>
                     </TableRow>
                   ) : collections.length > 0 ? (
-                    collections.map((category) => (
-                      <TableRow key={category.id}>
+                    collections.map((collection) => (
+                      <TableRow key={collection.id}>
                         <TableCell className="hidden sm:table-cell">
                            <Image
-                              alt={category.name}
+                              alt={collection.name}
                               className="aspect-square rounded-md object-cover"
                               height="48"
-                              src={category.imageUrl || `https://picsum.photos/48/48?random=${category.id}`}
+                              src={collection.imageUrl || `https://picsum.photos/48/48?random=${collection.id}`}
                               width="48"
                               data-ai-hint="collection image"
                             />
                         </TableCell>
-                        <TableCell className="font-medium">{category.name}</TableCell>
+                        <TableCell className="font-medium">{collection.name}</TableCell>
                         <TableCell>
                            <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
@@ -93,12 +93,12 @@ export default function CollectionsPage() {
                                 <DropdownMenuContent>
                                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                     <DropdownMenuItem asChild>
-                                      <Link href={`/admin/collections/${category.id}/edit`}>
+                                      <Link href={`/admin/collections/${collection.id}/edit`}>
                                         <Edit className="mr-2 h-4 w-4" />
                                         <span>Edit</span>
                                       </Link>
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem onSelect={() => setDeletingCollection(category)} className="text-destructive">
+                                    <DropdownMenuItem onSelect={() => setDeletingCollection(collection)} className="text-destructive">
                                         <Trash2 className="mr-2 h-4 w-4" />
                                         <span>Delete</span>
                                     </DropdownMenuItem>

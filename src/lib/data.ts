@@ -1,6 +1,6 @@
 import { db } from './firebase';
 import { collection, getDocs, addDoc, doc, getDoc, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
-import type { Product, Category } from './types';
+import type { Product, Collection } from './types';
 
 function toProduct(doc: any): Product {
     const data = doc.data();
@@ -56,35 +56,35 @@ export async function deleteProduct(id: string): Promise<void> {
   await deleteDoc(docRef);
 }
 
-export async function getCategories(): Promise<Category[]> {
+export async function getCollections(): Promise<Collection[]> {
     const categoriesCol = collection(db, 'categories');
     const categorySnapshot = await getDocs(categoriesCol);
-    const categoryList = categorySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category));
+    const categoryList = categorySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Collection));
     return categoryList.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-export async function getCategoryById(id: string): Promise<Category | null> {
+export async function getCollectionById(id: string): Promise<Collection | null> {
   const docRef = doc(db, 'categories', id);
   const docSnap = await getDoc(docRef);
 
   if (docSnap.exists()) {
-    return { id: docSnap.id, ...docSnap.data() } as Category;
+    return { id: docSnap.id, ...docSnap.data() } as Collection;
   } else {
     return null;
   }
 }
 
-export async function addCategory(category: Omit<Category, 'id'>): Promise<string> {
+export async function addCollection(category: Omit<Collection, 'id'>): Promise<string> {
     const categoriesCol = collection(db, 'categories');
     const docRef = await addDoc(categoriesCol, category);
     return docRef.id;
 }
 
-export async function updateCategory(id: string, categoryData: Partial<Omit<Category, 'id'>>): Promise<void> {
+export async function updateCollection(id: string, categoryData: Partial<Omit<Collection, 'id'>>): Promise<void> {
     const docRef = doc(db, 'categories', id);
     const oldCategorySnap = await getDoc(docRef);
     if (!oldCategorySnap.exists()) {
-        throw new Error("Category not found");
+        throw new Error("Collection not found");
     }
     const oldName = oldCategorySnap.data().name;
     const newName = categoryData.name;
@@ -108,7 +108,7 @@ export async function updateCategory(id: string, categoryData: Partial<Omit<Cate
     }
 }
 
-export async function deleteCategory(id: string): Promise<void> {
+export async function deleteCollection(id: string): Promise<void> {
   const docRef = doc(db, 'categories', id);
   await deleteDoc(docRef);
 }

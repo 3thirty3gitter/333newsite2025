@@ -1,9 +1,9 @@
 
 'use client';
 
-import { getCategories } from '@/lib/data';
+import { getCollections } from '@/lib/data';
 import { Button } from '../ui/button';
-import type { Category, PageSection } from '@/lib/types';
+import type { Collection, PageSection } from '@/lib/types';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Card, CardContent } from '../ui/card';
@@ -12,22 +12,22 @@ import { Skeleton } from '../ui/skeleton';
 
 type CollectionsSectionProps = {
   section: PageSection;
-  categories?: Category[]; // Optional categories prop
+  collections?: Collection[]; // Optional collections prop
 };
 
-export const CollectionsSection = ({ section, categories: initialCategories }: CollectionsSectionProps) => {
-  const [categories, setCategories] = useState<Category[]>(initialCategories || []);
-  const [isLoading, setIsLoading] = useState(!initialCategories);
+export const CollectionsSection = ({ section, collections: initialCollections }: CollectionsSectionProps) => {
+  const [collections, setCollections] = useState<Collection[]>(initialCollections || []);
+  const [isLoading, setIsLoading] = useState(!initialCollections);
 
   useEffect(() => {
-    if (!initialCategories) {
+    if (!initialCollections) {
       setIsLoading(true);
-      getCategories()
-        .then(setCategories)
+      getCollections()
+        .then(setCollections)
         .catch(console.error)
         .finally(() => setIsLoading(false));
     }
-  }, [initialCategories]);
+  }, [initialCollections]);
 
   if (isLoading) {
     return (
@@ -53,11 +53,11 @@ export const CollectionsSection = ({ section, categories: initialCategories }: C
           </p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8 justify-center">
-          {categories.map((category) => (
-            <Link key={category.id} href={`/collections/${category.name.toLowerCase().replace(/ /g, '-')}`} className="block group">
+          {collections.map((collection) => (
+            <Link key={collection.id} href={`/collections/${collection.name.toLowerCase().replace(/ /g, '-')}`} className="block group">
                 <Card className="overflow-hidden h-full transition-all hover:shadow-lg hover:-translate-y-1">
                     <CardContent className="p-6 flex flex-col items-center justify-center text-center h-full min-h-[150px]">
-                        <h3 className="text-xl font-headline font-semibold mb-2">{category.name}</h3>
+                        <h3 className="text-xl font-headline font-semibold mb-2">{collection.name}</h3>
                         <p className="text-sm text-primary flex items-center gap-2">
                             Shop Now <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                         </p>

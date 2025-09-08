@@ -12,10 +12,10 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, PlusCircle, Trash2, X, GripVertical, Upload, Image as ImageIcon } from 'lucide-react';
-import { addProduct, getCategories } from '@/lib/data';
+import { addProduct, getCollections } from '@/lib/data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import type { Category } from '@/lib/types';
+import type { Collection } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -53,28 +53,28 @@ type FormValues = z.infer<typeof formSchema>;
 export default function NewProductPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
+  const [collections, setCollections] = useState<Collection[]>([]);
+  const [isLoadingCollections, setIsLoadingCollections] = useState(true);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
 
   useEffect(() => {
-    async function fetchCategories() {
+    async function fetchCollections() {
       try {
-        const fetchedCategories = await getCategories();
-        setCategories(fetchedCategories);
+        const fetchedCollections = await getCollections();
+        setCollections(fetchedCollections);
       } catch (error) {
-        console.error("Failed to fetch categories", error);
+        console.error("Failed to fetch collections", error);
         toast({
             variant: 'destructive',
             title: 'Error',
-            description: 'Could not load categories.',
+            description: 'Could not load collections.',
         });
       } finally {
-        setIsLoadingCategories(false);
+        setIsLoadingCollections(false);
       }
     }
-    fetchCategories();
+    fetchCollections();
   }, [toast]);
 
   const form = useForm<FormValues>({
@@ -303,17 +303,17 @@ export default function NewProductPage() {
                                 name="category"
                                 render={({ field }) => (
                                     <FormItem>
-                                    <FormLabel>Category</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingCategories}>
+                                    <FormLabel>Collection</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingCollections}>
                                         <FormControl>
                                         <SelectTrigger>
-                                            <SelectValue placeholder="Select a category" />
+                                            <SelectValue placeholder="Select a collection" />
                                         </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
-                                        {categories.map((category) => (
-                                            <SelectItem key={category.id} value={category.name}>
-                                            {category.name}
+                                        {collections.map((collection) => (
+                                            <SelectItem key={collection.id} value={collection.name}>
+                                            {collection.name}
                                             </SelectItem>
                                         ))}
                                         </SelectContent>

@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { addCategory } from '@/lib/data';
+import { addCollection } from '@/lib/data';
 
 const formSchema = z.object({
   name: z.string().min(2, 'Collection name must be at least 2 characters'),
@@ -30,7 +30,7 @@ export function AddCollectionForm({ onCollectionAdded }: AddCollectionFormProps)
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
-      await addCategory({ name: values.name });
+      await addCollection({ name: values.name });
       toast({
         title: 'Collection Created',
         description: `The collection "${values.name}" has been successfully created.`,
