@@ -220,12 +220,11 @@ export default function WebsiteBuilderPage() {
     if (isLoading) {
         return (
              <div className="h-full flex flex-col">
-                 <div className="flex items-center justify-between mb-4">
-                    <h1 className="text-3xl font-headline font-bold">Website Editor</h1>
-                 </div>
-                 <div className="flex-1 grid grid-cols-1 md:grid-cols-[380px_1fr] gap-6 border bg-background rounded-lg shadow-sm overflow-hidden">
-                    <div className="p-6">
+                <div className="flex-1 grid grid-cols-1 md:grid-cols-[380px_1fr] gap-6 border bg-background rounded-lg shadow-sm overflow-hidden">
+                    <div className="p-6 border-b">
                         <Skeleton className="h-8 w-1/2 mb-4" />
+                    </div>
+                    <div className="p-6">
                         <Skeleton className="h-20 w-full" />
                     </div>
                     <div className="bg-muted/40 h-full flex items-center justify-center p-4">
@@ -241,192 +240,188 @@ export default function WebsiteBuilderPage() {
     <Form {...form}>
         <div className="h-full flex flex-col">
             <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col">
-                <div className="flex items-center justify-between mb-4">
-                    <h1 className="text-3xl font-headline font-bold">Website Editor</h1>
-                    <Button type="submit" disabled={isSaving}>
-                        {isSaving ? 'Saving...' : 'Save Changes'}
-                    </Button>
-                </div>
                 <div className="flex-1 grid grid-cols-1 md:grid-cols-[380px_1fr] gap-6 border bg-background rounded-lg shadow-sm overflow-hidden">
                     {/* Left Panel: Tools */}
-                    <div className="flex flex-col h-full overflow-y-auto">
-                    <Card className="rounded-none border-0 border-b shadow-none">
-                            <CardHeader>
-                                <CardTitle>Editor Controls</CardTitle>
-                                <CardDescription>
-                                    Adjust your website's appearance.
-                                </CardDescription>
-                            </CardHeader>
-                    </Card>
-                    <div className="p-6 flex-1">
-                            <Accordion type="multiple" defaultValue={['item-1', 'item-2']} className="w-full">
-                                <AccordionItem value="item-1">
-                                    <AccordionTrigger className="font-semibold text-lg">Header</AccordionTrigger>
-                                    <AccordionContent className="space-y-6 pt-4">
-                                        
-                                        <FormField
-                                            control={form.control}
-                                            name="headerType"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Header Style</FormLabel>
-                                                    <Select onValueChange={field.onChange} value={field.value}>
-                                                        <FormControl>
-                                                        <SelectTrigger>
-                                                            <SelectValue placeholder="Select a header style" />
-                                                        </SelectTrigger>
-                                                        </FormControl>
-                                                        <SelectContent>
-                                                            <SelectItem value="standard">Standard</SelectItem>
-                                                            <SelectItem value="centered">Centered</SelectItem>
-                                                            <SelectItem value="split">Split Navigation</SelectItem>
-                                                            <SelectItem value="minimalist">Minimalist</SelectItem>
-                                                            <SelectItem value="logo-top">Logo Top / Nav Below</SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
+                    <div className="flex flex-col h-full">
+                       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+                         <div className="flex items-center justify-between p-4 border-b">
+                            <h1 className="text-xl font-headline font-bold">Website Editor</h1>
+                            <Button type="submit" disabled={isSaving}>
+                                {isSaving ? 'Saving...' : 'Save Changes'}
+                            </Button>
+                         </div>
+                       </div>
+                       <div className="flex-1 overflow-y-auto">
+                            <div className="p-6">
+                                <Accordion type="multiple" defaultValue={['item-1', 'item-2']} className="w-full">
+                                    <AccordionItem value="item-1">
+                                        <AccordionTrigger className="font-semibold text-lg">Header</AccordionTrigger>
+                                        <AccordionContent className="space-y-6 pt-4">
+                                            
+                                            <FormField
+                                                control={form.control}
+                                                name="headerType"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Header Style</FormLabel>
+                                                        <Select onValueChange={field.onChange} value={field.value}>
+                                                            <FormControl>
+                                                            <SelectTrigger>
+                                                                <SelectValue placeholder="Select a header style" />
+                                                            </SelectTrigger>
+                                                            </FormControl>
+                                                            <SelectContent>
+                                                                <SelectItem value="standard">Standard</SelectItem>
+                                                                <SelectItem value="centered">Centered</SelectItem>
+                                                                <SelectItem value="split">Split Navigation</SelectItem>
+                                                                <SelectItem value="minimalist">Minimalist</SelectItem>
+                                                                <SelectItem value="logo-top">Logo Top / Nav Below</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
 
-                                        <div>
-                                            <Label>Logo</Label>
-                                            <Card className="mt-2">
-                                                <CardContent className="p-4">
-                                                    <div className="aspect-video w-full rounded-md border-2 border-dashed border-muted-foreground/40 flex items-center justify-center text-center cursor-pointer relative"
-                                                         onClick={() => imageInputRef.current?.click()}
-                                                    >
-                                                        <input
-                                                            type="file"
-                                                            ref={imageInputRef}
-                                                            onChange={handleLogoUpload}
-                                                            className="hidden"
-                                                            accept="image/*"
-                                                        />
-                                                        {logoUrl ? (
-                                                            <Image src={logoUrl} alt="Logo preview" fill className="object-contain p-4" />
-                                                        ) : (
-                                                            <div className="text-center text-muted-foreground p-4">
-                                                                <Upload className="mx-auto h-8 w-8" />
-                                                                <p className="mt-2 text-sm">Click to upload logo</p>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </CardContent>
-                                            </Card>
-                                        </div>
-
-                                        <FormField
-                                            control={form.control}
-                                            name="logoWidth"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Logo Width: {field.value}px</FormLabel>
-                                                    <FormControl>
-                                                        <Slider
-                                                            value={[field.value]}
-                                                            onValueChange={(value) => field.onChange(value[0])}
-                                                            min={20}
-                                                            max={300}
-                                                            step={5}
-                                                        />
-                                                    </FormControl>
-                                                </FormItem>
-                                            )}
-                                        />
-
-                                        <Separator />
-
-                                        <div>
-                                            <div className="flex items-center justify-between mb-2">
-                                                <Label>Navigation Menu</Label>
-                                                <Button type="button" size="sm" variant="outline" onClick={() => appendMenu({ label: '', href: '' })}>
-                                                    <Plus className="mr-2 h-4 w-4" /> Add Link
-                                                </Button>
-                                            </div>
-                                            <div className="space-y-3">
-                                                {menuFields.map((field, index) => (
-                                                    <Card key={field.id} className="p-3">
-                                                         <div className="flex items-start gap-2">
-                                                            <GripVertical className="h-5 w-5 text-muted-foreground mt-8 cursor-grab" />
-                                                            <div className="flex-1 space-y-2">
-                                                                <FormField
-                                                                    control={form.control}
-                                                                    name={`menuItems.${index}.label`}
-                                                                    render={({ field }) => (
-                                                                        <FormItem>
-                                                                            <FormLabel className="text-xs">Label</FormLabel>
-                                                                            <FormControl><Input {...field} placeholder="e.g., Home" /></FormControl>
-                                                                            <FormMessage />
-                                                                        </FormItem>
-                                                                    )}
-                                                                />
-                                                                <FormField
-                                                                    control={form.control}
-                                                                    name={`menuItems.${index}.href`}
-                                                                    render={({ field }) => (
-                                                                        <FormItem>
-                                                                            <FormLabel className="text-xs">URL</FormLabel>
-                                                                            <FormControl><Input {...field} placeholder="e.g., /" /></FormControl>
-                                                                            <FormMessage />
-                                                                        </FormItem>
-                                                                    )}
-                                                                />
-                                                            </div>
-                                                            <Button type="button" variant="ghost" size="icon" className="h-8 w-8 mt-6" onClick={() => removeMenu(index)}>
-                                                                <Trash2 className="h-4 w-4 text-destructive" />
-                                                            </Button>
+                                            <div>
+                                                <Label>Logo</Label>
+                                                <Card className="mt-2">
+                                                    <CardContent className="p-4">
+                                                        <div className="aspect-video w-full rounded-md border-2 border-dashed border-muted-foreground/40 flex items-center justify-center text-center cursor-pointer relative"
+                                                            onClick={() => imageInputRef.current?.click()}
+                                                        >
+                                                            <input
+                                                                type="file"
+                                                                ref={imageInputRef}
+                                                                onChange={handleLogoUpload}
+                                                                className="hidden"
+                                                                accept="image/*"
+                                                            />
+                                                            {logoUrl ? (
+                                                                <Image src={logoUrl} alt="Logo preview" fill className="object-contain p-4" />
+                                                            ) : (
+                                                                <div className="text-center text-muted-foreground p-4">
+                                                                    <Upload className="mx-auto h-8 w-8" />
+                                                                    <p className="mt-2 text-sm">Click to upload logo</p>
+                                                                </div>
+                                                            )}
                                                         </div>
-                                                    </Card>
-                                                ))}
+                                                    </CardContent>
+                                                </Card>
                                             </div>
-                                        </div>
 
-                                    </AccordionContent>
-                                </AccordionItem>
-                                <AccordionItem value="item-2">
-                                  <AccordionTrigger className="font-semibold text-lg">Page Sections</AccordionTrigger>
-                                  <AccordionContent className="space-y-6 pt-4">
-                                      <div className="space-y-3">
-                                          {sectionFields.map((field, index) => (
-                                            <Card key={field.id} className="p-3">
-                                                <div className="flex items-center gap-3">
-                                                    <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab" />
-                                                    <div className="flex-1">
-                                                        <p className="font-medium capitalize">{field.type.replace('-', ' ')}</p>
-                                                        <p className="text-xs text-muted-foreground">ID: {field.id}</p>
-                                                    </div>
-                                                    <Button type="button" variant="outline" size="sm" onClick={() => setEditingSection({ section: field, index })}>
-                                                        <Pencil className="mr-2 h-3 w-3" />
-                                                        Edit
-                                                    </Button>
-                                                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => removeSection(index)}>
-                                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                            <FormField
+                                                control={form.control}
+                                                name="logoWidth"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Logo Width: {field.value}px</FormLabel>
+                                                        <FormControl>
+                                                            <Slider
+                                                                value={[field.value]}
+                                                                onValueChange={(value) => field.onChange(value[0])}
+                                                                min={20}
+                                                                max={300}
+                                                                step={5}
+                                                            />
+                                                        </FormControl>
+                                                    </FormItem>
+                                                )}
+                                            />
+
+                                            <Separator />
+
+                                            <div>
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <Label>Navigation Menu</Label>
+                                                    <Button type="button" size="sm" variant="outline" onClick={() => appendMenu({ label: '', href: '' })}>
+                                                        <Plus className="mr-2 h-4 w-4" /> Add Link
                                                     </Button>
                                                 </div>
-                                            </Card>
-                                          ))}
-                                      </div>
-                                      
-                                      <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                          <Button variant="outline" className="w-full">
-                                            <Plus className="mr-2 h-4 w-4" /> Add Section
-                                          </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent className="w-64">
-                                          <DropdownMenuItem onSelect={() => handleAddSection('hero')}>Hero</DropdownMenuItem>
-                                          <DropdownMenuItem onSelect={() => handleAddSection('featured-products')}>Featured Products</DropdownMenuItem>
-                                          <DropdownMenuItem onSelect={() => handleAddSection('testimonials')}>Testimonials</DropdownMenuItem>
-                                          <DropdownMenuItem onSelect={() => handleAddSection('image-with-text')}>Image With Text</DropdownMenuItem>
-                                          <DropdownMenuItem onSelect={() => handleAddSection('faq')}>FAQ</DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                      </DropdownMenu>
+                                                <div className="space-y-3">
+                                                    {menuFields.map((field, index) => (
+                                                        <Card key={field.id} className="p-3">
+                                                            <div className="flex items-start gap-2">
+                                                                <GripVertical className="h-5 w-5 text-muted-foreground mt-8 cursor-grab" />
+                                                                <div className="flex-1 space-y-2">
+                                                                    <FormField
+                                                                        control={form.control}
+                                                                        name={`menuItems.${index}.label`}
+                                                                        render={({ field }) => (
+                                                                            <FormItem>
+                                                                                <FormLabel className="text-xs">Label</FormLabel>
+                                                                                <FormControl><Input {...field} placeholder="e.g., Home" /></FormControl>
+                                                                                <FormMessage />
+                                                                            </FormItem>
+                                                                        )}
+                                                                    />
+                                                                    <FormField
+                                                                        control={form.control}
+                                                                        name={`menuItems.${index}.href`}
+                                                                        render={({ field }) => (
+                                                                            <FormItem>
+                                                                                <FormLabel className="text-xs">URL</FormLabel>
+                                                                                <FormControl><Input {...field} placeholder="e.g., /" /></FormControl>
+                                                                                <FormMessage />
+                                                                            </FormItem>
+                                                                        )}
+                                                                    />
+                                                                </div>
+                                                                <Button type="button" variant="ghost" size="icon" className="h-8 w-8 mt-6" onClick={() => removeMenu(index)}>
+                                                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                                                </Button>
+                                                            </div>
+                                                        </Card>
+                                                    ))}
+                                                </div>
+                                            </div>
 
-                                  </AccordionContent>
-                                </AccordionItem>
-                            </Accordion>
-                    </div>
+                                        </AccordionContent>
+                                    </AccordionItem>
+                                    <AccordionItem value="item-2">
+                                    <AccordionTrigger className="font-semibold text-lg">Page Sections</AccordionTrigger>
+                                    <AccordionContent className="space-y-6 pt-4">
+                                        <div className="space-y-3">
+                                            {sectionFields.map((field, index) => (
+                                                <Card key={field.id} className="p-3">
+                                                    <div className="flex items-center gap-3">
+                                                        <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab" />
+                                                        <div className="flex-1">
+                                                            <p className="font-medium capitalize">{field.type.replace('-', ' ')}</p>
+                                                            <p className="text-xs text-muted-foreground">ID: {field.id}</p>
+                                                        </div>
+                                                        <Button type="button" variant="outline" size="sm" onClick={() => setEditingSection({ section: field, index })}>
+                                                            <Pencil className="mr-2 h-3 w-3" />
+                                                            Edit
+                                                        </Button>
+                                                        <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => removeSection(index)}>
+                                                            <Trash2 className="h-4 w-4 text-destructive" />
+                                                        </Button>
+                                                    </div>
+                                                </Card>
+                                            ))}
+                                        </div>
+                                        
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                            <Button variant="outline" className="w-full">
+                                                <Plus className="mr-2 h-4 w-4" /> Add Section
+                                            </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent className="w-64">
+                                            <DropdownMenuItem onSelect={() => handleAddSection('hero')}>Hero</DropdownMenuItem>
+                                            <DropdownMenuItem onSelect={() => handleAddSection('featured-products')}>Featured Products</DropdownMenuItem>
+                                            <DropdownMenuItem onSelect={() => handleAddSection('testimonials')}>Testimonials</DropdownMenuItem>
+                                            <DropdownMenuItem onSelect={() => handleAddSection('image-with-text')}>Image With Text</DropdownMenuItem>
+                                            <DropdownMenuItem onSelect={() => handleAddSection('faq')}>FAQ</DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+
+                                    </AccordionContent>
+                                    </AccordionItem>
+                                </Accordion>
+                            </div>
+                       </div>
                     </div>
 
                     {/* Right Panel: Live Preview */}
