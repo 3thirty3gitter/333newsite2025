@@ -192,7 +192,7 @@ export default function EditProductPage() {
     }
   };
   
-  const processAndUploadImage = async (file: File) => {
+  const processAndUploadImage = async (file: File, context: string) => {
     setIsUploading(true);
     try {
         const dataUrl = await new Promise<string>((resolve) => {
@@ -201,7 +201,7 @@ export default function EditProductPage() {
             reader.readAsDataURL(file);
         });
 
-        const uploadedUrl = await uploadImageAndGetURL(dataUrl, 'products');
+        const uploadedUrl = await uploadImageAndGetURL(dataUrl, 'products', context);
         
         const currentImages = form.getValues('images') || [];
         const newImages = [...currentImages, uploadedUrl];
@@ -219,9 +219,12 @@ export default function EditProductPage() {
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      processAndUploadImage(file);
+    const productName = form.getValues('name');
+    if (file && productName) {
+      processAndUploadImage(file, productName);
       event.target.value = '';
+    } else if (!productName) {
+      toast({ variant: 'destructive', title: 'Product name required', description: 'Please provide a product name before uploading an image.'})
     }
   };
 
@@ -510,7 +513,7 @@ export default function EditProductPage() {
                                                 <div className="flex items-center gap-4">
                                                      <span className="text-sm w-32 text-right">$... - $...</span>
                                                      <span className="text-sm w-20 text-right">... available</span>
-                                                     <Button variant="ghost" size="icon" className="h-8 w-8 data-[state=open]:rotate-180">
+                                                     <Button type="button" variant="ghost" size="icon" className="h-8 w-8 data-[state=open]:rotate-180">
                                                         <ChevronDown className="h-4 w-4" />
                                                      </Button>
                                                 </div>
@@ -520,14 +523,14 @@ export default function EditProductPage() {
                                             <Table className="bg-muted/20">
                                                 <TableHeader>
                                                     <TableRow>
-                                                        <TableHead>Variant</TableHead>
+                                                        <TableHead>{watchedVariants[1]?.type || 'Variant'}</TableHead>
                                                         <TableHead className="w-[150px]">Price</TableHead>
                                                         <TableHead className="w-[100px]">Available</TableHead>
                                                     </TableRow>
                                                 </TableHeader>
                                                 <TableBody>
-                                                   {(watchedVariants[1]?.options || []).map((secondaryOption, sIndex) => {
-                                                        const comboId = `${primaryOption.value}-${secondaryOption.value}`;
+                                                   {(watchedVariants[1]?.options || [{value: 'Default'}]).map((secondaryOption, sIndex) => {
+                                                        const comboId = watchedVariants[1] ? `${primaryOption.value}-${secondaryOption.value}` : primaryOption.value;
                                                         const inventoryItemIndex = inventoryFields.findIndex(i => i.id === comboId);
                                                         
                                                         if (inventoryItemIndex === -1) return null;
