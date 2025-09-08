@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetClose } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { PageSection } from '@/lib/types';
+import Image from 'next/image';
+import { Upload } from 'lucide-react';
 
 interface EditSectionDrawerProps {
   isOpen: boolean;
@@ -17,7 +19,22 @@ interface EditSectionDrawerProps {
   onSave: (newProps: any) => void;
 }
 
-const HeroForm = ({ control }: { control: any }) => (
+const HeroForm = ({ control, setValue, watch }: { control: any, setValue: any, watch: any }) => {
+    const imageUrl = watch('imageUrl');
+    const imageInputRef = useRef<HTMLInputElement>(null);
+
+    const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                setValue('imageUrl', e.target?.result as string, { shouldDirty: true });
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+    
+    return (
     <div className="space-y-4">
         <FormField
             control={control}
@@ -41,17 +58,33 @@ const HeroForm = ({ control }: { control: any }) => (
                 </FormItem>
             )}
         />
-        <FormField
-            control={control}
-            name="imageUrl"
-            render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Image URL</FormLabel>
-                    <FormControl><Input {...field} /></FormControl>
-                    <FormMessage />
-                </FormItem>
-            )}
-        />
+        
+        <div>
+            <Label>Background Image</Label>
+            <div className="mt-2">
+                <input
+                    type="file"
+                    ref={imageInputRef}
+                    onChange={handleImageUpload}
+                    className="hidden"
+                    accept="image/*"
+                />
+                <div 
+                    className="aspect-video w-full rounded-md border-2 border-dashed border-muted-foreground/40 flex items-center justify-center text-center cursor-pointer relative"
+                    onClick={() => imageInputRef.current?.click()}
+                >
+                    {imageUrl ? (
+                        <Image src={imageUrl} alt="Hero background preview" fill className="object-cover rounded-md" />
+                    ) : (
+                        <div className="text-center text-muted-foreground">
+                            <Upload className="mx-auto h-12 w-12" />
+                            <p className="mt-2">Click to upload an image</p>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+
         <FormField
             control={control}
             name="buttonLabel"
@@ -75,13 +108,13 @@ const HeroForm = ({ control }: { control: any }) => (
             )}
         />
     </div>
-);
+)};
 
 
-const SectionForm = ({ section, control }: { section: PageSection, control: any }) => {
+const SectionForm = ({ section, control, setValue, watch }: { section: PageSection, control: any, setValue: any, watch: any }) => {
     switch (section.type) {
         case 'hero':
-            return <HeroForm control={control} />;
+            return <HeroForm control={control} setValue={setValue} watch={watch} />;
         // Other cases will be added here
         default:
             return <p>This section type cannot be edited yet.</p>;
@@ -111,7 +144,7 @@ export function EditSectionDrawer({ isOpen, onClose, section, onSave }: EditSect
                         </SheetHeader>
 
                         <div className="flex-1 py-6">
-                            <SectionForm section={section} control={form.control} />
+                            <SectionForm section={section} control={form.control} setValue={form.setValue} watch={form.watch} />
                         </div>
                         
                         <SheetFooter>
@@ -126,4 +159,3 @@ export function EditSectionDrawer({ isOpen, onClose, section, onSave }: EditSect
         </Sheet>
     );
 }
-
