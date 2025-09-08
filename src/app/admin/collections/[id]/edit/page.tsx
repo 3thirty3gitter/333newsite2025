@@ -12,12 +12,13 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Upload, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, Upload, Image as ImageIcon, Sparkles } from 'lucide-react';
 import { getCategoryById, updateCategory } from '@/lib/data';
 import { useEffect, useState, useRef } from 'react';
 import type { Category } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import NextImage from 'next/image';
+import { generateCollectionDescription } from '@/ai/flows/generate-collection-description';
 
 const formSchema = z.object({
   name: z.string().min(2, 'Name is required'),
@@ -33,6 +34,7 @@ export default function EditCollectionPage() {
   const { toast } = useToast();
   const [collection, setCollection] = useState<Category | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isGenerating, setIsGenerating] = useState(false);
   const categoryId = params.id as string;
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -118,6 +120,39 @@ export default function EditCollectionPage() {
     if (file) {
       processAndSetImage(file);
       event.target.value = '';
+    }
+  };
+  
+  const handleGenerateDescription = async () => {
+    const collectionName = form.getValues('name');
+    if (!collectionName) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Please enter a collection name first.',
+      });
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      const result = await generateCollectionDescription({ collectionName });
+      if (result.description) {
+        form.setValue('description', result.description, { shouldDirty: true });
+        toast({
+          title: 'Description Generated',
+          description: 'The AI-powered description has been added.',
+        });
+      }
+    } catch (error) {
+      console.error('Failed to generate description:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Could not generate description. Please try again.',
+      });
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -209,7 +244,13 @@ export default function EditCollectionPage() {
                             name="description"
                             render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Description</FormLabel>
+                                <div className="flex items-center justify-between">
+                                    <FormLabel>Description</FormLabel>
+                                    <Button type="button" variant="outline" size="sm" onClick={handleGenerateDescription} disabled={isGenerating}>
+                                        <Sparkles className="mr-2 h-4 w-4" />
+                                        {isGenerating ? 'Generating...' : 'Generate with AI'}
+                                    </Button>
+                                </div>
                                 <FormControl>
                                 <Textarea placeholder="Describe the collection." {...field} />
                                 </FormControl>
@@ -273,7 +314,7 @@ export default function EditCollectionPage() {
                 <Button type="button" variant="outline" onClick={() => router.back()}>
                     Cancel
                 </Button>
-                <Button type="submit" disabled={form.formState.isSubmitting}>
+                <Button type="submit" disabled={form.formState.isSubmitting || isGenerating}>
                     {form.formState.isSubmitting ? 'Saving...' : 'Save Changes'}
                 </Button>
             </div>
