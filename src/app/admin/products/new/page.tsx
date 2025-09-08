@@ -406,7 +406,7 @@ export default function NewProductPage() {
                                     <TableBody>
                                         {inventoryFields.map((field, index) => (
                                             <TableRow key={field.id}>
-                                                <TableCell className="font-medium">{field.id.split('-').join(' / ')}</TableCell>
+                                                <TableCell className="font-medium">{field.id.replace(/-/g, ' / ')}</TableCell>
                                                 <TableCell>
                                                     <FormField
                                                         control={form.control}
