@@ -19,6 +19,7 @@ import type { Category } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import NextImage from 'next/image';
 import { generateCollectionDescription } from '@/ai/flows/generate-collection-description';
+import { GenerateImageDialog } from '@/components/admin/GenerateImageDialog';
 
 const formSchema = z.object({
   name: z.string().min(2, 'Name is required'),
@@ -38,6 +39,7 @@ export default function EditCollectionPage() {
   const categoryId = params.id as string;
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isImageGeneratorOpen, setIsImageGeneratorOpen] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -123,6 +125,15 @@ export default function EditCollectionPage() {
     }
   };
   
+  const handleGeneratedImage = (imageUrl: string) => {
+    setImagePreview(imageUrl);
+    form.setValue('imageUrl', imageUrl, { shouldDirty: true });
+    toast({
+        title: 'Image Generated',
+        description: 'The AI-powered image has been set.',
+    });
+  }
+
   const handleGenerateDescription = async () => {
     const collectionName = form.getValues('name');
     if (!collectionName) {
@@ -206,6 +217,12 @@ export default function EditCollectionPage() {
   }
 
   return (
+    <>
+    <GenerateImageDialog 
+        isOpen={isImageGeneratorOpen}
+        onClose={() => setIsImageGeneratorOpen(false)}
+        onImageGenerated={handleGeneratedImage}
+    />
     <div>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -264,8 +281,12 @@ export default function EditCollectionPage() {
 
                  <div className="md:col-span-1 space-y-8">
                     <Card>
-                        <CardHeader>
+                        <CardHeader className="flex flex-row items-center justify-between">
                             <CardTitle>Collection Image</CardTitle>
+                            <Button type="button" variant="outline" size="sm" onClick={() => setIsImageGeneratorOpen(true)}>
+                                <Sparkles className="mr-2 h-4 w-4" />
+                                AI Generate
+                            </Button>
                         </CardHeader>
                          <CardContent>
                             <div className="space-y-4">
@@ -321,5 +342,6 @@ export default function EditCollectionPage() {
         </form>
       </Form>
     </div>
+    </>
   );
 }
