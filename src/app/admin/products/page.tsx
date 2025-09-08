@@ -1,3 +1,5 @@
+'use client';
+
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -5,21 +7,54 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { getProducts } from '@/lib/data';
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
-import { MoreHorizontal, PlusCircle, Eye } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Eye, Upload } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { useEffect, useState, useTransition } from 'react';
+import type { Product } from '@/lib/types';
+import { ImportProductsDialog } from '@/components/admin/ImportProductsDialog';
 
-export default async function AdminProductsPage() {
-  const products = await getProducts();
+export default function AdminProductsPage() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isImporting, startTransition] = useTransition();
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+
+  const fetchProducts = async () => {
+    setIsLoading(true);
+    const products = await getProducts();
+    setProducts(products);
+    setIsLoading(false);
+  }
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const handleImported = () => {
+    setIsImportDialogOpen(false);
+    fetchProducts();
+  }
 
   return (
+    <>
+    <ImportProductsDialog 
+        isOpen={isImportDialogOpen}
+        onClose={() => setIsImportDialogOpen(false)}
+        onImported={handleImported}
+    />
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-headline font-bold">Products</h1>
-        <Button asChild>
-          <Link href="/admin/products/new">
-            <PlusCircle className="mr-2 h-4 w-4" /> Add Product
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+           <Button variant="outline" onClick={() => setIsImportDialogOpen(true)}>
+            <Upload className="mr-2 h-4 w-4" /> Import
+          </Button>
+          <Button asChild>
+            <Link href="/admin/products/new">
+              <PlusCircle className="mr-2 h-4 w-4" /> Add Product
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -85,5 +120,6 @@ export default async function AdminProductsPage() {
         </CardContent>
       </Card>
     </div>
+    </>
   );
 }
