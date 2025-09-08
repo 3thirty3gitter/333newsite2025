@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -11,12 +11,28 @@ import { Label } from '@/components/ui/label';
 import type { PageSection } from '@/lib/types';
 import Image from 'next/image';
 import { Upload } from 'lucide-react';
+import { HeroSection } from '../sections/HeroSection';
+import { Separator } from '../ui/separator';
 
 interface EditSectionDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   section: PageSection;
   onSave: (newProps: any) => void;
+}
+
+const SectionPreview = ({ section }: { section: PageSection }) => {
+    switch (section.type) {
+        case 'hero':
+            return <HeroSection section={section} />;
+        // Other previews can be added here
+        default:
+            return (
+                <div className="flex items-center justify-center h-48 bg-muted rounded-md">
+                    <p className="text-muted-foreground">No preview available for this section type.</p>
+                </div>
+            );
+    }
 }
 
 const HeroForm = ({ control, setValue, watch }: { control: any, setValue: any, watch: any }) => {
@@ -126,6 +142,13 @@ export function EditSectionDrawer({ isOpen, onClose, section, onSave }: EditSect
         defaultValues: section.props,
     });
 
+    const watchedProps = form.watch();
+
+    const previewSection: PageSection = {
+        ...section,
+        props: watchedProps
+    };
+
     useEffect(() => {
         form.reset(section.props);
     }, [section, form]);
@@ -136,25 +159,38 @@ export function EditSectionDrawer({ isOpen, onClose, section, onSave }: EditSect
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col">
-                        <DialogHeader>
-                            <DialogTitle>Edit Section: <span className="capitalize">{section.type.replace('-', ' ')}</span></DialogTitle>
-                        </DialogHeader>
-
-                        <div className="py-6">
-                            <SectionForm section={section} control={form.control} setValue={form.setValue} watch={form.watch} />
+            <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+                <DialogHeader>
+                    <DialogTitle>Edit Section: <span className="capitalize">{section.type.replace('-', ' ')}</span></DialogTitle>
+                </DialogHeader>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 flex-1 overflow-hidden">
+                    <div className="flex flex-col">
+                        <Label className="mb-2 text-sm font-medium">Controls</Label>
+                        <div className="p-4 border rounded-lg overflow-y-auto">
+                            <Form {...form}>
+                                <form onSubmit={form.handleSubmit(onSubmit)} id="section-edit-form">
+                                    <SectionForm section={section} control={form.control} setValue={form.setValue} watch={form.watch} />
+                                </form>
+                            </Form>
                         </div>
-                        
-                        <DialogFooter>
-                            <DialogClose asChild>
-                                <Button type="button" variant="outline">Cancel</Button>
-                            </DialogClose>
-                            <Button type="submit">Save Changes</Button>
-                        </DialogFooter>
-                    </form>
-                </Form>
+                    </div>
+                    <div className="flex flex-col">
+                        <Label className="mb-2 text-sm font-medium">Live Preview</Label>
+                        <div className="border rounded-lg overflow-y-auto relative bg-background">
+                           <div className="transform scale-[0.9] origin-top">
+                             <SectionPreview section={previewSection} />
+                           </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <DialogFooter className="mt-auto pt-6">
+                    <DialogClose asChild>
+                        <Button type="button" variant="outline">Cancel</Button>
+                    </DialogClose>
+                    <Button type="submit" form="section-edit-form">Save Changes</Button>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
     );

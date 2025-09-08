@@ -1,7 +1,5 @@
 
 
-import Image from 'next/image';
-import { Button } from '@/components/ui/button';
 import { getProducts } from '@/lib/data';
 import { ProductCard } from '@/components/products/ProductCard';
 import Link from 'next/link';
@@ -11,37 +9,7 @@ import { PageSection } from '@/lib/types';
 import { TestimonialsSection } from '@/components/sections/TestimonialsSection';
 import { ImageWithTextSection } from '@/components/sections/ImageWithTextSection';
 import { FaqSection } from '@/components/sections/FaqSection';
-
-const HeroSection = ({ section }: { section: PageSection }) => (
-  <section className="relative w-full h-[60vh] min-h-[400px] flex items-center justify-center text-center bg-primary/10">
-    <div className="absolute inset-0">
-      <Image
-        src={section.props.imageUrl}
-        alt="Hero background"
-        fill
-        className="object-cover opacity-20"
-        priority
-        data-ai-hint="abstract background"
-      />
-      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />
-    </div>
-    <div className="container px-4 md:px-6 relative z-10">
-      <div className="grid gap-6">
-        <h1 className="text-4xl font-headline font-bold tracking-tighter sm:text-5xl md:text-6xl text-primary-foreground mix-blend-multiply">
-          {section.props.title}
-        </h1>
-        <p className="mx-auto max-w-[700px] text-foreground/80 md:text-xl">
-          {section.props.subtitle}
-        </p>
-        <div>
-          <Button asChild size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90">
-            <a href={section.props.buttonHref}>{section.props.buttonLabel}</a>
-          </Button>
-        </div>
-      </div>
-    </div>
-  </section>
-);
+import { HeroSection } from '@/components/sections/HeroSection';
 
 const FeaturedProductsSection = async ({ section }: { section: PageSection }) => {
   const products = await getProducts();
