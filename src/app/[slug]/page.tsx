@@ -1,4 +1,5 @@
 
+
 import { notFound } from 'next/navigation';
 import { getThemeSettings } from '@/lib/settings';
 import { TestimonialsSection } from '@/components/sections/TestimonialsSection';
@@ -6,6 +7,7 @@ import { ImageWithTextSection } from '@/components/sections/ImageWithTextSection
 import { FaqSection } from '@/components/sections/FaqSection';
 import { HeroSection } from '@/components/sections/HeroSection';
 import { FeaturedProductsSection } from '@/components/sections/FeaturedProductsSection';
+import { CollectionsSection } from '@/components/sections/CollectionsSection';
 
 type PageProps = {
   params: {
@@ -19,6 +21,7 @@ const sectionComponents = {
   'testimonials': TestimonialsSection,
   'image-with-text': ImageWithTextSection,
   'faq': FaqSection,
+  'collections': CollectionsSection,
 };
 
 export default async function Page({ params }: PageProps) {
