@@ -1,18 +1,20 @@
 
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import type { PageSection } from '@/lib/types';
+import type { PageSection, Product } from '@/lib/types';
 import Image from 'next/image';
 import { Upload } from 'lucide-react';
 import { HeroSection } from '../sections/HeroSection';
-import { Separator } from '../ui/separator';
+import { FeaturedProductsSection } from '../sections/FeaturedProductsSection';
+import { Slider } from '../ui/slider';
+import { getProducts } from '@/lib/data';
 
 interface EditSectionDrawerProps {
   isOpen: boolean;
@@ -21,11 +23,12 @@ interface EditSectionDrawerProps {
   onSave: (newProps: any) => void;
 }
 
-const SectionPreview = ({ section }: { section: PageSection }) => {
+const SectionPreview = ({ section, products }: { section: PageSection, products: Product[] }) => {
     switch (section.type) {
         case 'hero':
             return <HeroSection section={section} />;
-        // Other previews can be added here
+        case 'featured-products':
+            return <FeaturedProductsSection section={section} products={products} />;
         default:
             return (
                 <div className="flex items-center justify-center h-48 bg-muted rounded-md">
@@ -126,12 +129,61 @@ const HeroForm = ({ control, setValue, watch }: { control: any, setValue: any, w
     </div>
 )};
 
+const FeaturedProductsForm = ({ control, watch }: { control: any, watch: any }) => {
+    const count = watch('count');
+    return (
+        <div className="space-y-4">
+            <FormField
+                control={control}
+                name="title"
+                render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Title</FormLabel>
+                        <FormControl><Input {...field} /></FormControl>
+                        <FormMessage />
+                    </FormItem>
+                )}
+            />
+            <FormField
+                control={control}
+                name="subtitle"
+                render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Subtitle</FormLabel>
+                        <FormControl><Input {...field} /></FormControl>
+                        <FormMessage />
+                    </FormItem>
+                )}
+            />
+            <FormField
+                control={control}
+                name="count"
+                render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Number of products: {count}</FormLabel>
+                        <FormControl>
+                            <Slider
+                                value={[field.value]}
+                                onValueChange={(value) => field.onChange(value[0])}
+                                min={2}
+                                max={12}
+                                step={1}
+                            />
+                        </FormControl>
+                    </FormItem>
+                )}
+            />
+        </div>
+    );
+};
+
 
 const SectionForm = ({ section, control, setValue, watch }: { section: PageSection, control: any, setValue: any, watch: any }) => {
     switch (section.type) {
         case 'hero':
             return <HeroForm control={control} setValue={setValue} watch={watch} />;
-        // Other cases will be added here
+        case 'featured-products':
+            return <FeaturedProductsForm control={control} watch={watch} />;
         default:
             return <p>This section type cannot be edited yet.</p>;
     }
@@ -141,6 +193,18 @@ export function EditSectionDrawer({ isOpen, onClose, section, onSave }: EditSect
     const form = useForm({
         defaultValues: section.props,
     });
+    
+    const [products, setProducts] = useState<Product[]>([]);
+    const [isLoadingProducts, setIsLoadingProducts] = useState(false);
+
+    useEffect(() => {
+        if (section.type === 'featured-products') {
+            setIsLoadingProducts(true);
+            getProducts()
+                .then(setProducts)
+                .finally(() => setIsLoadingProducts(false));
+        }
+    }, [section.type]);
 
     const watchedProps = form.watch();
 
@@ -178,8 +242,8 @@ export function EditSectionDrawer({ isOpen, onClose, section, onSave }: EditSect
                     <div className="flex flex-col">
                         <Label className="mb-2 text-sm font-medium">Live Preview</Label>
                         <div className="border rounded-lg overflow-y-auto relative bg-background">
-                           <div className="transform scale-[0.9] origin-top">
-                             <SectionPreview section={previewSection} />
+                           <div className="transform scale-[0.8] origin-top">
+                             <SectionPreview section={previewSection} products={products} />
                            </div>
                         </div>
                     </div>
