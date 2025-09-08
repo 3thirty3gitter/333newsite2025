@@ -43,7 +43,7 @@ export type MenuItem = {
   href: string;
 };
 
-export type SectionType = 'hero' | 'featured-products' | 'testimonials';
+export type SectionType = 'hero' | 'featured-products' | 'testimonials' | 'image-with-text' | 'faq';
 
 export type PageSection = {
   id: string;

@@ -9,6 +9,8 @@ import { Package } from 'lucide-react';
 import { getThemeSettings } from '@/lib/settings';
 import { PageSection } from '@/lib/types';
 import { TestimonialsSection } from '@/components/sections/TestimonialsSection';
+import { ImageWithTextSection } from '@/components/sections/ImageWithTextSection';
+import { FaqSection } from '@/components/sections/FaqSection';
 
 const HeroSection = ({ section }: { section: PageSection }) => (
   <section className="relative w-full h-[60vh] min-h-[400px] flex items-center justify-center text-center bg-primary/10">
@@ -80,6 +82,8 @@ const sectionComponents = {
   'hero': HeroSection,
   'featured-products': FeaturedProductsSection,
   'testimonials': TestimonialsSection,
+  'image-with-text': ImageWithTextSection,
+  'faq': FaqSection,
 };
 
 export default async function Home() {

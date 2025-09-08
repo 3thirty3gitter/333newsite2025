@@ -40,6 +40,18 @@ const defaultSettings: ThemeSettings = {
         count: 8,
       }
     },
+     {
+      id: 'image-with-text-1',
+      type: 'image-with-text',
+      props: {
+        title: 'Crafted for Comfort',
+        text: 'Our products are designed with the best materials to ensure they are not only stylish but also comfortable for everyday wear. Experience the difference in quality and craftsmanship.',
+        imageUrl: `https://picsum.photos/800/600?random=4`,
+        buttonLabel: 'Explore Collections',
+        buttonHref: '/products',
+        imagePosition: 'left'
+      }
+    },
     {
       id: 'testimonials-1',
       type: 'testimonials',
@@ -65,6 +77,28 @@ const defaultSettings: ThemeSettings = {
             quote: "CommerceCraft has an amazing selection. I found the perfect gift for my friend, and she loved it. The checkout process was seamless.",
             avatarUrl: 'https://picsum.photos/100/100?random=3',
           },
+        ]
+      }
+    },
+    {
+      id: 'faq-1',
+      type: 'faq',
+      props: {
+        title: 'Got Questions?',
+        subtitle: 'We have answers! Check out our FAQ section to find what you are looking for.',
+        items: [
+          {
+            question: 'What materials do you use?',
+            answer: 'We prioritize sustainable and high-quality materials. Each product page has a detailed breakdown of the materials used.'
+          },
+          {
+            question: 'What sizes do you offer?',
+            answer: 'We offer a wide range of sizes from XS to XXXL. Please check our sizing chart for detailed measurements to find your perfect fit.'
+          },
+          {
+            question: 'How do I care for my new items?',
+            answer: 'Care instructions are provided on the label of each garment and on the product page. Following these will help your new items last longer.'
+          }
         ]
       }
     }

@@ -83,6 +83,38 @@ const sectionDefaults: Record<SectionType, Omit<PageSection, 'id'>> = {
         },
       ]
     }
+  },
+  'image-with-text': {
+    type: 'image-with-text',
+    props: {
+      title: 'Image With Text',
+      text: 'Pair a custom image with a title and text to highlight a product, collection, or blog post. Add a button to link to a page or a product.',
+      imageUrl: `https://picsum.photos/800/600?random=${Math.floor(Math.random() * 1000)}`,
+      buttonLabel: 'Shop Now',
+      buttonHref: '#',
+      imagePosition: 'left'
+    }
+  },
+  'faq': {
+    type: 'faq',
+    props: {
+      title: 'Frequently Asked Questions',
+      subtitle: 'Find answers to common questions below.',
+      items: [
+        {
+          question: 'What is the return policy?',
+          answer: 'You can return any item within 30 days of purchase for a full refund. The item must be in its original condition.'
+        },
+        {
+          question: 'Do you ship internationally?',
+          answer: 'Yes, we ship to most countries worldwide. Shipping costs will be calculated at checkout based on your location.'
+        },
+        {
+          question: 'How can I track my order?',
+          answer: 'Once your order has shipped, you will receive an email with a tracking number and a link to the carrier\'s website.'
+        }
+      ]
+    }
   }
 }
 
@@ -373,6 +405,8 @@ export default function WebsiteBuilderPage() {
                                           <DropdownMenuItem onSelect={() => handleAddSection('hero')}>Hero</DropdownMenuItem>
                                           <DropdownMenuItem onSelect={() => handleAddSection('featured-products')}>Featured Products</DropdownMenuItem>
                                           <DropdownMenuItem onSelect={() => handleAddSection('testimonials')}>Testimonials</DropdownMenuItem>
+                                          <DropdownMenuItem onSelect={() => handleAddSection('image-with-text')}>Image With Text</DropdownMenuItem>
+                                          <DropdownMenuItem onSelect={() => handleAddSection('faq')}>FAQ</DropdownMenuItem>
                                         </DropdownMenuContent>
                                       </DropdownMenu>
 
