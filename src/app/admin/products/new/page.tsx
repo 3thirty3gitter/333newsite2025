@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -162,8 +163,8 @@ export default function NewProductPage() {
         const img = document.createElement('img');
         img.onload = () => {
           const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 600;
-          const MAX_HEIGHT = 600;
+          const MAX_WIDTH = 400;
+          const MAX_HEIGHT = 400;
           let width = img.width;
           let height = img.height;
 
@@ -182,7 +183,7 @@ export default function NewProductPage() {
           canvas.height = height;
           const ctx = canvas.getContext('2d');
           ctx?.drawImage(img, 0, 0, width, height);
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
           
           const currentImages = form.getValues('images') || [];
           const newImages = [...currentImages, dataUrl];
