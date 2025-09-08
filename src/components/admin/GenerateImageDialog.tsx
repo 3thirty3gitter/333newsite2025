@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -24,13 +25,14 @@ interface GenerateImageDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onImageGenerated: (imageUrl: string) => void;
+  promptSuggestion?: string;
 }
 
 const formSchema = z.object({
   prompt: z.string().min(5, 'Prompt must be at least 5 characters'),
 });
 
-export function GenerateImageDialog({ isOpen, onClose, onImageGenerated }: GenerateImageDialogProps) {
+export function GenerateImageDialog({ isOpen, onClose, onImageGenerated, promptSuggestion }: GenerateImageDialogProps) {
   const { toast } = useToast();
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -40,6 +42,12 @@ export function GenerateImageDialog({ isOpen, onClose, onImageGenerated }: Gener
       prompt: '',
     },
   });
+
+  useEffect(() => {
+    if (promptSuggestion) {
+      form.setValue('prompt', promptSuggestion);
+    }
+  }, [promptSuggestion, form]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsGenerating(true);
@@ -65,7 +73,12 @@ export function GenerateImageDialog({ isOpen, onClose, onImageGenerated }: Gener
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+        if (!open) {
+            form.reset({ prompt: '' });
+        }
+        onClose();
+    }}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">

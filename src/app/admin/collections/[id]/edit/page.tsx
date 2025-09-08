@@ -186,6 +186,8 @@ export default function EditCollectionPage() {
     }
   }
 
+  const collectionName = form.watch('name');
+
   if (isLoading) {
     return (
         <div className="space-y-8">
@@ -222,6 +224,7 @@ export default function EditCollectionPage() {
         isOpen={isImageGeneratorOpen}
         onClose={() => setIsImageGeneratorOpen(false)}
         onImageGenerated={handleGeneratedImage}
+        promptSuggestion={collectionName}
     />
     <div>
       <Form {...form}>
