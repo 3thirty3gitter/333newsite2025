@@ -24,6 +24,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EditSectionDrawer } from "@/components/admin/EditSectionDrawer";
 import { cn } from "@/lib/utils";
+import { AddPageDialog } from "@/components/admin/AddPageDialog";
 
 const menuItemSchema = z.object({
     label: z.string().min(1, "Label is required"),
@@ -39,7 +40,7 @@ const pageSectionSchema = z.object({
 const pageSchema = z.object({
     id: z.string(),
     name: z.string().min(1, "Page name is required"),
-    path: z.string().min(1, "Page path is required"),
+    path: z.string().min(1, "Page path is required").refine(val => val.startsWith('/'), { message: "Path must start with /" }),
     sections: z.array(pageSectionSchema).optional(),
 })
 
@@ -133,8 +134,9 @@ export default function WebsiteBuilderPage() {
     const [isSaving, startTransition] = useTransition();
     const [previewKey, setPreviewKey] = useState(0);
     const imageInputRef = useRef<HTMLInputElement>(null);
-    const [editingSection, setEditingSection] = useState<{ section: PageSection; index: number } | null>(null);
+    const [editingSection, setEditingSection] = useState<{ pageIndex: number; section: PageSection; sectionIndex: number } | null>(null);
     const [activePageIndex, setActivePageIndex] = useState(0);
+    const [isAddPageDialogOpen, setIsAddPageDialogOpen] = useState(false);
 
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
@@ -152,7 +154,7 @@ export default function WebsiteBuilderPage() {
         name: "menuItems",
     });
 
-    const { fields: pageFields, append: appendPage, remove: removePage } = useFieldArray({
+    const { fields: pageFields, append: appendPage, remove: removePage, update: updatePage } = useFieldArray({
         control: form.control,
         name: "pages",
     });
@@ -183,8 +185,12 @@ export default function WebsiteBuilderPage() {
         loadSettings();
     }, [form, toast]);
     
-    const reloadPreview = () => {
-        setPreviewKey(prevKey => prevKey + 1);
+    const reloadPreview = (path: string = '/') => {
+        // A bit of a hack to force iframe reload. We could also send a message.
+        const iframe = document.querySelector('iframe');
+        if (iframe) {
+            iframe.src = `${path}?_=${new Date().getTime()}`;
+        }
     };
 
     async function onSubmit(values: FormValues) {
@@ -197,7 +203,7 @@ export default function WebsiteBuilderPage() {
                 };
                 await updateThemeSettings(updatedSettings);
                 toast({ title: 'Success', description: 'Your changes have been saved.' });
-                reloadPreview();
+                reloadPreview(pages?.[activePageIndex]?.path);
             } catch (error) {
                 toast({ variant: 'destructive', title: 'Error', description: 'Failed to save changes.' });
             }
@@ -222,10 +228,27 @@ export default function WebsiteBuilderPage() {
       };
       appendSection(newSection);
     }
+    
+    const handleAddNewPage = (pageData: Omit<Page, 'id' | 'sections'>) => {
+        const newPage: Page = {
+            id: `page-${Date.now()}`,
+            ...pageData,
+            sections: [], // Start with no sections
+        };
+        appendPage(newPage);
+        setActivePageIndex(pageFields.length); // Switch to the new page
+        setIsAddPageDialogOpen(false);
+    }
 
-    const handleSaveSection = (index: number, newProps: any) => {
-        const currentSection = form.getValues(`pages.${activePageIndex}.sections.${index}` as `pages.0.sections.0`);
-        updateSection(index, { ...currentSection, props: newProps });
+    const handleSaveSection = (pageIndex: number, sectionIndex: number, newProps: any) => {
+        const currentSection = form.getValues(`pages.${pageIndex}.sections.${sectionIndex}` as `pages.0.sections.0`);
+        const updatedSection = { ...currentSection, props: newProps };
+
+        const currentPage = form.getValues(`pages.${pageIndex}` as `pages.0`);
+        const updatedSections = [...(currentPage.sections || [])];
+        updatedSections[sectionIndex] = updatedSection;
+
+        updatePage(pageIndex, { ...currentPage, sections: updatedSections });
         setEditingSection(null);
     }
     
@@ -283,7 +306,7 @@ export default function WebsiteBuilderPage() {
                                                     </Card>
                                                 ))}
                                             </div>
-                                            <Button variant="outline" className="w-full" disabled>
+                                            <Button type="button" variant="outline" className="w-full" onClick={() => setIsAddPageDialogOpen(true)}>
                                                 <Plus className="mr-2 h-4 w-4" /> Add New Page
                                             </Button>
                                         </AccordionContent>
@@ -424,7 +447,7 @@ export default function WebsiteBuilderPage() {
                                                             <p className="font-medium capitalize">{field.type.replace('-', ' ')}</p>
                                                             <p className="text-xs text-muted-foreground">ID: {field.id}</p>
                                                         </div>
-                                                        <Button type="button" variant="outline" size="sm" onClick={() => setEditingSection({ section: field, index })}>
+                                                        <Button type="button" variant="outline" size="sm" onClick={() => setEditingSection({ pageIndex: activePageIndex, section: field, sectionIndex: index })}>
                                                             <Pencil className="mr-2 h-3 w-3" />
                                                             Edit
                                                         </Button>
@@ -463,7 +486,7 @@ export default function WebsiteBuilderPage() {
                         <div className="w-full h-full bg-white rounded-lg overflow-hidden shadow-inner">
                             <iframe
                                 key={previewKey}
-                                src="/"
+                                src={pages?.[activePageIndex]?.path || '/'}
                                 title="Website Preview"
                                 className="w-full h-full border-0"
                             />
@@ -474,12 +497,21 @@ export default function WebsiteBuilderPage() {
         </div>
     </Form>
     
+    <AddPageDialog
+        isOpen={isAddPageDialogOpen}
+        onClose={() => setIsAddPageDialogOpen(false)}
+        onAddPage={handleAddNewPage}
+        existingPaths={pages?.map(p => p.path) || []}
+    />
+
     {editingSection && (
         <EditSectionDrawer
             isOpen={!!editingSection}
             onClose={() => setEditingSection(null)}
+            pageIndex={editingSection.pageIndex}
             section={editingSection.section}
-            onSave={(newProps) => handleSaveSection(editingSection.index, newProps)}
+            sectionIndex={editingSection.sectionIndex}
+            onSave={(newProps) => handleSaveSection(editingSection.pageIndex, editingSection.sectionIndex, newProps)}
         />
     )}
     </>

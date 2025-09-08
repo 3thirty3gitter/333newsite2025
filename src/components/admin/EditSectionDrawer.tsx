@@ -19,6 +19,8 @@ import { getProducts } from '@/lib/data';
 interface EditSectionDrawerProps {
   isOpen: boolean;
   onClose: () => void;
+  pageIndex: number;
+  sectionIndex: number;
   section: PageSection;
   onSave: (newProps: any) => void;
 }
