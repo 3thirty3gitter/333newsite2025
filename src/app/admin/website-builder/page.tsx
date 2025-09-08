@@ -10,9 +10,9 @@ import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
 import { getThemeSettings, updateThemeSettings } from "@/lib/settings";
-import { MenuItem, PageSection, SectionType, ThemeSettings } from "@/lib/types";
+import { MenuItem, Page, PageSection, SectionType, ThemeSettings } from "@/lib/types";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { GripVertical, Plus, Trash2, Upload, LayoutTemplate, Pencil } from "lucide-react";
+import { GripVertical, Plus, Trash2, Upload, LayoutTemplate, Pencil, Home, File, Settings } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import * as z from 'zod';
@@ -23,6 +23,7 @@ import { Label } from "@/components/ui/label";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EditSectionDrawer } from "@/components/admin/EditSectionDrawer";
+import { cn } from "@/lib/utils";
 
 const menuItemSchema = z.object({
     label: z.string().min(1, "Label is required"),
@@ -35,12 +36,19 @@ const pageSectionSchema = z.object({
   props: z.record(z.any()),
 });
 
+const pageSchema = z.object({
+    id: z.string(),
+    name: z.string().min(1, "Page name is required"),
+    path: z.string().min(1, "Page path is required"),
+    sections: z.array(pageSectionSchema).optional(),
+})
+
 const formSchema = z.object({
     logoUrl: z.string().optional(),
     logoWidth: z.number().min(20).max(300),
     menuItems: z.array(menuItemSchema),
     headerType: z.string().optional(),
-    sections: z.array(pageSectionSchema).optional(),
+    pages: z.array(pageSchema).optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -126,6 +134,7 @@ export default function WebsiteBuilderPage() {
     const [previewKey, setPreviewKey] = useState(0);
     const imageInputRef = useRef<HTMLInputElement>(null);
     const [editingSection, setEditingSection] = useState<{ section: PageSection; index: number } | null>(null);
+    const [activePageIndex, setActivePageIndex] = useState(0);
 
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
@@ -134,7 +143,7 @@ export default function WebsiteBuilderPage() {
             logoWidth: 140,
             menuItems: [],
             headerType: 'standard',
-            sections: [],
+            pages: [],
         },
     });
 
@@ -143,9 +152,14 @@ export default function WebsiteBuilderPage() {
         name: "menuItems",
     });
 
+    const { fields: pageFields, append: appendPage, remove: removePage } = useFieldArray({
+        control: form.control,
+        name: "pages",
+    });
+    
     const { fields: sectionFields, append: appendSection, remove: removeSection, update: updateSection } = useFieldArray({
       control: form.control,
-      name: "sections",
+      name: `pages.${activePageIndex}.sections` as 'pages.0.sections',
     });
 
     useEffect(() => {
@@ -158,7 +172,7 @@ export default function WebsiteBuilderPage() {
                     logoWidth: settings.logoWidth || 140,
                     menuItems: settings.menuItems || [{ label: 'Home', href: '/' }, { label: 'All Products', href: '/products' }],
                     headerType: settings.headerType || 'standard',
-                    sections: settings.sections || [],
+                    pages: settings.pages || [],
                 });
             } catch (error) {
                 toast({ variant: 'destructive', title: 'Error', description: 'Could not load theme settings.' });
@@ -210,12 +224,13 @@ export default function WebsiteBuilderPage() {
     }
 
     const handleSaveSection = (index: number, newProps: any) => {
-        const currentSection = form.getValues(`sections.${index}`);
+        const currentSection = form.getValues(`pages.${activePageIndex}.sections.${index}` as `pages.0.sections.0`);
         updateSection(index, { ...currentSection, props: newProps });
         setEditingSection(null);
     }
     
     const logoUrl = form.watch('logoUrl');
+    const pages = form.watch('pages');
 
     if (isLoading) {
         return (
@@ -253,7 +268,26 @@ export default function WebsiteBuilderPage() {
                        </div>
                        <div className="flex-1 overflow-y-auto">
                             <div className="p-6">
-                                <Accordion type="multiple" defaultValue={['item-1', 'item-2']} className="w-full">
+                                <Accordion type="multiple" defaultValue={['item-0', 'item-1', 'item-2']} className="w-full">
+                                    <AccordionItem value="item-0">
+                                        <AccordionTrigger className="font-semibold text-lg">Pages</AccordionTrigger>
+                                        <AccordionContent className="space-y-4 pt-4">
+                                            <div className="space-y-2">
+                                                {pageFields.map((page, index) => (
+                                                     <Card key={page.id} className={cn("cursor-pointer hover:bg-muted/50", activePageIndex === index && "border-primary ring-1 ring-primary")}>
+                                                        <CardContent className="p-3 flex items-center gap-3" onClick={() => setActivePageIndex(index)}>
+                                                            {page.path === '/' ? <Home className="h-4 w-4 text-muted-foreground" /> : <File className="h-4 w-4 text-muted-foreground" />}
+                                                            <span className="flex-1 font-medium">{page.name}</span>
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8"><Settings className="h-4 w-4" /></Button>
+                                                        </CardContent>
+                                                    </Card>
+                                                ))}
+                                            </div>
+                                            <Button variant="outline" className="w-full" disabled>
+                                                <Plus className="mr-2 h-4 w-4" /> Add New Page
+                                            </Button>
+                                        </AccordionContent>
+                                    </AccordionItem>
                                     <AccordionItem value="item-1">
                                         <AccordionTrigger className="font-semibold text-lg">Header</AccordionTrigger>
                                         <AccordionContent className="space-y-6 pt-4">

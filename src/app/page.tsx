@@ -19,7 +19,8 @@ const sectionComponents = {
 
 export default async function Home() {
   const settings = await getThemeSettings();
-  const sections = settings.sections || [];
+  const homePage = settings.pages?.find(p => p.path === '/');
+  const sections = homePage?.sections || [];
 
   return (
     <div className="flex flex-col">

@@ -43,6 +43,13 @@ export type MenuItem = {
   href: string;
 };
 
+export type Page = {
+  id: string;
+  name: string;
+  path: string;
+  sections: PageSection[];
+}
+
 export type SectionType = 'hero' | 'featured-products' | 'testimonials' | 'image-with-text' | 'faq';
 
 export type PageSection = {
@@ -61,5 +68,6 @@ export type ThemeSettings = {
   logoWidth?: number;
   menuItems?: MenuItem[];
   headerType?: 'standard' | 'centered' | 'split' | 'minimalist' | 'logo-top';
-  sections?: PageSection[];
+  pages?: Page[];
+  sections?: PageSection[]; // This will be deprecated in favor of pages.sections
 };
