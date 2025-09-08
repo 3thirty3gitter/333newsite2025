@@ -30,6 +30,25 @@ const csvTemplateHeaders = "name,description,longDescription,price,category,imag
 const csvTemplateData = `"Example T-Shirt","A cool example shirt.","This is a longer description for the cool example shirt.",19.99,"Apparel","https://picsum.photos/400/400?random=1,https://picsum.photos/400/400?random=2","{""type"":""Size"",""options"":[{""value"":""S""},{""value"":""M""},{""value"":""L""}]};{""type"":""Color"",""options"":[{""value"":""Red""},{""value"":""Blue""}]}","{""id"":""S-Red"",""price"":21.99,""stock"":10};{""id"":""M-Blue"",""price"":22.99,""stock"":5}"`;
 const csvTemplate = `${csvTemplateHeaders}\n${csvTemplateData}`;
 
+
+// A more robust parser for the semi-colon delimited JSON strings in the CSV
+function parseJsonField(value: string | undefined): any[] {
+    if (!value) return [];
+    try {
+        // If it's a single valid JSON array, parse it directly
+        if (value.trim().startsWith('[')) {
+            return JSON.parse(value);
+        }
+        // If it's multiple JSON objects separated by semicolons
+        const jsonString = `[${value.replace(/""/g, '"').replace(/;/g, ',')}]`;
+        return JSON.parse(jsonString);
+    } catch (e) {
+        console.error("Failed to parse JSON field:", value, e);
+        return [];
+    }
+}
+
+
 export function ImportProductsDialog({ isOpen, onClose, onImported }: ImportProductsDialogProps) {
   const { toast } = useToast();
   const [isImporting, startTransition] = useTransition();
@@ -69,11 +88,11 @@ export function ImportProductsDialog({ isOpen, onClose, onImported }: ImportProd
         complete: async (results) => {
           try {
             if (results.errors.length > 0) {
-              throw new Error(`CSV parsing errors: ${JSON.stringify(results.errors)}`);
+              console.error('CSV parsing errors:', results.errors);
+              throw new Error(`CSV parsing errors found. Please check the file format.`);
             }
             
             const productsToImport: Omit<Product, 'id'>[] = results.data.map(row => {
-              // Basic validation and type conversion
               const price = parseFloat(row.price);
               if (isNaN(price)) {
                 console.warn(`Skipping row with invalid price:`, row);
@@ -86,9 +105,9 @@ export function ImportProductsDialog({ isOpen, onClose, onImported }: ImportProd
                 longDescription: row.longDescription || '',
                 price: price,
                 category: row.category || 'Uncategorized',
-                images: row.images ? row.images.split(',') : [],
-                variants: row.variants ? JSON.parse(row.variants.replace(/""/g, '"')) : [],
-                inventory: row.inventory ? JSON.parse(row.inventory.replace(/""/g, '"')) : [],
+                images: row.images ? row.images.split(',').map(s => s.trim()) : [],
+                variants: parseJsonField(row.variants),
+                inventory: parseJsonField(row.inventory),
               };
             }).filter(p => p !== null) as Omit<Product, 'id'>[];
 
@@ -100,12 +119,15 @@ export function ImportProductsDialog({ isOpen, onClose, onImported }: ImportProd
             await importProducts(productsToImport);
             toast({ title: 'Import Successful', description: `${productsToImport.length} products have been imported.` });
             onImported();
+            setCsvFile(null);
+            setFileName('');
           } catch (error: any) {
             console.error('Import failed:', error);
             toast({
               variant: 'destructive',
               title: 'Import Failed',
               description: `An error occurred during the import. Check console for details. Error: ${error.message}`,
+              duration: 9000,
             });
           }
         },
