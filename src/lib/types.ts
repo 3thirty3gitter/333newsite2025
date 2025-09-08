@@ -19,6 +19,7 @@ export type Variant = {
 
 export type VariantOption = {
     value: string;
+    image?: string; // Optional image URL for the variant, e.g., for a color swatch
 }
 
 export type InventoryItem = {

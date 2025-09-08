@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import Link from 'next/link';
@@ -12,20 +12,24 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, PlusCircle, Trash2, X, GripVertical, Upload, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Trash2, X, GripVertical, Upload, Image as ImageIcon, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 import { getCollections, getProductById, updateProduct, deleteProduct, uploadImageAndGetURL } from '@/lib/data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useEffect, useState, useMemo, useRef } from 'react';
-import type { Collection, Product } from '@/lib/types';
+import type { Collection, Product, VariantOption } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import Image from 'next/image';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { cn } from '@/lib/utils';
+
 
 const variantOptionSchema = z.object({
   value: z.string().min(1, 'Value cannot be empty.'),
+  image: z.string().optional(),
 });
 
 const variantSchema = z.object({
@@ -104,10 +108,7 @@ export default function EditProductPage() {
             price: fetchedProduct.price,
             category: fetchedProduct.category,
             images: productImages,
-            variants: fetchedProduct.variants?.map(v => ({
-              type: v.type,
-              options: v.options.map(o => ({ value: o.value }))
-            })) || [],
+            variants: fetchedProduct.variants || [],
             inventory: fetchedProduct.inventory || [],
           });
         } else {
@@ -174,7 +175,7 @@ export default function EditProductPage() {
         toast({ variant: 'destructive', title: 'Duplicate Option', description: 'This option value already exists for this variant.' });
         return;
       }
-      const newOptionValues = [...currentOptions, { value: optionValue }];
+      const newOptionValues = [...currentOptions, { value: optionValue, image: '' }];
       update(variantIndex, { ...form.getValues(`variants.${variantIndex}`), options: newOptionValues });
       
       const updatedNewOptions = [...newOptions];
@@ -263,6 +264,10 @@ export default function EditProductPage() {
       setIsDeleting(false);
     }
   }
+
+  const primaryVariantOptions = useMemo(() => {
+    return watchedVariants?.[0]?.options || [];
+  }, [watchedVariants]);
 
 
   if (isLoadingProduct) {
@@ -418,7 +423,7 @@ export default function EditProductPage() {
                             </div>
                             <Button type="button" variant="outline" onClick={() => append({ type: '', options: [] })}>
                                 <PlusCircle className="mr-2 h-4 w-4" />
-                                Add Variant Type
+                                Add Variant
                             </Button>
                         </CardHeader>
                         <CardContent className="space-y-6">
@@ -435,7 +440,7 @@ export default function EditProductPage() {
                                         name={`variants.${index}.type`}
                                         render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Variant Type</FormLabel>
+                                            <FormLabel>Option name</FormLabel>
                                             <FormControl>
                                             <Input placeholder="e.g., Size, Color" {...field} />
                                             </FormControl>
@@ -445,9 +450,9 @@ export default function EditProductPage() {
                                     />
 
                                     <FormItem>
-                                        <FormLabel>Options</FormLabel>
+                                        <FormLabel>Option values</FormLabel>
                                         <div className="flex flex-wrap gap-2">
-                                            {form.watch(`variants.${index}.options`)?.map((option, optionIndex) => (
+                                            {form.watch(`variants.${index}.options`)?.map((option: VariantOption, optionIndex: number) => (
                                                 <Badge key={optionIndex} variant="secondary" className="flex items-center gap-1.5 pl-3 pr-1.5 py-1 text-sm">
                                                     {option.value}
                                                     <button type="button" onClick={() => handleRemoveOption(index, optionIndex)} className="rounded-full hover:bg-muted-foreground/20 p-0.5">
@@ -482,7 +487,7 @@ export default function EditProductPage() {
                         </CardContent>
                     </Card>
 
-                    {inventoryFields.length > 0 && (
+                    {primaryVariantOptions.length > 0 && (
                         <Card>
                             <CardHeader>
                                 <CardTitle>Inventory</CardTitle>
@@ -491,50 +496,71 @@ export default function EditProductPage() {
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Variant</TableHead>
-                                            <TableHead className="w-[150px]">Price</TableHead>
-                                            <TableHead className="w-[100px]">Stock</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {inventoryFields.map((field, index) => (
-                                            <TableRow key={field.id}>
-                                                <TableCell className="font-medium">{field.id.replace(/-/g, ' / ')}</TableCell>
-                                                <TableCell>
-                                                    <FormField
-                                                        control={form.control}
-                                                        name={`inventory.${index}.price`}
-                                                        render={({ field }) => (
-                                                            <FormItem>
-                                                                <FormControl>
-                                                                    <Input type="number" step="0.01" {...field} />
-                                                                </FormControl>
-                                                                <FormMessage />
-                                                            </FormItem>
-                                                        )}
-                                                    />
-                                                </TableCell>
-                                                <TableCell>
-                                                    <FormField
-                                                        control={form.control}
-                                                        name={`inventory.${index}.stock`}
-                                                        render={({ field }) => (
-                                                            <FormItem>
-                                                                <FormControl>
-                                                                    <Input type="number" step="1" {...field} />
-                                                                </FormControl>
-                                                                <FormMessage />
-                                                            </FormItem>
-                                                        )}
-                                                    />
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
+                                {primaryVariantOptions.map((primaryOption, pIndex) => (
+                                    <Collapsible key={pIndex} className="border-b last:border-b-0">
+                                        <CollapsibleTrigger asChild>
+                                            <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50">
+                                                <div className="flex items-center gap-4">
+                                                    <Image src={primaryOption.image || imagePreviews[0] || 'https://placehold.co/64x64'} alt={primaryOption.value} width={40} height={40} className="rounded-md object-cover" />
+                                                    <div>
+                                                        <p className="font-medium">{primaryOption.value}</p>
+                                                        <p className="text-sm text-muted-foreground">{watchedVariants[1]?.options.length || 0} variants</p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-4">
+                                                     <span className="text-sm w-32 text-right">$... - $...</span>
+                                                     <span className="text-sm w-20 text-right">... available</span>
+                                                     <Button variant="ghost" size="icon" className="h-8 w-8 data-[state=open]:rotate-180">
+                                                        <ChevronDown className="h-4 w-4" />
+                                                     </Button>
+                                                </div>
+                                            </div>
+                                        </CollapsibleTrigger>
+                                        <CollapsibleContent>
+                                            <Table className="bg-muted/20">
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>Variant</TableHead>
+                                                        <TableHead className="w-[150px]">Price</TableHead>
+                                                        <TableHead className="w-[100px]">Available</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                   {(watchedVariants[1]?.options || []).map((secondaryOption, sIndex) => {
+                                                        const comboId = `${primaryOption.value}-${secondaryOption.value}`;
+                                                        const inventoryItemIndex = inventoryFields.findIndex(i => i.id === comboId);
+                                                        
+                                                        if (inventoryItemIndex === -1) return null;
+
+                                                        return (
+                                                            <TableRow key={comboId}>
+                                                                <TableCell>{secondaryOption.value}</TableCell>
+                                                                <TableCell>
+                                                                    <FormField
+                                                                        control={form.control}
+                                                                        name={`inventory.${inventoryItemIndex}.price`}
+                                                                        render={({ field }) => (
+                                                                            <FormItem><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
+                                                                        )}
+                                                                    />
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                     <FormField
+                                                                        control={form.control}
+                                                                        name={`inventory.${inventoryItemIndex}.stock`}
+                                                                        render={({ field }) => (
+                                                                            <FormItem><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                                                                        )}
+                                                                    />
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        );
+                                                   })}
+                                                </TableBody>
+                                            </Table>
+                                        </CollapsibleContent>
+                                    </Collapsible>
+                                ))}
                             </CardContent>
                         </Card>
                     )}
