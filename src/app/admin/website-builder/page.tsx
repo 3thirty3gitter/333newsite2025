@@ -19,6 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import Image from "next/image";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const menuItemSchema = z.object({
     label: z.string().min(1, "Label is required"),
@@ -29,6 +30,7 @@ const formSchema = z.object({
     logoUrl: z.string().optional(),
     logoWidth: z.number().min(20).max(300),
     menuItems: z.array(menuItemSchema),
+    headerType: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -37,7 +39,7 @@ export default function WebsiteBuilderPage() {
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, startTransition] = useTransition();
-    const [previewKey, setPreviewKey] = useState(0); // Used to force iframe reload
+    const [previewKey, setPreviewKey] = useState(0);
     const imageInputRef = useRef<HTMLInputElement>(null);
 
     const form = useForm<FormValues>({
@@ -46,6 +48,7 @@ export default function WebsiteBuilderPage() {
             logoUrl: '',
             logoWidth: 140,
             menuItems: [],
+            headerType: 'standard',
         },
     });
 
@@ -63,6 +66,7 @@ export default function WebsiteBuilderPage() {
                     logoUrl: settings.logoUrl || '',
                     logoWidth: settings.logoWidth || 140,
                     menuItems: settings.menuItems || [{ label: 'Home', href: '/' }, { label: 'All Products', href: '/products' }],
+                    headerType: settings.headerType || 'standard',
                 });
             } catch (error) {
                 toast({ variant: 'destructive', title: 'Error', description: 'Could not load theme settings.' });
@@ -83,9 +87,7 @@ export default function WebsiteBuilderPage() {
                 const currentSettings = await getThemeSettings();
                 const updatedSettings: ThemeSettings = {
                     ...currentSettings,
-                    logoUrl: values.logoUrl,
-                    logoWidth: values.logoWidth,
-                    menuItems: values.menuItems,
+                    ...values,
                 };
                 await updateThemeSettings(updatedSettings);
                 toast({ title: 'Success', description: 'Your changes have been saved.' });
@@ -155,6 +157,28 @@ export default function WebsiteBuilderPage() {
                                     <AccordionTrigger className="font-semibold text-lg">Header</AccordionTrigger>
                                     <AccordionContent className="space-y-6 pt-4">
                                         
+                                        <FormField
+                                            control={form.control}
+                                            name="headerType"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Header Style</FormLabel>
+                                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                        <FormControl>
+                                                        <SelectTrigger>
+                                                            <SelectValue placeholder="Select a header style" />
+                                                        </SelectTrigger>
+                                                        </FormControl>
+                                                        <SelectContent>
+                                                            <SelectItem value="standard">Standard</SelectItem>
+                                                            <SelectItem value="centered">Centered</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+
                                         <div>
                                             <Label>Logo</Label>
                                             <Card className="mt-2">

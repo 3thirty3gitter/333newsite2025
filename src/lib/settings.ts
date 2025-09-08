@@ -16,7 +16,8 @@ const defaultSettings: ThemeSettings = {
   menuItems: [
     { label: 'Home', href: '/' },
     { label: 'All Products', href: '/products' },
-  ]
+  ],
+  headerType: 'standard',
 };
 
 export async function getThemeSettings(): Promise<ThemeSettings> {

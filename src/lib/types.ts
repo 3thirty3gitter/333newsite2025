@@ -49,4 +49,5 @@ export type ThemeSettings = {
   logoUrl?: string;
   logoWidth?: number;
   menuItems?: MenuItem[];
+  headerType?: 'standard' | 'centered';
 };
