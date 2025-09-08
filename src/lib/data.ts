@@ -1,3 +1,4 @@
+
 import { db } from './firebase';
 import { collection, getDocs, addDoc, doc, getDoc, updateDoc, deleteDoc, query, where, writeBatch } from 'firebase/firestore';
 import type { Product, Collection } from './types';
@@ -57,14 +58,14 @@ export async function deleteProduct(id: string): Promise<void> {
 }
 
 export async function getCollections(): Promise<Collection[]> {
-    const categoriesCol = collection(db, 'categories');
-    const categorySnapshot = await getDocs(categoriesCol);
-    const categoryList = categorySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Collection));
-    return categoryList.sort((a, b) => a.name.localeCompare(b.name));
+    const collectionsCol = collection(db, 'collections');
+    const collectionSnapshot = await getDocs(collectionsCol);
+    const collectionList = collectionSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Collection));
+    return collectionList.sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export async function getCollectionById(id: string): Promise<Collection | null> {
-  const docRef = doc(db, 'categories', id);
+  const docRef = doc(db, 'collections', id);
   const docSnap = await getDoc(docRef);
 
   if (docSnap.exists()) {
@@ -74,14 +75,14 @@ export async function getCollectionById(id: string): Promise<Collection | null> 
   }
 }
 
-export async function addCollection(category: Omit<Collection, 'id'>): Promise<string> {
-    const categoriesCol = collection(db, 'categories');
-    const docRef = await addDoc(categoriesCol, category);
+export async function addCollection(collectionData: Omit<Collection, 'id'>): Promise<string> {
+    const collectionsCol = collection(db, 'collections');
+    const docRef = await addDoc(collectionsCol, collectionData);
     return docRef.id;
 }
 
 export async function updateCollection(id: string, collectionData: Partial<Omit<Collection, 'id'>>): Promise<void> {
-    const collectionRef = doc(db, 'categories', id);
+    const collectionRef = doc(db, 'collections', id);
     const oldCollectionSnap = await getDoc(collectionRef);
     
     if (!oldCollectionSnap.exists()) {
@@ -113,6 +114,6 @@ export async function updateCollection(id: string, collectionData: Partial<Omit<
 
 
 export async function deleteCollection(id: string): Promise<void> {
-  const docRef = doc(db, 'categories', id);
+  const docRef = doc(db, 'collections', id);
   await deleteDoc(docRef);
 }
