@@ -12,7 +12,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 const navItems = [
   { href: '/admin', label: 'Dashboard', icon: Home },
   { href: '/admin/products', label: 'Products', icon: Package },
-  { href: '/admin/categories', label: 'Categories', icon: Folder },
+  { href: '/admin/collections', label: 'Collections', icon: Folder },
   { href: '/admin/website-builder', label: 'Website Editor', icon: Palette },
   { href: '/admin/settings', label: 'Settings', icon: Settings },
 ];

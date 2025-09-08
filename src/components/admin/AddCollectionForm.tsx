@@ -12,10 +12,10 @@ import { useToast } from '@/hooks/use-toast';
 import { addCategory } from '@/lib/data';
 
 const formSchema = z.object({
-  name: z.string().min(2, 'Category name must be at least 2 characters'),
+  name: z.string().min(2, 'Collection name must be at least 2 characters'),
 });
 
-export function AddCategoryForm() {
+export function AddCollectionForm() {
   const router = useRouter();
   const { toast } = useToast();
 
@@ -30,17 +30,17 @@ export function AddCategoryForm() {
     try {
       await addCategory({ name: values.name });
       toast({
-        title: 'Category Created',
-        description: `The category "${values.name}" has been successfully created.`,
+        title: 'Collection Created',
+        description: `The collection "${values.name}" has been successfully created.`,
       });
       form.reset();
       router.refresh(); // To show the new category in the list
     } catch (error) {
-      console.error('Failed to create category:', error);
+      console.error('Failed to create collection:', error);
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Failed to create category. Please try again.',
+        description: 'Failed to create collection. Please try again.',
       });
     }
   }
@@ -48,8 +48,8 @@ export function AddCategoryForm() {
   return (
     <Card>
         <CardHeader>
-            <CardTitle>Add New Category</CardTitle>
-            <CardDescription>Create a new category for your products.</CardDescription>
+            <CardTitle>Add New Collection</CardTitle>
+            <CardDescription>Create a new collection for your products.</CardDescription>
         </CardHeader>
         <CardContent>
             <Form {...form}>
@@ -59,7 +59,7 @@ export function AddCategoryForm() {
                     name="name"
                     render={({ field }) => (
                     <FormItem>
-                        <FormLabel>Category Name</FormLabel>
+                        <FormLabel>Collection Name</FormLabel>
                         <FormControl>
                         <Input placeholder="e.g., Footwear" {...field} />
                         </FormControl>
@@ -69,7 +69,7 @@ export function AddCategoryForm() {
                 />
 
                 <Button type="submit" disabled={form.formState.isSubmitting} className="w-full">
-                    {form.formState.isSubmitting ? 'Creating...' : 'Create Category'}
+                    {form.formState.isSubmitting ? 'Creating...' : 'Create Collection'}
                 </Button>
                 </form>
             </Form>
