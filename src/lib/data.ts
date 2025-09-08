@@ -1,5 +1,5 @@
 import { db } from './firebase';
-import { collection, getDocs, addDoc, doc, getDoc, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, getDoc, updateDoc, deleteDoc, query, where, writeBatch } from 'firebase/firestore';
 import type { Product, Collection } from './types';
 
 function toProduct(doc: any): Product {
@@ -80,17 +80,21 @@ export async function addCollection(category: Omit<Collection, 'id'>): Promise<s
     return docRef.id;
 }
 
-export async function updateCollection(id: string, categoryData: Partial<Omit<Collection, 'id'>>): Promise<void> {
-    const docRef = doc(db, 'categories', id);
-    const oldCategorySnap = await getDoc(docRef);
-    if (!oldCategorySnap.exists()) {
+export async function updateCollection(id: string, collectionData: Partial<Omit<Collection, 'id'>>): Promise<void> {
+    const collectionRef = doc(db, 'categories', id);
+    const oldCollectionSnap = await getDoc(collectionRef);
+    
+    if (!oldCollectionSnap.exists()) {
         throw new Error("Collection not found");
     }
-    const oldName = oldCategorySnap.data().name;
-    const newName = categoryData.name;
 
-    // Update category document
-    await updateDoc(docRef, categoryData);
+    const oldName = oldCollectionSnap.data().name;
+    const newName = collectionData.name;
+
+    const batch = writeBatch(db);
+
+    // Update collection document
+    batch.update(collectionRef, collectionData);
 
     // If the name changed, update products that use this category
     if (newName && oldName !== newName) {
@@ -98,15 +102,15 @@ export async function updateCollection(id: string, categoryData: Partial<Omit<Co
         const q = query(productsRef, where("category", "==", oldName));
         const querySnapshot = await getDocs(q);
         
-        const batch = [];
         querySnapshot.forEach((productDoc) => {
             const productRef = doc(db, 'products', productDoc.id);
-            batch.push(updateDoc(productRef, { category: newName }));
+            batch.update(productRef, { category: newName });
         });
-
-        await Promise.all(batch);
     }
+
+    await batch.commit();
 }
+
 
 export async function deleteCollection(id: string): Promise<void> {
   const docRef = doc(db, 'categories', id);
