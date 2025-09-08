@@ -583,7 +583,7 @@ export default function EditProductPage() {
                                                         onClick={() => imageInputRef.current?.click()}
                                                     >
                                                         {imagePreviews[0] ? (
-                                                            <Image src={imagePreviews[0]} alt="Product preview" width={600} height={600} className="object-cover rounded-md" />
+                                                            <Image src={imagePreviews[0]} alt="Product preview" width={400} height={400} className="object-cover rounded-md" />
                                                         ) : (
                                                             <div className="text-center text-muted-foreground">
                                                                 <Upload className="mx-auto h-12 w-12" />

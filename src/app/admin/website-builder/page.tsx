@@ -243,7 +243,7 @@ export default function WebsiteBuilderPage() {
                 canvas.height = height;
                 const ctx = canvas.getContext('2d');
                 ctx?.drawImage(img, 0, 0, width, height);
-                const dataUrl = canvas.toDataURL('image/png'); // Use PNG for logos to preserve transparency
+                const dataUrl = canvas.toDataURL('image/png', 0.7); // Use PNG for logos to preserve transparency
                 
                 form.setValue('logoUrl', dataUrl, { shouldDirty: true });
             };
