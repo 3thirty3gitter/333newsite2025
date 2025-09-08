@@ -227,7 +227,7 @@ export default function WebsiteBuilderPage() {
               reader.readAsDataURL(file);
           });
           
-          const uploadedUrl = await uploadImageAndGetURL(dataUrl, 'logos');
+          const uploadedUrl = await uploadImageAndGetURL(dataUrl, 'logos', 'logo');
           form.setValue('logoUrl', uploadedUrl, { shouldDirty: true });
 
       } catch (error) {
