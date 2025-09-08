@@ -29,15 +29,15 @@ const generateCollectionDescriptionPrompt = ai.definePrompt({
   name: 'generateCollectionDescriptionPrompt',
   input: {schema: GenerateCollectionDescriptionInputSchema},
   output: {schema: GenerateCollectionDescriptionOutputSchema},
-  prompt: `You are a marketing expert for an e-commerce website. 
+  prompt: `You are a marketing expert for an e-commerce website that specializes in custom printing. 
   
   Your task is to write a short, compelling description for a product collection. 
   
-  The description should be engaging and make the user want to explore the products within that collection.
+  The description should be engaging, highlight the custom printing aspect, and make the user want to explore the products within that collection.
 
   Collection Name: {{{collectionName}}}
   
-  Generate a description based on this name.`,
+  Generate a description based on this name, tailored for a custom printing business.`,
 });
 
 const generateCollectionDescriptionFlow = ai.defineFlow(
