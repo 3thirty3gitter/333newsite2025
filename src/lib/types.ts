@@ -43,9 +43,11 @@ export type MenuItem = {
   href: string;
 };
 
+export type SectionType = 'hero' | 'featured-products' | 'testimonials';
+
 export type PageSection = {
   id: string;
-  type: 'hero' | 'featured-products';
+  type: SectionType;
   props: {
     [key: string]: any;
   };

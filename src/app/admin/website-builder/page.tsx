@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -9,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
 import { getThemeSettings, updateThemeSettings } from "@/lib/settings";
-import { MenuItem, PageSection, ThemeSettings } from "@/lib/types";
+import { MenuItem, PageSection, SectionType, ThemeSettings } from "@/lib/types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { GripVertical, Plus, Trash2, Upload, LayoutTemplate } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
@@ -19,6 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import Image from "next/image";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const menuItemSchema = z.object({
@@ -41,6 +43,48 @@ const formSchema = z.object({
 });
 
 type FormValues = z.infer<typeof formSchema>;
+
+const sectionDefaults: Record<SectionType, Omit<PageSection, 'id'>> = {
+  hero: {
+    type: 'hero',
+    props: {
+      title: 'New Hero Title',
+      subtitle: 'This is a new hero section. Customize it!',
+      imageUrl: `https://picsum.photos/1920/1080?random=${Math.floor(Math.random() * 1000)}`,
+      buttonLabel: 'Learn More',
+      buttonHref: '#'
+    }
+  },
+  'featured-products': {
+    type: 'featured-products',
+    props: {
+      title: 'New Featured Products',
+      subtitle: 'Our finest selection, just for you.',
+      count: 4,
+    }
+  },
+  testimonials: {
+    type: 'testimonials',
+    props: {
+      title: 'Customer Stories',
+      subtitle: 'Hear from our happy customers.',
+      testimonials: [
+        {
+            name: 'Alex R.',
+            title: 'Happy Customer',
+            quote: "This is a fantastic product! I'm so glad I found it. It has completely changed my workflow for the better. Highly recommended to everyone.",
+            avatarUrl: `https://picsum.photos/100/100?random=${Math.floor(Math.random() * 1000)}`,
+        },
+        {
+            name: 'Sam B.',
+            title: 'Frequent User',
+            quote: "I use this every day. The quality and attention to detail are second to none. The support team is also incredibly responsive and helpful.",
+            avatarUrl: `https://picsum.photos/100/100?random=${Math.floor(Math.random() * 1000)}`,
+        },
+      ]
+    }
+  }
+}
 
 export default function WebsiteBuilderPage() {
     const { toast } = useToast();
@@ -123,6 +167,14 @@ export default function WebsiteBuilderPage() {
         }
     };
     
+    const handleAddSection = (type: SectionType) => {
+      const newSection = {
+        ...sectionDefaults[type],
+        id: `${type}-${Date.now()}`
+      };
+      appendSection(newSection);
+    }
+    
     const logoUrl = form.watch('logoUrl');
 
     if (isLoading) {
@@ -166,7 +218,7 @@ export default function WebsiteBuilderPage() {
                             </CardHeader>
                     </Card>
                     <div className="p-6 flex-1">
-                            <Accordion type="multiple" defaultValue={['item-1']} className="w-full">
+                            <Accordion type="multiple" defaultValue={['item-1', 'item-2']} className="w-full">
                                 <AccordionItem value="item-1">
                                     <AccordionTrigger className="font-semibold text-lg">Header</AccordionTrigger>
                                     <AccordionContent className="space-y-6 pt-4">
@@ -177,7 +229,7 @@ export default function WebsiteBuilderPage() {
                                             render={({ field }) => (
                                                 <FormItem>
                                                     <FormLabel>Header Style</FormLabel>
-                                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                    <Select onValueChange={field.onChange} value={field.value}>
                                                         <FormControl>
                                                         <SelectTrigger>
                                                             <SelectValue placeholder="Select a header style" />
@@ -303,17 +355,26 @@ export default function WebsiteBuilderPage() {
                                                         <p className="font-medium capitalize">{field.type.replace('-', ' ')}</p>
                                                         <p className="text-xs text-muted-foreground">ID: {field.id}</p>
                                                     </div>
-                                                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8">
+                                                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => removeSection(index)}>
                                                         <Trash2 className="h-4 w-4 text-destructive" />
                                                     </Button>
                                                 </div>
                                             </Card>
                                           ))}
                                       </div>
-
-                                      <Button type="button" variant="outline" className="w-full">
-                                        <Plus className="mr-2 h-4 w-4" /> Add Section
-                                      </Button>
+                                      
+                                      <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                          <Button variant="outline" className="w-full">
+                                            <Plus className="mr-2 h-4 w-4" /> Add Section
+                                          </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent className="w-64">
+                                          <DropdownMenuItem onSelect={() => handleAddSection('hero')}>Hero</DropdownMenuItem>
+                                          <DropdownMenuItem onSelect={() => handleAddSection('featured-products')}>Featured Products</DropdownMenuItem>
+                                          <DropdownMenuItem onSelect={() => handleAddSection('testimonials')}>Testimonials</DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                      </DropdownMenu>
 
                                   </AccordionContent>
                                 </AccordionItem>

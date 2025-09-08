@@ -1,4 +1,5 @@
 
+
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { getProducts } from '@/lib/data';
@@ -7,6 +8,7 @@ import Link from 'next/link';
 import { Package } from 'lucide-react';
 import { getThemeSettings } from '@/lib/settings';
 import { PageSection } from '@/lib/types';
+import { TestimonialsSection } from '@/components/sections/TestimonialsSection';
 
 const HeroSection = ({ section }: { section: PageSection }) => (
   <section className="relative w-full h-[60vh] min-h-[400px] flex items-center justify-center text-center bg-primary/10">
@@ -77,6 +79,7 @@ const FeaturedProductsSection = async ({ section }: { section: PageSection }) =>
 const sectionComponents = {
   'hero': HeroSection,
   'featured-products': FeaturedProductsSection,
+  'testimonials': TestimonialsSection,
 };
 
 export default async function Home() {
