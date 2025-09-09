@@ -55,9 +55,6 @@ export function GenerateImageDialog({ isOpen, onClose, onImageGenerated, promptS
       const result = await generateImage({ prompt: values.prompt });
       if (result.imageUrl) {
         onImageGenerated(result.imageUrl, values.prompt);
-        // Do not close the dialog automatically, let the user do it.
-        // onClose(); 
-        // form.reset();
       } else {
         throw new Error('AI did not return an image.');
       }
@@ -112,9 +109,7 @@ export function GenerateImageDialog({ isOpen, onClose, onImageGenerated, promptS
               )}
             />
             <DialogFooter>
-              <DialogClose asChild>
-                <Button type="button" variant="outline" disabled={isGenerating}>Close</Button>
-              </DialogClose>
+              <Button type="button" variant="outline" onClick={handleDialogClose} disabled={isGenerating}>Close</Button>
               <Button type="submit" disabled={isGenerating}>
                 {isGenerating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {isGenerating ? 'Generating...' : 'Generate'}

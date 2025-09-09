@@ -133,6 +133,7 @@ const HeroForm = ({ control, setValue, watch, getValues }: { control: any, setVa
              toast({ variant: "destructive", title: "Upload Failed", description: "Could not upload the AI image." });
         } finally {
              setIsUploading(false);
+             setIsImageGeneratorOpen(false);
         }
     };
 
