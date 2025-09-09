@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { Collection, PageSection, Product } from '@/lib/types';
 import Image from 'next/image';
-import { Upload, Loader2 } from 'lucide-react';
+import { Upload, Loader2, Sparkles } from 'lucide-react';
 import { HeroSection } from '../sections/HeroSection';
 import { FeaturedProductsSection } from '../sections/FeaturedProductsSection';
 import { Slider } from '../ui/slider';
@@ -19,8 +19,11 @@ import { CollectionsSection } from '../sections/CollectionsSection';
 import { FaqSection } from '../sections/FaqSection';
 import { ImageWithTextSection } from '../sections/ImageWithTextSection';
 import { TestimonialsSection } from '../sections/TestimonialsSection';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { generateHeroText } from '@/ai/flows/generate-hero-text';
+import { GenerateImageDialog } from './GenerateImageDialog';
+
 
 interface EditSectionDrawerProps {
   isOpen: boolean;
@@ -54,22 +57,29 @@ const SectionPreview = ({ section, products, collections }: { section: PageSecti
     }
 }
 
-const processAndUploadImage = async (file: File, callback: (url: string) => void) => {
-    const dataUrl = await new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target?.result as string);
-        reader.readAsDataURL(file);
-    });
+const processAndUploadImage = async (fileOrDataUrl: File | string, context: string) => {
+    let dataUrl: string;
+    if (typeof fileOrDataUrl === 'string') {
+        dataUrl = fileOrDataUrl;
+    } else {
+        dataUrl = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target?.result as string);
+            reader.readAsDataURL(fileOrDataUrl);
+        });
+    }
 
-    const uploadedUrl = await uploadImageAndGetURL(dataUrl, 'sections');
-    callback(uploadedUrl);
+    const uploadedUrl = await uploadImageAndGetURL(dataUrl, 'sections', context);
+    return uploadedUrl;
 };
 
 
-const HeroForm = ({ control, setValue, watch }: { control: any, setValue: any, watch: any }) => {
+const HeroForm = ({ control, setValue, watch, getValues }: { control: any, setValue: any, watch: any, getValues: any }) => {
     const imageUrl = watch('imageUrl');
     const imageInputRef = useRef<HTMLInputElement>(null);
-    const [isUploading, setIsUploading] = useState(false);
+    const [isUploading, setIsUploading(false);
+    const [isGeneratingText, setIsGeneratingText<false | 'title' | 'subtitle'>(false);
+    const [isImageGeneratorOpen, setIsImageGeneratorOpen(false);
     const { toast } = useToast();
 
     const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -77,9 +87,8 @@ const HeroForm = ({ control, setValue, watch }: { control: any, setValue: any, w
         if (file) {
             setIsUploading(true);
             try {
-                await processAndUploadImage(file, (url) => {
-                    setValue('imageUrl', url, { shouldDirty: true });
-                });
+                const uploadedUrl = await processAndUploadImage(file, "hero-background");
+                setValue('imageUrl', uploadedUrl, { shouldDirty: true });
             } catch (err) {
                 toast({ variant: 'destructive', title: 'Upload failed' });
             } finally {
@@ -88,14 +97,66 @@ const HeroForm = ({ control, setValue, watch }: { control: any, setValue: any, w
         }
     };
     
+    const handleGenerateText = async (field: 'title' | 'subtitle') => {
+        setIsGeneratingText(field);
+        try {
+            const currentTitle = getValues('title');
+            const result = await generateHeroText({ 
+                topic: 'a modern, stylish e-commerce store',
+                existingTitle: field === 'subtitle' ? currentTitle : undefined
+            });
+
+            if (field === 'title' && result.title) {
+                setValue('title', result.title, { shouldDirty: true });
+                if (result.subtitle) {
+                    setValue('subtitle', result.subtitle, { shouldDirty: true });
+                }
+            } else if (field === 'subtitle' && result.subtitle) {
+                setValue('subtitle', result.subtitle, { shouldDirty: true });
+            }
+            toast({ title: 'Text Generated', description: 'The AI-powered text has been added.' });
+        } catch (error) {
+            console.error('AI text generation failed', error);
+            toast({ variant: 'destructive', title: 'Generation Failed' });
+        } finally {
+            setIsGeneratingText(false);
+        }
+    };
+    
+     const handleGeneratedImage = async (imageUrl: string, prompt: string) => {
+        setIsUploading(true);
+        try {
+            const uploadedUrl = await processAndUploadImage(imageUrl, prompt);
+            setValue('imageUrl', uploadedUrl, { shouldDirty: true });
+            toast({ title: 'Image Generated & Uploaded', description: 'The AI-powered image has been added.' });
+        } catch (error) {
+             toast({ variant: "destructive", title: "Upload Failed", description: "Could not upload the AI image." });
+        } finally {
+             setIsUploading(false);
+        }
+    };
+
     return (
+    <>
+    <GenerateImageDialog
+        isOpen={isImageGeneratorOpen}
+        onClose={() => setIsImageGeneratorOpen(false)}
+        onImageGenerated={handleGeneratedImage}
+        promptSuggestion={getValues('title') || 'abstract background'}
+    />
     <div className="space-y-4">
         <FormField
             control={control}
             name="title"
             render={({ field }) => (
                 <FormItem>
-                    <FormLabel>Title</FormLabel>
+                    <div className="flex items-center justify-between">
+                        <FormLabel>Title</FormLabel>
+                        <Button type="button" variant="outline" size="sm" onClick={() => handleGenerateText('title')} disabled={!!isGeneratingText}>
+                           <Sparkles className="mr-2 h-4 w-4" />
+                           {isGeneratingText === 'title' ? 'Generating...' : 'Generate with AI'}
+                        </Button>
+                    </div>
                     <FormControl><Input {...field} /></FormControl>
                     <FormMessage />
                 </FormItem>
@@ -106,7 +167,13 @@ const HeroForm = ({ control, setValue, watch }: { control: any, setValue: any, w
             name="subtitle"
             render={({ field }) => (
                 <FormItem>
-                    <FormLabel>Subtitle</FormLabel>
+                     <div className="flex items-center justify-between">
+                        <FormLabel>Subtitle</FormLabel>
+                        <Button type="button" variant="outline" size="sm" onClick={() => handleGenerateText('subtitle')} disabled={!!isGeneratingText}>
+                           <Sparkles className="mr-2 h-4 w-4" />
+                           {isGeneratingText === 'subtitle' ? 'Generating...' : 'Generate with AI'}
+                        </Button>
+                    </div>
                     <FormControl><Input {...field} /></FormControl>
                     <FormMessage />
                 </FormItem>
@@ -114,7 +181,13 @@ const HeroForm = ({ control, setValue, watch }: { control: any, setValue: any, w
         />
         
         <div>
-            <Label>Background Image</Label>
+            <div className="flex items-center justify-between mb-2">
+                <Label>Background Image</Label>
+                <Button type="button" variant="outline" size="sm" onClick={() => setIsImageGeneratorOpen(true)}>
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    AI Generate
+                </Button>
+            </div>
             <div className="mt-2">
                 <input
                     type="file"
@@ -164,6 +237,7 @@ const HeroForm = ({ control, setValue, watch }: { control: any, setValue: any, w
             )}
         />
     </div>
+    </>
 )};
 
 const FeaturedProductsForm = ({ control, watch }: { control: any, watch: any }) => {
@@ -246,7 +320,7 @@ const CollectionsForm = ({ control }: { control: any }) => {
 const ImageWithTextForm = ({ control, setValue, watch }: { control: any, setValue: any, watch: any }) => {
     const imageUrl = watch('imageUrl');
     const imageInputRef = useRef<HTMLInputElement>(null);
-    const [isUploading, setIsUploading] = useState(false);
+    const [isUploading, setIsUploading(false);
     const { toast } = useToast();
 
     const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -254,9 +328,8 @@ const ImageWithTextForm = ({ control, setValue, watch }: { control: any, setValu
         if (file) {
             setIsUploading(true);
             try {
-                await processAndUploadImage(file, (url) => {
-                    setValue('imageUrl', url, { shouldDirty: true });
-                });
+                const uploadedUrl = await processAndUploadImage(file, "image-with-text-section");
+                setValue('imageUrl', uploadedUrl, { shouldDirty: true });
             } catch (err) {
                 toast({ variant: 'destructive', title: 'Upload failed' });
             } finally {
@@ -320,10 +393,10 @@ const ImageWithTextForm = ({ control, setValue, watch }: { control: any, setValu
     );
 };
 
-const SectionForm = ({ section, control, setValue, watch }: { section: PageSection, control: any, setValue: any, watch: any }) => {
+const SectionForm = ({ section, control, setValue, watch, getValues }: { section: PageSection, control: any, setValue: any, watch: any, getValues: any }) => {
     switch (section.type) {
         case 'hero':
-            return <HeroForm control={control} setValue={setValue} watch={watch} />;
+            return <HeroForm control={control} setValue={setValue} watch={watch} getValues={getValues} />;
         case 'featured-products':
             return <FeaturedProductsForm control={control} watch={watch} />;
         case 'collections':
@@ -342,7 +415,7 @@ export function EditSectionDrawer({ isOpen, onClose, section, onSave }: EditSect
     
     const [products, setProducts] = useState<Product[]>([]);
     const [collections, setCollections] = useState<Collection[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, setIsLoading(false);
 
     useEffect(() => {
         async function loadData() {
@@ -394,7 +467,7 @@ export function EditSectionDrawer({ isOpen, onClose, section, onSave }: EditSect
                         <div className="p-4 border rounded-lg overflow-y-auto">
                             <Form {...form}>
                                 <form onSubmit={form.handleSubmit(onSubmit)} id="section-edit-form" className="space-y-6">
-                                    <SectionForm section={section} control={form.control} setValue={form.setValue} watch={form.watch} />
+                                    <SectionForm section={section} control={form.control} setValue={form.setValue} watch={form.watch} getValues={form.getValues} />
                                 </form>
                             </Form>
                         </div>
