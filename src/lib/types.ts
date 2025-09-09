@@ -41,6 +41,31 @@ export type Collection = {
   imageUrl?: string;
 };
 
+export type Contact = {
+    name: string;
+    email: string;
+    phone: string;
+    role: 'Primary' | 'Billing' | 'Shipping' | 'Other';
+};
+
+export type Customer = {
+    id: string;
+    clientType: 'ORGANIZATION' | 'INDIVIDUAL';
+    company?: string;
+    contacts: Contact[];
+    billingStreet: string;
+    billingCity: string;
+    billingState: string;
+    billingZip: string;
+    shippingStreet: string;
+    shippingCity: string;
+    shippingState: string;
+    shippingZip: string;
+    taxExempt: boolean;
+    taxExemptionNumber?: string;
+    gstNumber?: string;
+};
+
 export type MenuItem = {
   label: string;
   href: string;

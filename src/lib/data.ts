@@ -2,7 +2,7 @@
 import { db, storage } from './firebase';
 import { collection, getDocs, addDoc, doc, getDoc, updateDoc, deleteDoc, query, where, writeBatch } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { Product, Collection } from './types';
+import type { Product, Collection, Customer } from './types';
 import { generateFilename } from '@/ai/flows/generate-filename';
 
 function toProduct(doc: any): Product {
@@ -159,4 +159,79 @@ export async function updateCollection(id: string, collectionData: Partial<Omit<
 export async function deleteCollection(id: string): Promise<void> {
   const docRef = doc(db, 'collections', id);
   await deleteDoc(docRef);
+}
+
+// MOCK CUSTOMER DATA - replace with real firestore calls
+const mockCustomers: Customer[] = [
+    {
+        id: '1',
+        clientType: 'ORGANIZATION',
+        company: 'Piedmont Corp',
+        contacts: [{ name: 'John Doe', email: 'john@piedmont.com', phone: '555-1234', role: 'Primary' }],
+        billingStreet: '123 Main St',
+        billingCity: 'Anytown',
+        billingState: 'CA',
+        billingZip: '12345',
+        shippingStreet: '123 Main St',
+        shippingCity: 'Anytown',
+        shippingState: 'CA',
+        shippingZip: '12345',
+        taxExempt: true,
+        taxExemptionNumber: 'TX-123456',
+        gstNumber: ''
+    },
+    {
+        id: '2',
+        clientType: 'INDIVIDUAL',
+        company: '',
+        contacts: [{ name: 'Jane Smith', email: 'jane@example.com', phone: '555-5678', role: 'Primary' }],
+        billingStreet: '456 Side St',
+        billingCity: 'Otherville',
+        billingState: 'NY',
+        billingZip: '54321',
+        shippingStreet: '456 Side St',
+        shippingCity: 'Otherville',
+        shippingState: 'NY',
+        shippingZip: '54321',
+        taxExempt: false,
+    }
+];
+
+export async function getCustomers(): Promise<Customer[]> {
+  // In a real app, this would fetch from Firestore
+  return Promise.resolve(mockCustomers);
+}
+
+export async function getCustomerById(id: string): Promise<Customer | null> {
+  // In a real app, this would fetch from Firestore
+  const customer = mockCustomers.find(c => c.id === id);
+  return Promise.resolve(customer || null);
+}
+
+export async function addCustomer(customer: Omit<Customer, 'id'>): Promise<string> {
+    console.log("Adding customer", customer);
+    // In a real app, this would use addDoc to add to Firestore
+    const newId = (mockCustomers.length + 1).toString();
+    mockCustomers.push({id: newId, ...customer});
+    return Promise.resolve(newId);
+}
+
+export async function updateCustomer(id: string, customerData: Partial<Omit<Customer, 'id'>>): Promise<void> {
+    console.log("Updating customer", id, customerData);
+    // In a real app, this would use updateDoc
+    const index = mockCustomers.findIndex(c => c.id === id);
+    if(index > -1) {
+        mockCustomers[index] = { ...mockCustomers[index], ...customerData };
+    }
+    return Promise.resolve();
+}
+
+export async function deleteCustomer(id: string): Promise<void> {
+    console.log("Deleting customer", id);
+    // In a real app, this would use deleteDoc
+    const index = mockCustomers.findIndex(c => c.id === id);
+    if(index > -1) {
+        mockCustomers.splice(index, 1);
+    }
+    return Promise.resolve();
 }

@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Package, Settings, Home, ShoppingBag, Folder, Palette, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { Package, Settings, Home, ShoppingBag, Folder, Palette, ChevronsLeft, ChevronsRight, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,7 @@ const navItems = [
   { href: '/admin', label: 'Dashboard', icon: Home },
   { href: '/admin/products', label: 'Products', icon: Package },
   { href: '/admin/collections', label: 'Collections', icon: Folder },
+  { href: '/admin/customers', label: 'Customers', icon: Users },
   { href: '/admin/website-builder', label: 'Website Editor', icon: Palette },
   { href: '/admin/settings', label: 'Settings', icon: Settings },
 ];
