@@ -121,3 +121,4 @@ export function GenerateImageDialog({ isOpen, onClose, onImageGenerated, promptS
     </Dialog>
   );
 }
+
