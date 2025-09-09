@@ -55,7 +55,7 @@ export function GenerateImageDialog({ isOpen, onClose, onImageGenerated, promptS
       const result = await generateImage({ prompt: values.prompt });
       if (result.imageUrl) {
         onImageGenerated(result.imageUrl, values.prompt);
-        onClose();
+        onClose(); 
         form.reset();
       } else {
         throw new Error('AI did not return an image.');
