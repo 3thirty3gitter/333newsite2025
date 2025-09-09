@@ -35,7 +35,9 @@ const menuItemSchema = z.object({
 const pageSectionSchema = z.object({
   id: z.string(),
   type: z.string(),
-  props: z.record(z.any()),
+  props: z.record(z.any()).and(z.object({
+    height: z.number().optional()
+  })),
 });
 
 const pageSchema = z.object({
