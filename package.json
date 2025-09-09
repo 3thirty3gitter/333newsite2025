@@ -10,7 +10,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "setup:cors": "sh ./scripts/setup_cors.sh"
+    "setup:cors": "gcloud storage buckets update gs://commercecraft-g9ur4.appspot.com --cors-file=./cors.json"
   },
   "dependencies": {
     "@genkit-ai/googleai": "^1.14.1",
