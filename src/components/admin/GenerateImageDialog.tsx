@@ -44,7 +44,7 @@ export function GenerateImageDialog({ isOpen, onClose, onImageGenerated, promptS
   });
 
   useEffect(() => {
-    if (promptSuggestion) {
+    if (isOpen && promptSuggestion) {
       form.setValue('prompt', promptSuggestion);
     }
   }, [promptSuggestion, form, isOpen]);
@@ -55,8 +55,9 @@ export function GenerateImageDialog({ isOpen, onClose, onImageGenerated, promptS
       const result = await generateImage({ prompt: values.prompt });
       if (result.imageUrl) {
         onImageGenerated(result.imageUrl, values.prompt);
-        onClose(); 
-        form.reset();
+        // Do not close the dialog automatically, let the user do it.
+        // onClose(); 
+        // form.reset();
       } else {
         throw new Error('AI did not return an image.');
       }
@@ -71,12 +72,18 @@ export function GenerateImageDialog({ isOpen, onClose, onImageGenerated, promptS
       setIsGenerating(false);
     }
   }
+  
+  const handleDialogClose = () => {
+    if (!isGenerating) {
+        form.reset({ prompt: promptSuggestion || '' });
+        onClose();
+    }
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
-        if (!isGenerating) {
-            form.reset({ prompt: promptSuggestion || '' });
-            onClose();
+        if (!open) {
+          handleDialogClose();
         }
     }}>
       <DialogContent>
@@ -106,7 +113,7 @@ export function GenerateImageDialog({ isOpen, onClose, onImageGenerated, promptS
             />
             <DialogFooter>
               <DialogClose asChild>
-                <Button type="button" variant="outline" disabled={isGenerating}>Cancel</Button>
+                <Button type="button" variant="outline" disabled={isGenerating}>Close</Button>
               </DialogClose>
               <Button type="submit" disabled={isGenerating}>
                 {isGenerating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
