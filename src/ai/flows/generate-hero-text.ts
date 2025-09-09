@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -11,23 +12,17 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
-export const GenerateHeroTextInputSchema = z.object({
+const GenerateHeroTextInputSchema = z.object({
   topic: z.string().describe('The topic or theme for the hero section (e.g., "custom printing e-commerce").'),
   existingTitle: z.string().optional().describe('An existing title, if a new subtitle needs to be generated for it.'),
 });
 export type GenerateHeroTextInput = z.infer<typeof GenerateHeroTextInputSchema>;
 
-export const GenerateHeroTextOutputSchema = z.object({
+const GenerateHeroTextOutputSchema = z.object({
   title: z.string().optional().describe('The generated hero title.'),
   subtitle: z.string().optional().describe('The generated hero subtitle.'),
 });
 export type GenerateHeroTextOutput = z.infer<typeof GenerateHeroTextOutputSchema>;
-
-
-export async function generateHeroText(input: GenerateHeroTextInput): Promise<GenerateHeroTextOutput> {
-  return generateHeroTextFlow(input);
-}
-
 
 const generateHeroTextPrompt = ai.definePrompt({
     name: 'generateHeroTextPrompt',
@@ -48,7 +43,6 @@ const generateHeroTextPrompt = ai.definePrompt({
     `,
 });
 
-
 const generateHeroTextFlow = ai.defineFlow(
   {
     name: 'generateHeroTextFlow',
@@ -60,3 +54,8 @@ const generateHeroTextFlow = ai.defineFlow(
     return output!;
   }
 );
+
+
+export async function generateHeroText(input: GenerateHeroTextInput): Promise<GenerateHeroTextOutput> {
+  return generateHeroTextFlow(input);
+}
