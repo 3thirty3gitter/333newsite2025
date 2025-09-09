@@ -63,7 +63,8 @@ const sectionDefaults: Record<SectionType, Omit<PageSection, 'id'>> = {
       subtitle: 'This is a new hero section. Customize it!',
       imageUrl: `https://picsum.photos/1920/1080?random=${Math.floor(Math.random() * 1000)}`,
       buttonLabel: 'Learn More',
-      buttonHref: '#'
+      buttonHref: '#',
+      height: 60,
     }
   },
   'featured-products': {

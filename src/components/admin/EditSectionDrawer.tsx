@@ -76,6 +76,7 @@ const processAndUploadImage = async (fileOrDataUrl: File | string, context: stri
 
 const HeroForm = ({ control, setValue, watch, getValues }: { control: any, setValue: any, watch: any, getValues: any }) => {
     const imageUrl = watch('imageUrl');
+    const height = watch('height');
     const imageInputRef = useRef<HTMLInputElement>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [isGeneratingText, setIsGeneratingText] = useState<false | 'title' | 'subtitle'>(false);
@@ -101,18 +102,18 @@ const HeroForm = ({ control, setValue, watch, getValues }: { control: any, setVa
         setIsGeneratingText(field);
         try {
             const currentTitle = getValues('title');
-            const result = await generateHeroText({ 
+            const { title, subtitle } = await generateHeroText({ 
                 topic: 'a modern, stylish e-commerce store',
                 existingTitle: field === 'subtitle' ? currentTitle : undefined
             });
 
-            if (field === 'title' && result.title) {
-                setValue('title', result.title, { shouldDirty: true });
-                if (result.subtitle) {
-                    setValue('subtitle', result.subtitle, { shouldDirty: true });
+            if (field === 'title' && title) {
+                setValue('title', title, { shouldDirty: true });
+                if (subtitle) {
+                    setValue('subtitle', subtitle, { shouldDirty: true });
                 }
-            } else if (field === 'subtitle' && result.subtitle) {
-                setValue('subtitle', result.subtitle, { shouldDirty: true });
+            } else if (field === 'subtitle' && subtitle) {
+                setValue('subtitle', subtitle, { shouldDirty: true });
             }
             toast({ title: 'Text Generated', description: 'The AI-powered text has been added.' });
         } catch (error) {
@@ -214,6 +215,25 @@ const HeroForm = ({ control, setValue, watch, getValues }: { control: any, setVa
                 </div>
             </div>
         </div>
+
+        <FormField
+            control={control}
+            name="height"
+            render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Section Height: {height || 60}vh</FormLabel>
+                    <FormControl>
+                        <Slider
+                            value={[field.value || 60]}
+                            onValueChange={(value) => field.onChange(value[0])}
+                            min={30}
+                            max={100}
+                            step={5}
+                        />
+                    </FormControl>
+                </FormItem>
+            )}
+        />
 
         <FormField
             control={control}
