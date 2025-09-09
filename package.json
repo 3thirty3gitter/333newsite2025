@@ -9,7 +9,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "setup:cors": "sh ./scripts/setup_cors.sh"
   },
   "dependencies": {
     "@genkit-ai/googleai": "^1.14.1",
