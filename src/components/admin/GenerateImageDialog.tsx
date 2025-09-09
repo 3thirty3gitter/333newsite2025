@@ -94,7 +94,7 @@ export function GenerateImageDialog({ isOpen, onClose, onImageGenerated, promptS
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
             <FormField
               control={form.control}
               name="prompt"
@@ -110,7 +110,7 @@ export function GenerateImageDialog({ isOpen, onClose, onImageGenerated, promptS
             />
             <DialogFooter>
               <Button type="button" variant="outline" onClick={handleDialogClose} disabled={isGenerating}>Close</Button>
-              <Button type="submit" disabled={isGenerating}>
+              <Button type="button" onClick={form.handleSubmit(onSubmit)} disabled={isGenerating}>
                 {isGenerating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {isGenerating ? 'Generating...' : 'Generate'}
               </Button>
