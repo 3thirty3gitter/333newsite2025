@@ -77,9 +77,9 @@ const processAndUploadImage = async (fileOrDataUrl: File | string, context: stri
 const HeroForm = ({ control, setValue, watch, getValues }: { control: any, setValue: any, watch: any, getValues: any }) => {
     const imageUrl = watch('imageUrl');
     const imageInputRef = useRef<HTMLInputElement>(null);
-    const [isUploading, setIsUploading(false);
-    const [isGeneratingText, setIsGeneratingText<false | 'title' | 'subtitle'>(false);
-    const [isImageGeneratorOpen, setIsImageGeneratorOpen(false);
+    const [isUploading, setIsUploading] = useState(false);
+    const [isGeneratingText, setIsGeneratingText] = useState<false | 'title' | 'subtitle'>(false);
+    const [isImageGeneratorOpen, setIsImageGeneratorOpen] = useState(false);
     const { toast } = useToast();
 
     const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -320,7 +320,7 @@ const CollectionsForm = ({ control }: { control: any }) => {
 const ImageWithTextForm = ({ control, setValue, watch }: { control: any, setValue: any, watch: any }) => {
     const imageUrl = watch('imageUrl');
     const imageInputRef = useRef<HTMLInputElement>(null);
-    const [isUploading, setIsUploading(false);
+    const [isUploading, setIsUploading] = useState(false);
     const { toast } = useToast();
 
     const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -415,7 +415,7 @@ export function EditSectionDrawer({ isOpen, onClose, section, onSave }: EditSect
     
     const [products, setProducts] = useState<Product[]>([]);
     const [collections, setCollections] = useState<Collection[]>([]);
-    const [isLoading, setIsLoading(false);
+    const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
         async function loadData() {
