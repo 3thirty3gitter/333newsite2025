@@ -16,6 +16,8 @@ import { addCustomer } from '@/lib/data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
+import { useState, useEffect } from 'react';
+import { cn } from '@/lib/utils';
 
 const contactSchema = z.object({
   name: z.string().min(2, 'Name is required'),
@@ -32,10 +34,10 @@ const formSchema = z.object({
   billingCity: z.string().min(2, 'City is required'),
   billingState: z.string().min(2, 'State is required'),
   billingZip: z.string().min(5, 'ZIP code is required'),
-  shippingStreet: z.string().min(2, 'Street is required'),
-  shippingCity: z.string().min(2, 'City is required'),
-  shippingState: z.string().min(2, 'State is required'),
-  shippingZip: z.string().min(5, 'ZIP code is required'),
+  shippingStreet: z.string().optional(),
+  shippingCity: z.string().optional(),
+  shippingState: z.string().optional(),
+  shippingZip: z.string().optional(),
   taxExempt: z.boolean(),
   taxExemptionNumber: z.string().optional(),
   gstNumber: z.string().optional(),
@@ -49,6 +51,7 @@ type FormValues = z.infer<typeof formSchema>;
 export default function NewCustomerPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const [isSameAsBilling, setIsSameAsBilling] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -76,9 +79,25 @@ export default function NewCustomerPage() {
   });
   
   const clientType = form.watch('clientType');
+  const billingAddress = form.watch(['billingStreet', 'billingCity', 'billingState', 'billingZip']);
+
+  useEffect(() => {
+    if (isSameAsBilling) {
+      form.setValue('shippingStreet', billingAddress[0]);
+      form.setValue('shippingCity', billingAddress[1]);
+      form.setValue('shippingState', billingAddress[2]);
+      form.setValue('shippingZip', billingAddress[3]);
+    }
+  }, [isSameAsBilling, billingAddress, form]);
 
   async function onSubmit(values: FormValues) {
     try {
+      if (isSameAsBilling) {
+        values.shippingStreet = values.billingStreet;
+        values.shippingCity = values.billingCity;
+        values.shippingState = values.billingState;
+        values.shippingZip = values.billingZip;
+      }
       await addCustomer(values);
       toast({
         title: 'Customer Created',
@@ -200,8 +219,16 @@ export default function NewCustomerPage() {
                     </div>
                      <Separator />
                      <div>
-                        <h3 className="font-medium mb-4">Shipping Address</h3>
-                         <div className="space-y-4">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="font-medium">Shipping Address</h3>
+                             <div className="flex items-center space-x-2">
+                                <Checkbox id="sameAsBilling" checked={isSameAsBilling} onCheckedChange={() => setIsSameAsBilling(!isSameAsBilling)} />
+                                <label htmlFor="sameAsBilling" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                    Same as billing
+                                </label>
+                            </div>
+                        </div>
+                         <div className={cn("space-y-4", isSameAsBilling && "hidden")}>
                             <FormField control={form.control} name="shippingStreet" render={({ field }) => (<FormItem><FormLabel>Street</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                             <div className="grid grid-cols-3 gap-4">
                                 <FormField control={form.control} name="shippingCity" render={({ field }) => (<FormItem><FormLabel>City</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />

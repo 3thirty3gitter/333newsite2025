@@ -24,9 +24,9 @@
         "type": "object",
         "required": ["file","diff","apply","rollback"],
         "properties": {
-          "file": { "type": "string" },
-          "diff": { "type": "string" },
-          "apply": { "type": "string" },
+          "file":     { "type": "string" },
+          "diff":     { "type": "string", "description": "Unified diff or patch" },
+          "apply":    { "type": "string" },
           "rollback": { "type": "string" }
         }
       }
@@ -37,9 +37,9 @@
         "type": "object",
         "required": ["name","type","steps","expected"],
         "properties": {
-          "name": { "type": "string" },
-          "type": { "type": "string", "enum": ["unit","integration","e2e","a11y","perf"] },
-          "steps": { "type": "string" },
+          "name":     { "type": "string" },
+          "type":     { "type": "string", "enum": ["unit","integration","e2e","a11y","perf"] },
+          "steps":    { "type": "string" },
           "expected": { "type": "string" }
         }
       }
@@ -50,9 +50,9 @@
         "type": "object",
         "required": ["rule","status","notes"],
         "properties": {
-          "rule": { "type": "string" },
+          "rule":   { "type": "string" },
           "status": { "type": "string", "enum": ["PASS","FAIL"] },
-          "notes": { "type": "string" }
+          "notes":  { "type": "string" }
         }
       },
       "minItems": 1

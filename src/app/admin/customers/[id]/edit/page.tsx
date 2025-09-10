@@ -19,6 +19,7 @@ import { Separator } from '@/components/ui/separator';
 import { Customer } from '@/lib/types';
 import { useEffect, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 const contactSchema = z.object({
   name: z.string().min(2, 'Name is required'),
@@ -55,6 +56,7 @@ export default function EditCustomerPage() {
   const customerId = params.id as string;
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
+  const [isSameAsBilling, setIsSameAsBilling] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -84,6 +86,14 @@ export default function EditCustomerPage() {
             const customer = await getCustomerById(customerId);
             if (customer) {
                 form.reset(customer);
+                 if (
+                    customer.billingStreet === customer.shippingStreet &&
+                    customer.billingCity === customer.shippingCity &&
+                    customer.billingState === customer.shippingState &&
+                    customer.billingZip === customer.shippingZip
+                ) {
+                    setIsSameAsBilling(true);
+                }
             } else {
                 toast({ variant: 'destructive', title: 'Error', description: 'Customer not found.' });
                 router.push('/admin/customers');
@@ -104,6 +114,18 @@ export default function EditCustomerPage() {
   });
   
   const clientType = form.watch('clientType');
+
+  const billingAddress = form.watch(['billingStreet', 'billingCity', 'billingState', 'billingZip']);
+
+  useEffect(() => {
+    if (isSameAsBilling) {
+      form.setValue('shippingStreet', billingAddress[0]);
+      form.setValue('shippingCity', billingAddress[1]);
+      form.setValue('shippingState', billingAddress[2]);
+      form.setValue('shippingZip', billingAddress[3]);
+    }
+  }, [isSameAsBilling, billingAddress, form]);
+
 
   async function onSubmit(values: FormValues) {
     try {
@@ -256,8 +278,16 @@ export default function EditCustomerPage() {
                     </div>
                      <Separator />
                      <div>
-                        <h3 className="font-medium mb-4">Shipping Address</h3>
-                         <div className="space-y-4">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="font-medium">Shipping Address</h3>
+                             <div className="flex items-center space-x-2">
+                                <Checkbox id="sameAsBilling" checked={isSameAsBilling} onCheckedChange={() => setIsSameAsBilling(!isSameAsBilling)} />
+                                <label htmlFor="sameAsBilling" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                    Same as billing
+                                </label>
+                            </div>
+                        </div>
+                         <div className={cn("space-y-4", isSameAsBilling && "hidden")}>
                             <FormField control={form.control} name="shippingStreet" render={({ field }) => (<FormItem><FormLabel>Street</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                             <div className="grid grid-cols-3 gap-4">
                                 <FormField control={form.control} name="shippingCity" render={({ field }) => (<FormItem><FormLabel>City</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
