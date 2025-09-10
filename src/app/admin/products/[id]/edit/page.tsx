@@ -1,14 +1,14 @@
 
 'use client';
 
-import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
@@ -23,8 +23,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import Image from 'next/image';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { cn } from '@/lib/utils';
+import { Switch } from '@/components/ui/switch';
 
 
 const variantOptionSchema = z.object({
@@ -41,17 +40,25 @@ const inventoryItemSchema = z.object({
     id: z.string(),
     price: z.coerce.number().min(0, "Price can't be negative"),
     stock: z.coerce.number().min(0, "Stock can't be negative"),
+    sku: z.string().optional(),
+    barcode: z.string().optional(),
 });
 
 const formSchema = z.object({
   name: z.string().min(2, 'Name is required'),
-  description: z.string().min(10, 'Description must be at least 10 characters'),
-  longDescription: z.string().min(20, 'Long description must be at least 20 characters'),
+  description: z.string().optional(),
+  longDescription: z.string().optional(),
   price: z.coerce.number().min(0.01, 'Price must be a positive number'),
   category: z.string().min(1, 'Category is required'),
   images: z.array(z.string()).optional(),
   variants: z.array(variantSchema).optional(),
   inventory: z.array(inventoryItemSchema).optional(),
+  status: z.enum(['active', 'draft']),
+  compareAtPrice: z.coerce.number().optional(),
+  costPerItem: z.coerce.number().optional(),
+  isTaxable: z.boolean(),
+  trackQuantity: z.boolean(),
+  allowOutOfStockPurchase: z.boolean(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -82,6 +89,10 @@ export default function EditProductPage() {
       images: [],
       variants: [],
       inventory: [],
+      status: 'active',
+      isTaxable: true,
+      trackQuantity: true,
+      allowOutOfStockPurchase: false,
     },
   });
 
@@ -102,11 +113,9 @@ export default function EditProductPage() {
           setImagePreviews(productImages);
           
           form.reset({
-            name: fetchedProduct.name,
-            description: fetchedProduct.description,
-            longDescription: fetchedProduct.longDescription,
-            price: fetchedProduct.price,
-            category: fetchedProduct.category,
+            ...fetchedProduct,
+            description: fetchedProduct.description || '',
+            longDescription: fetchedProduct.longDescription || '',
             images: productImages,
             variants: fetchedProduct.variants || [],
             inventory: fetchedProduct.inventory || [],
@@ -143,10 +152,10 @@ export default function EditProductPage() {
   const basePrice = form.watch('price');
 
   const generatedCombinations = useMemo(() => {
-    const validVariants = watchedVariants?.filter(v => v.type && v.options && v.options.length > 0);
-    if (!validVariants || validVariants.length === 0) {
-      return [];
-    }
+    if (!watchedVariants || watchedVariants.length === 0) return [];
+    const validVariants = watchedVariants.filter(v => v.type && v.options && v.options.length > 0);
+    if (validVariants.length === 0) return [];
+
     const optionGroups = validVariants.map(v => v.options.map(o => o.value));
     const cartesian = <T,>(...a: T[][]): T[][] => a.reduce((a, b) => a.flatMap(d => b.map(e => [d, e].flat())));
     return cartesian(...optionGroups);
@@ -162,6 +171,8 @@ export default function EditProductPage() {
             id: comboId,
             price: existingItem?.price ?? basePrice ?? 0,
             stock: existingItem?.stock ?? 0,
+            sku: existingItem?.sku || '',
+            barcode: existingItem?.barcode || '',
         };
     });
     replaceInventory(newInventory);
@@ -268,11 +279,6 @@ export default function EditProductPage() {
     }
   }
 
-  const primaryVariantOptions = useMemo(() => {
-    return watchedVariants?.[0]?.options || [];
-  }, [watchedVariants]);
-
-
   if (isLoadingProduct) {
     return (
         <div className="space-y-8">
@@ -288,10 +294,6 @@ export default function EditProductPage() {
                             <div className="space-y-2"><Skeleton className="h-4 w-24" /><Skeleton className="h-10 w-full" /></div>
                             <div className="space-y-2"><Skeleton className="h-4 w-24" /><Skeleton className="h-10 w-full" /></div>
                             <div className="space-y-2"><Skeleton className="h-4 w-24" /><Skeleton className="h-20 w-full" /></div>
-                            <div className="grid md:grid-cols-2 gap-8">
-                                <div className="space-y-2"><Skeleton className="h-4 w-24" /><Skeleton className="h-10 w-full" /></div>
-                                <div className="space-y-2"><Skeleton className="h-4 w-24" /><Skeleton className="h-10 w-full" /></div>
-                            </div>
                         </CardContent>
                     </Card>
                 </div>
@@ -374,45 +376,73 @@ export default function EditProductPage() {
                             </FormItem>
                             )}
                         />
-                        <div className="grid md:grid-cols-2 gap-8">
-                            <FormField
-                            control={form.control}
-                            name="price"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Base Price</FormLabel>
-                                <FormControl>
-                                    <Input type="number" step="0.01" placeholder="e.g., 129.99" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                            />
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Pricing</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            <div className="grid md:grid-cols-2 gap-8">
+                                <FormField
+                                    control={form.control}
+                                    name="price"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Price</FormLabel>
+                                            <FormControl>
+                                                <Input type="number" step="0.01" placeholder="e.g., 129.99" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="compareAtPrice"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Compare-at price</FormLabel>
+                                            <FormControl>
+                                                <Input type="number" step="0.01" placeholder="e.g., 159.99" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
                             <FormField
                                 control={form.control}
-                                name="category"
+                                name="isTaxable"
                                 render={({ field }) => (
-                                    <FormItem>
-                                    <FormLabel>Collection</FormLabel>
-                                    <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingCollections}>
+                                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                                        <div className="space-y-0.5">
+                                            <FormLabel>Charge tax on this product</FormLabel>
+                                        </div>
                                         <FormControl>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select a collection" />
-                                        </SelectTrigger>
+                                            <Switch
+                                                checked={field.value}
+                                                onCheckedChange={field.onChange}
+                                            />
                                         </FormControl>
-                                        <SelectContent>
-                                        {collections.map((collection) => (
-                                            <SelectItem key={collection.id} value={collection.name}>
-                                            {collection.name}
-                                            </SelectItem>
-                                        ))}
-                                        </SelectContent>
-                                    </Select>
-                                    <FormMessage />
                                     </FormItem>
                                 )}
                             />
-                        </div>
+                             <FormField
+                                control={form.control}
+                                name="costPerItem"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Cost per item</FormLabel>
+                                        <FormControl>
+                                            <Input type="number" step="0.01" placeholder="e.g., 50.00" {...field} />
+                                        </FormControl>
+                                        <FormDescription>Customers won’t see this.</FormDescription>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
                         </CardContent>
                     </Card>
 
@@ -490,7 +520,7 @@ export default function EditProductPage() {
                         </CardContent>
                     </Card>
 
-                    {primaryVariantOptions.length > 0 && (
+                    {generatedCombinations.length > 0 && (
                         <Card>
                             <CardHeader>
                                 <CardTitle>Inventory</CardTitle>
@@ -499,77 +529,117 @@ export default function EditProductPage() {
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
-                                {primaryVariantOptions.map((primaryOption, pIndex) => (
-                                    <Collapsible key={pIndex} className="border-b last:border-b-0">
-                                        <CollapsibleTrigger asChild>
-                                            <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50">
-                                                <div className="flex items-center gap-4">
-                                                    <Image src={primaryOption.image || imagePreviews[0] || 'https://placehold.co/64x64'} alt={primaryOption.value} width={40} height={40} className="rounded-md object-cover" />
-                                                    <div>
-                                                        <p className="font-medium">{primaryOption.value}</p>
-                                                        <p className="text-sm text-muted-foreground">{watchedVariants[1]?.options.length || 0} variants</p>
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center gap-4">
-                                                     <span className="text-sm w-32 text-right">$... - $...</span>
-                                                     <span className="text-sm w-20 text-right">... available</span>
-                                                     <Button type="button" variant="ghost" size="icon" className="h-8 w-8 data-[state=open]:rotate-180">
-                                                        <ChevronDown className="h-4 w-4" />
-                                                     </Button>
-                                                </div>
-                                            </div>
-                                        </CollapsibleTrigger>
-                                        <CollapsibleContent>
-                                            <Table className="bg-muted/20">
-                                                <TableHeader>
-                                                    <TableRow>
-                                                        <TableHead>{watchedVariants[1]?.type || 'Variant'}</TableHead>
-                                                        <TableHead className="w-[150px]">Price</TableHead>
-                                                        <TableHead className="w-[100px]">Available</TableHead>
-                                                    </TableRow>
-                                                </TableHeader>
-                                                <TableBody>
-                                                   {(watchedVariants[1]?.options || [{value: 'Default'}]).map((secondaryOption, sIndex) => {
-                                                        const comboId = watchedVariants[1] ? `${primaryOption.value}-${secondaryOption.value}` : primaryOption.value;
-                                                        const inventoryItemIndex = inventoryFields.findIndex(i => i.id === comboId);
-                                                        
-                                                        if (inventoryItemIndex === -1) return null;
-
-                                                        return (
-                                                            <TableRow key={comboId}>
-                                                                <TableCell>{secondaryOption.value}</TableCell>
-                                                                <TableCell>
-                                                                    <FormField
-                                                                        control={form.control}
-                                                                        name={`inventory.${inventoryItemIndex}.price`}
-                                                                        render={({ field }) => (
-                                                                            <FormItem><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
-                                                                        )}
-                                                                    />
-                                                                </TableCell>
-                                                                <TableCell>
-                                                                     <FormField
-                                                                        control={form.control}
-                                                                        name={`inventory.${inventoryItemIndex}.stock`}
-                                                                        render={({ field }) => (
-                                                                            <FormItem><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
-                                                                        )}
-                                                                    />
-                                                                </TableCell>
-                                                            </TableRow>
-                                                        );
-                                                   })}
-                                                </TableBody>
-                                            </Table>
-                                        </CollapsibleContent>
-                                    </Collapsible>
-                                ))}
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            {watchedVariants.map(v => v.type && <TableHead key={v.type}>{v.type}</TableHead>)}
+                                            <TableHead className="w-[150px]">Price</TableHead>
+                                            <TableHead className="w-[100px]">Available</TableHead>
+                                            <TableHead className="w-[150px]">SKU</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {generatedCombinations.map((combo, comboIndex) => {
+                                            const comboArray = Array.isArray(combo) ? combo : [combo];
+                                            return (
+                                                <TableRow key={comboIndex}>
+                                                    {comboArray.map((option, optionIndex) => <TableCell key={optionIndex}>{option}</TableCell>)}
+                                                    <TableCell>
+                                                        <FormField
+                                                            control={form.control}
+                                                            name={`inventory.${comboIndex}.price`}
+                                                            render={({ field }) => (
+                                                                <FormItem><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
+                                                            )}
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <FormField
+                                                            control={form.control}
+                                                            name={`inventory.${comboIndex}.stock`}
+                                                            render={({ field }) => (
+                                                                <FormItem><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                                                            )}
+                                                        />
+                                                    </TableCell>
+                                                     <TableCell>
+                                                        <FormField
+                                                            control={form.control}
+                                                            name={`inventory.${comboIndex}.sku`}
+                                                            render={({ field }) => (
+                                                                <FormItem><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                                                            )}
+                                                        />
+                                                    </TableCell>
+                                                </TableRow>
+                                            )
+                                        })}
+                                    </TableBody>
+                                </Table>
                             </CardContent>
                         </Card>
                     )}
                 </div>
 
                  <div className="md:col-span-1 space-y-8">
+                     <Card>
+                        <CardHeader>
+                            <CardTitle>Product status</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                             <FormField
+                                control={form.control}
+                                name="status"
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <FormControl>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select a status" />
+                                        </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="active">Active</SelectItem>
+                                            <SelectItem value="draft">Draft</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </CardContent>
+                    </Card>
+                     <Card>
+                        <CardHeader>
+                            <CardTitle>Product organization</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            <FormField
+                                control={form.control}
+                                name="category"
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>Collection</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingCollections}>
+                                        <FormControl>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select a collection" />
+                                        </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                        {collections.map((collection) => (
+                                            <SelectItem key={collection.id} value={collection.name}>
+                                            {collection.name}
+                                            </SelectItem>
+                                        ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </CardContent>
+                    </Card>
                     <Card>
                         <CardHeader>
                             <CardTitle>Product Images</CardTitle>

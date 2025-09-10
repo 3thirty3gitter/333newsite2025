@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useTransition } from 'react';
@@ -26,8 +27,8 @@ interface ImportProductsDialogProps {
   onImported: () => void;
 }
 
-const csvTemplateHeaders = "name,description,longDescription,price,category,images,variants,inventory";
-const csvTemplateData = `"Example T-Shirt","A cool example shirt.","This is a longer description for the cool example shirt.",19.99,"Apparel","https://picsum.photos/400/400?random=1,https://picsum.photos/400/400?random=2","{""type"":""Size"",""options"":[{""value"":""S""},{""value"":""M""},{""value"":""L""}]};{""type"":""Color"",""options"":[{""value"":""Red""},{""value"":""Blue""}]}","{""id"":""S-Red"",""price"":21.99,""stock"":10};{""id"":""M-Blue"",""price"":22.99,""stock"":5}"`;
+const csvTemplateHeaders = "name,description,longDescription,price,category,images,variants,inventory,status,compareAtPrice,costPerItem,isTaxable,trackQuantity,allowOutOfStockPurchase,sku,barcode";
+const csvTemplateData = `"Example T-Shirt","A cool example shirt.","This is a longer description for the cool example shirt.",19.99,"Apparel","https://picsum.photos/400/400?random=1,https://picsum.photos/400/400?random=2","[{""type"":""Size"",""options"":[{""value"":""S""},{""value"":""M""},{""value"":""L""}]},{""type"":""Color"",""options"":[{""value"":""Red""},{""value"":""Blue""}]}]","[{""id"":""S-Red"",""price"":21.99,""stock"":10,""sku"":""TS-S-R""},{""id"":""M-Blue"",""price"":22.99,""stock"":5,""sku"":""TS-M-B""}]","active",24.99,10.00,TRUE,TRUE,FALSE,"",""`;
 const csvTemplate = `${csvTemplateHeaders}\n${csvTemplateData}`;
 
 
@@ -35,13 +36,9 @@ const csvTemplate = `${csvTemplateHeaders}\n${csvTemplateData}`;
 function parseJsonField(value: string | undefined): any[] {
     if (!value) return [];
     try {
-        // If it's a single valid JSON array, parse it directly
-        if (value.trim().startsWith('[')) {
-            return JSON.parse(value);
-        }
-        // If it's multiple JSON objects separated by semicolons
-        const jsonString = `[${value.replace(/""/g, '"').replace(/;/g, ',')}]`;
-        return JSON.parse(jsonString);
+        // Handle values that might be wrapped in extra quotes
+        const cleanedValue = value.startsWith('"') && value.endsWith('"') ? value.slice(1, -1).replace(/""/g, '"') : value;
+        return JSON.parse(cleanedValue);
     } catch (e) {
         console.error("Failed to parse JSON field:", value, e);
         return [];
@@ -108,6 +105,12 @@ export function ImportProductsDialog({ isOpen, onClose, onImported }: ImportProd
                 images: row.images ? row.images.split(',').map(s => s.trim()) : [],
                 variants: parseJsonField(row.variants),
                 inventory: parseJsonField(row.inventory),
+                status: row.status === 'active' || row.status === 'draft' ? row.status : 'draft',
+                compareAtPrice: row.compareAtPrice ? parseFloat(row.compareAtPrice) : undefined,
+                costPerItem: row.costPerItem ? parseFloat(row.costPerItem) : undefined,
+                isTaxable: row.isTaxable?.toUpperCase() === 'TRUE',
+                trackQuantity: row.trackQuantity?.toUpperCase() === 'TRUE',
+                allowOutOfStockPurchase: row.allowOutOfStockPurchase?.toUpperCase() === 'TRUE',
               };
             }).filter(p => p !== null) as Omit<Product, 'id'>[];
 

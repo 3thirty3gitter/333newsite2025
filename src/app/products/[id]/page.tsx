@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -30,8 +31,12 @@ export default function ProductPage({ params }: ProductPageProps) {
     async function fetchProduct() {
       const fetchedProduct = await getProductById(params.id);
       if (fetchedProduct) {
-        setProduct(fetchedProduct);
-        addToHistory(fetchedProduct.id);
+        if (fetchedProduct.status === 'active') {
+            setProduct(fetchedProduct);
+            addToHistory(fetchedProduct.id);
+        } else {
+            notFound();
+        }
       } else {
         notFound();
       }

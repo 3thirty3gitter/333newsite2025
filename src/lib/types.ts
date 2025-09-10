@@ -10,6 +10,12 @@ export type Product = {
   category: string;
   variants: Variant[];
   inventory: InventoryItem[];
+  status: 'active' | 'draft';
+  compareAtPrice?: number;
+  costPerItem?: number;
+  isTaxable: boolean;
+  trackQuantity: boolean;
+  allowOutOfStockPurchase: boolean;
 };
 
 export type Variant = {
@@ -26,6 +32,8 @@ export type InventoryItem = {
     id: string; // Combination of variant values, e.g., "Small-Red"
     price: number;
     stock: number;
+    sku?: string;
+    barcode?: string;
 }
 
 export type CartItem = {

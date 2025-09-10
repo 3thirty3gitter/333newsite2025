@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -66,6 +67,7 @@ export default function AdminProductsPage() {
                   <span className="sr-only">Image</span>
                 </TableHead>
                 <TableHead>Name</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead className="hidden md:table-cell">Price</TableHead>
                 <TableHead>
@@ -87,6 +89,9 @@ export default function AdminProductsPage() {
                     />
                   </TableCell>
                   <TableCell className="font-medium">{product.name}</TableCell>
+                   <TableCell>
+                    <Badge variant={product.status === 'active' ? 'secondary' : 'outline'}>{product.status}</Badge>
+                  </TableCell>
                   <TableCell>
                     <Badge variant="outline">{product.category}</Badge>
                   </TableCell>
