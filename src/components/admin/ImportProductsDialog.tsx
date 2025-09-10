@@ -27,7 +27,7 @@ interface ImportProductsDialogProps {
 }
 
 const csvTemplateHeaders = "name,handle,description,longDescription,price,category,vendor,tags,images,variants,inventory,status,compareAtPrice,costPerItem,isTaxable,trackQuantity,allowOutOfStockPurchase,seoTitle,seoDescription";
-const csvTemplateData = `"Example T-Shirt","example-t-shirt","A cool example shirt.","This is a longer description for the cool example shirt.",19.99,"Apparel","Example Brand","shirt,summer","https://picsum.photos/400/400?random=1,https://picsum.photos/400/400?random=2","[{""type"":""Size"",""options"":[{""value"":""S""},{""value"":""M""},{""value"":""L""}]},{""type"":""Color"",""options"":[{""value"":""Red""},{""value"":""Blue""}]}]","[{""id"":""S-Red"",""price"":21.99,""stock"":10,""sku"":""TS-S-R"",""grams"":150},{""id"":""M-Blue"",""price"":22.99,""stock"":5,""sku"":""TS-M-B"",""grams"":170}]","active",24.99,10.00,TRUE,TRUE,FALSE,"Example SEO Title","Example SEO Description"`;
+const csvTemplateData = `"Example T-Shirt","example-t-shirt","A cool example shirt.","This is a longer description for the cool example shirt.",19.99,"Apparel","Example Brand","shirt,summer","https://picsum.photos/400/400?random=1","[{""type"":""Size"",""options"":[{""value"":""S""},{""value"":""M""}]}]","[{""id"":""S"",""price"":21.99,""stock"":10,""sku"":""TS-S""},{""id"":""M"",""price"":22.99,""stock"":5,""sku"":""TS-M""}]","active",24.99,10.00,TRUE,TRUE,FALSE,"Example SEO Title","Example SEO Description"`;
 const csvTemplate = `${csvTemplateHeaders}\n${csvTemplateData}`;
 
 
