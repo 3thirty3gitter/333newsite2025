@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -139,13 +138,102 @@ const sectionDefaults: Record<SectionType, Omit<PageSection, 'id'>> = {
   }
 }
 
+function PageSectionsEditor({ activePageIndex }: { activePageIndex: number }) {
+  const form = useFormContext();
+  const { fields, append, remove, update } = useFieldArray({
+    control: form.control,
+    name: `pages.${activePageIndex}.sections`,
+    keyName: "keyId", // To avoid conflicts with our `id` field
+  });
+  const [editingSection, setEditingSection] = useState<{ pageIndex: number; section: PageSection; sectionIndex: number } | null>(null);
+
+  const handleAddSection = (type: SectionType) => {
+    const newSection = {
+      ...sectionDefaults[type],
+      id: `${type}-${Date.now()}`
+    };
+    append(newSection);
+  }
+
+  const handleSaveSection = (pageIndex: number, sectionIndex: number, newProps: any) => {
+      const currentSection = form.getValues(`pages.${pageIndex}.sections.${sectionIndex}`);
+      const updatedSection = { ...currentSection, props: newProps };
+
+      const currentPage = form.getValues(`pages.${pageIndex}`);
+      const updatedSections = [...(currentPage.sections || [])];
+      updatedSections[sectionIndex] = updatedSection;
+      
+      const pages = form.getValues('pages');
+      pages[pageIndex].sections = updatedSections;
+      form.setValue('pages', pages, { shouldDirty: true });
+
+      setEditingSection(null);
+  }
+
+  return (
+    <>
+    <AccordionItem value="item-2">
+      <AccordionTrigger className="font-semibold text-lg">Page Sections</AccordionTrigger>
+      <AccordionContent className="space-y-6 pt-4">
+        <div className="space-y-3">
+          {fields.map((field, index) => (
+            <Card key={field.keyId} className="p-3">
+              <div className="flex items-center gap-3">
+                <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab" />
+                <div className="flex-1">
+                  <p className="font-medium capitalize">{field.type.replace('-', ' ')}</p>
+                  <p className="text-xs text-muted-foreground">ID: {field.id}</p>
+                </div>
+                <Button type="button" variant="outline" size="sm" onClick={() => setEditingSection({ pageIndex: activePageIndex, section: field as PageSection, sectionIndex: index })}>
+                  <Pencil className="mr-2 h-3 w-3" />
+                  Edit
+                </Button>
+                <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => remove(index)}>
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </div>
+            </Card>
+          ))}
+        </div>
+        
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="w-full">
+              <Plus className="mr-2 h-4 w-4" /> Add Section
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-64">
+            <DropdownMenuItem onSelect={() => handleAddSection('hero')}>Hero</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => handleAddSection('featured-products')}>Featured Products</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => handleAddSection('collections')}>Collections</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => handleAddSection('testimonials')}>Testimonials</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => handleAddSection('image-with-text')}>Image With Text</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => handleAddSection('faq')}>FAQ</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+      </AccordionContent>
+    </AccordionItem>
+    {editingSection && (
+        <EditSectionDrawer
+            isOpen={!!editingSection}
+            onClose={() => setEditingSection(null)}
+            pageIndex={editingSection.pageIndex}
+            section={editingSection.section}
+            sectionIndex={editingSection.sectionIndex}
+            onSave={(newProps) => handleSaveSection(editingSection.pageIndex, editingSection.sectionIndex, newProps)}
+        />
+    )}
+    </>
+  );
+}
+
 export default function WebsiteBuilderPage() {
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, startTransition] = useTransition();
     const [isUploading, setIsUploading] = useState(false);
     const imageInputRef = useRef<HTMLInputElement>(null);
-    const [editingSection, setEditingSection] = useState<{ pageIndex: number; section: PageSection; sectionIndex: number } | null>(null);
     const [activePageIndex, setActivePageIndex] = useState(0);
     const [isAddPageDialogOpen, setIsAddPageDialogOpen] = useState(false);
 
@@ -168,12 +256,6 @@ export default function WebsiteBuilderPage() {
     const { fields: pageFields, append: appendPage, remove: removePage, update: updatePage } = useFieldArray({
         control: form.control,
         name: "pages",
-    });
-    
-    const sectionName = `pages.${activePageIndex}.sections` as const;
-    const { fields: sectionFields, append: appendSection, remove: removeSection, update: updateSection } = useFieldArray({
-      control: form.control,
-      name: sectionName,
     });
 
     useEffect(() => {
@@ -203,7 +285,11 @@ export default function WebsiteBuilderPage() {
         const iframe = document.querySelector('iframe');
         if (iframe) {
             const targetPath = path || pages?.[activePageIndex]?.path || '/';
-            iframe.src = `${targetPath}?_=${new Date().getTime()}`;
+            if (iframe.contentWindow) {
+                iframe.contentWindow.location.href = `${targetPath}?_=${new Date().getTime()}`;
+            } else {
+                iframe.src = `${targetPath}?_=${new Date().getTime()}`;
+            }
         }
     };
     
@@ -211,7 +297,7 @@ export default function WebsiteBuilderPage() {
         if (!isLoading && pages && pages.length > 0) {
             reloadPreview(pages[activePageIndex].path);
         }
-    }, [activePageIndex, isLoading, pages]);
+    }, [activePageIndex, isLoading]);
 
 
     async function onSubmit(values: FormValues) {
@@ -258,14 +344,6 @@ export default function WebsiteBuilderPage() {
         }
     };
     
-    const handleAddSection = (type: SectionType) => {
-      const newSection = {
-        ...sectionDefaults[type],
-        id: `${type}-${Date.now()}`
-      };
-      appendSection(newSection);
-    }
-    
     const handleAddNewPage = (pageData: Omit<Page, 'id' | 'sections'>) => {
         const newPage: Page = {
             id: `page-${Date.now()}`,
@@ -275,18 +353,6 @@ export default function WebsiteBuilderPage() {
         appendPage(newPage);
         setActivePageIndex(pageFields.length); // Switch to the new page
         setIsAddPageDialogOpen(false);
-    }
-
-    const handleSaveSection = (pageIndex: number, sectionIndex: number, newProps: any) => {
-        const currentSection = form.getValues(`pages.${pageIndex}.sections.${sectionIndex}`);
-        const updatedSection = { ...currentSection, props: newProps };
-
-        const currentPage = form.getValues(`pages.${pageIndex}`);
-        const updatedSections = [...(currentPage.sections || [])];
-        updatedSections[sectionIndex] = updatedSection;
-
-        updatePage(pageIndex, { ...currentPage, sections: updatedSections });
-        setEditingSection(null);
     }
     
     const logoUrl = form.watch('logoUrl');
@@ -476,48 +542,11 @@ export default function WebsiteBuilderPage() {
 
                                         </AccordionContent>
                                     </AccordionItem>
-                                    <AccordionItem value="item-2">
-                                    <AccordionTrigger className="font-semibold text-lg">Page Sections</AccordionTrigger>
-                                    <AccordionContent className="space-y-6 pt-4">
-                                        <div className="space-y-3">
-                                            {sectionFields.map((field, index) => (
-                                                <Card key={field.id} className="p-3">
-                                                    <div className="flex items-center gap-3">
-                                                        <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab" />
-                                                        <div className="flex-1">
-                                                            <p className="font-medium capitalize">{field.type.replace('-', ' ')}</p>
-                                                            <p className="text-xs text-muted-foreground">ID: {field.id}</p>
-                                                        </div>
-                                                        <Button type="button" variant="outline" size="sm" onClick={() => setEditingSection({ pageIndex: activePageIndex, section: field, sectionIndex: index })}>
-                                                            <Pencil className="mr-2 h-3 w-3" />
-                                                            Edit
-                                                        </Button>
-                                                        <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => removeSection(index)}>
-                                                            <Trash2 className="h-4 w-4 text-destructive" />
-                                                        </Button>
-                                                    </div>
-                                                </Card>
-                                            ))}
-                                        </div>
-                                        
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                            <Button variant="outline" className="w-full">
-                                                <Plus className="mr-2 h-4 w-4" /> Add Section
-                                            </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent className="w-64">
-                                                <DropdownMenuItem onSelect={() => handleAddSection('hero')}>Hero</DropdownMenuItem>
-                                                <DropdownMenuItem onSelect={() => handleAddSection('featured-products')}>Featured Products</DropdownMenuItem>
-                                                <DropdownMenuItem onSelect={() => handleAddSection('collections')}>Collections</DropdownMenuItem>
-                                                <DropdownMenuItem onSelect={() => handleAddSection('testimonials')}>Testimonials</DropdownMenuItem>
-                                                <DropdownMenuItem onSelect={() => handleAddSection('image-with-text')}>Image With Text</DropdownMenuItem>
-                                                <DropdownMenuItem onSelect={() => handleAddSection('faq')}>FAQ</DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
+                                    
+                                    {pages && pages.length > 0 && (
+                                        <PageSectionsEditor key={activePageIndex} activePageIndex={activePageIndex} />
+                                    )}
 
-                                    </AccordionContent>
-                                    </AccordionItem>
                                 </Accordion>
                             </div>
                        </div>
@@ -545,17 +574,8 @@ export default function WebsiteBuilderPage() {
         onAddPage={handleAddNewPage}
         existingPaths={pages?.map(p => p.path) || []}
     />
-
-    {editingSection && (
-        <EditSectionDrawer
-            isOpen={!!editingSection}
-            onClose={() => setEditingSection(null)}
-            pageIndex={editingSection.pageIndex}
-            section={editingSection.section}
-            sectionIndex={editingSection.sectionIndex}
-            onSave={(newProps) => handleSaveSection(editingSection.pageIndex, editingSection.sectionIndex, newProps)}
-        />
-    )}
     </>
   );
 }
+
+    
