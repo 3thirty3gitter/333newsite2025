@@ -197,12 +197,22 @@ export default function WebsiteBuilderPage() {
         loadSettings();
     }, [form, toast]);
     
-    const reloadPreview = (path: string = '/') => {
+    const pages = form.watch('pages');
+    
+    const reloadPreview = (path?: string) => {
         const iframe = document.querySelector('iframe');
         if (iframe) {
-            iframe.src = `${path}?_=${new Date().getTime()}`;
+            const targetPath = path || pages?.[activePageIndex]?.path || '/';
+            iframe.src = `${targetPath}?_=${new Date().getTime()}`;
         }
     };
+    
+    useEffect(() => {
+        if (!isLoading) {
+            reloadPreview();
+        }
+    }, [activePageIndex]);
+
 
     async function onSubmit(values: FormValues) {
         startTransition(async () => {
@@ -280,7 +290,6 @@ export default function WebsiteBuilderPage() {
     }
     
     const logoUrl = form.watch('logoUrl');
-    const pages = form.watch('pages');
 
     if (isLoading) {
         return (
