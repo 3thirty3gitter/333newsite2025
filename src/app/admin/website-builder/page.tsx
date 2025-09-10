@@ -13,7 +13,7 @@ import { MenuItem, Page, PageSection, SectionType, ThemeSettings } from "@/lib/t
 import { zodResolver } from "@hookform/resolvers/zod";
 import { GripVertical, Plus, Trash2, Upload, LayoutTemplate, Pencil, Home, File, Settings, Loader2 } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { useFieldArray, useForm } from "react-hook-form";
+import { useFieldArray, useForm, useFormContext } from "react-hook-form";
 import * as z from 'zod';
 import { Skeleton } from "@/components/ui/skeleton";
 import Image from "next/image";
@@ -140,7 +140,7 @@ const sectionDefaults: Record<SectionType, Omit<PageSection, 'id'>> = {
 
 function PageSectionsEditor({ activePageIndex }: { activePageIndex: number }) {
   const form = useFormContext();
-  const { fields, append, remove, update } = useFieldArray({
+  const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: `pages.${activePageIndex}.sections`,
     keyName: "keyId", // To avoid conflicts with our `id` field
@@ -172,7 +172,7 @@ function PageSectionsEditor({ activePageIndex }: { activePageIndex: number }) {
 
   return (
     <>
-    <AccordionItem value="item-2">
+    <AccordionItem value="item-2" key={activePageIndex}>
       <AccordionTrigger className="font-semibold text-lg">Page Sections</AccordionTrigger>
       <AccordionContent className="space-y-6 pt-4">
         <div className="space-y-3">
@@ -544,7 +544,7 @@ export default function WebsiteBuilderPage() {
                                     </AccordionItem>
                                     
                                     {pages && pages.length > 0 && (
-                                        <PageSectionsEditor key={activePageIndex} activePageIndex={activePageIndex} />
+                                        <PageSectionsEditor activePageIndex={activePageIndex} />
                                     )}
 
                                 </Accordion>
@@ -577,5 +577,7 @@ export default function WebsiteBuilderPage() {
     </>
   );
 }
+
+    
 
     
