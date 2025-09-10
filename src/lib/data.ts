@@ -235,3 +235,13 @@ export async function deleteCustomer(id: string): Promise<void> {
     }
     return Promise.resolve();
 }
+
+export async function importCustomers(customers: Omit<Customer, 'id'>[]): Promise<void> {
+    console.log("Importing customers", customers);
+    // In a real app, this would use a Firestore batch write
+    customers.forEach(customer => {
+        const newId = (mockCustomers.length + Math.random()).toString();
+        mockCustomers.push({ id: newId, ...customer });
+    });
+    return Promise.resolve();
+}
