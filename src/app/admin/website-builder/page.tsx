@@ -144,7 +144,6 @@ export default function WebsiteBuilderPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, startTransition] = useTransition();
     const [isUploading, setIsUploading] = useState(false);
-    const [previewKey, setPreviewKey] = useState(0);
     const imageInputRef = useRef<HTMLInputElement>(null);
     const [editingSection, setEditingSection] = useState<{ pageIndex: number; section: PageSection; sectionIndex: number } | null>(null);
     const [activePageIndex, setActivePageIndex] = useState(0);
@@ -171,9 +170,10 @@ export default function WebsiteBuilderPage() {
         name: "pages",
     });
     
+    const sectionName = `pages.${activePageIndex}.sections` as const;
     const { fields: sectionFields, append: appendSection, remove: removeSection, update: updateSection } = useFieldArray({
       control: form.control,
-      name: `pages.${activePageIndex}.sections` as 'pages.0.sections',
+      name: sectionName,
     });
 
     useEffect(() => {
@@ -208,10 +208,10 @@ export default function WebsiteBuilderPage() {
     };
     
     useEffect(() => {
-        if (!isLoading) {
-            reloadPreview();
+        if (!isLoading && pages && pages.length > 0) {
+            reloadPreview(pages[activePageIndex].path);
         }
-    }, [activePageIndex]);
+    }, [activePageIndex, isLoading, pages]);
 
 
     async function onSubmit(values: FormValues) {
@@ -278,10 +278,10 @@ export default function WebsiteBuilderPage() {
     }
 
     const handleSaveSection = (pageIndex: number, sectionIndex: number, newProps: any) => {
-        const currentSection = form.getValues(`pages.${pageIndex}.sections.${sectionIndex}` as `pages.0.sections.0`);
+        const currentSection = form.getValues(`pages.${pageIndex}.sections.${sectionIndex}`);
         const updatedSection = { ...currentSection, props: newProps };
 
-        const currentPage = form.getValues(`pages.${pageIndex}` as `pages.0`);
+        const currentPage = form.getValues(`pages.${pageIndex}`);
         const updatedSections = [...(currentPage.sections || [])];
         updatedSections[sectionIndex] = updatedSection;
 
@@ -527,7 +527,7 @@ export default function WebsiteBuilderPage() {
                     <div className="bg-muted/40 h-full flex items-center justify-center p-4">
                         <div className="w-full h-full bg-white rounded-lg overflow-hidden shadow-inner">
                             <iframe
-                                key={previewKey}
+                                key={pages?.[activePageIndex]?.id || 'initial'}
                                 src={pages?.[activePageIndex]?.path || '/'}
                                 title="Website Preview"
                                 className="w-full h-full border-0"
