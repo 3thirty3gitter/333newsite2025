@@ -7,12 +7,12 @@ import * as z from 'zod';
 import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, PlusCircle, Trash2, X, GripVertical, Upload, Image as ImageIcon, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Trash2, X, GripVertical, Upload, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { getCollections, getProductById, updateProduct, deleteProduct, uploadImageAndGetURL } from '@/lib/data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useEffect, useState, useMemo, useRef } from 'react';
@@ -42,14 +42,18 @@ const inventoryItemSchema = z.object({
     stock: z.coerce.number().min(0, "Stock can't be negative"),
     sku: z.string().optional(),
     barcode: z.string().optional(),
+    grams: z.coerce.number().optional(),
 });
 
 const formSchema = z.object({
   name: z.string().min(2, 'Name is required'),
+  handle: z.string().min(2, 'Handle is required'),
   description: z.string().optional(),
   longDescription: z.string().optional(),
   price: z.coerce.number().min(0.01, 'Price must be a positive number'),
   category: z.string().min(1, 'Category is required'),
+  vendor: z.string().optional(),
+  tags: z.string().optional(),
   images: z.array(z.string()).optional(),
   variants: z.array(variantSchema).optional(),
   inventory: z.array(inventoryItemSchema).optional(),
@@ -82,10 +86,13 @@ export default function EditProductPage() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
+      handle: '',
       description: '',
       longDescription: '',
       price: 0,
       category: '',
+      vendor: '',
+      tags: '',
       images: [],
       variants: [],
       inventory: [],
@@ -119,6 +126,7 @@ export default function EditProductPage() {
             images: productImages,
             variants: fetchedProduct.variants || [],
             inventory: fetchedProduct.inventory || [],
+            tags: fetchedProduct.tags ? fetchedProduct.tags.join(', ') : '',
           });
         } else {
           toast({ variant: 'destructive', title: 'Error', description: 'Product not found.' });
@@ -173,6 +181,7 @@ export default function EditProductPage() {
             stock: existingItem?.stock ?? 0,
             sku: existingItem?.sku || '',
             barcode: existingItem?.barcode || '',
+            grams: existingItem?.grams || 0,
         };
     });
     replaceInventory(newInventory);
@@ -241,7 +250,11 @@ export default function EditProductPage() {
 
   async function onSubmit(values: FormValues) {
     try {
-      await updateProduct(productId, values);
+      const productData = {
+        ...values,
+        tags: values.tags ? values.tags.split(',').map(tag => tag.trim()) : [],
+      };
+      await updateProduct(productId, productData);
       toast({
         title: 'Product Updated',
         description: `The product "${values.name}" has been successfully updated.`,
@@ -372,6 +385,20 @@ export default function EditProductPage() {
                                 <FormControl>
                                 <Textarea placeholder="Describe the product in detail." {...field} />
                                 </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="handle"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>URL Handle</FormLabel>
+                                <FormControl>
+                                <Input placeholder="e.g., astro-grip-sneakers" {...field} />
+                                </FormControl>
+                                <FormDescription>This will be the product's URL slug.</FormDescription>
                                 <FormMessage />
                             </FormItem>
                             )}
@@ -536,6 +563,7 @@ export default function EditProductPage() {
                                             <TableHead className="w-[150px]">Price</TableHead>
                                             <TableHead className="w-[100px]">Available</TableHead>
                                             <TableHead className="w-[150px]">SKU</TableHead>
+                                            <TableHead className="w-[100px]">Weight (g)</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -568,6 +596,15 @@ export default function EditProductPage() {
                                                             name={`inventory.${comboIndex}.sku`}
                                                             render={({ field }) => (
                                                                 <FormItem><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                                                            )}
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <FormField
+                                                            control={form.control}
+                                                            name={`inventory.${comboIndex}.grams`}
+                                                            render={({ field }) => (
+                                                                <FormItem><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
                                                             )}
                                                         />
                                                     </TableCell>
@@ -636,6 +673,33 @@ export default function EditProductPage() {
                                     </Select>
                                     <FormMessage />
                                     </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="vendor"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Vendor</FormLabel>
+                                    <FormControl>
+                                    <Input placeholder="e.g., Nike, Adidas" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="tags"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Tags</FormLabel>
+                                    <FormControl>
+                                    <Input placeholder="e.g., shoes, running, summer" {...field} />
+                                    </FormControl>
+                                    <FormDescription>Separate tags with a comma.</FormDescription>
+                                    <FormMessage />
+                                </FormItem>
                                 )}
                             />
                         </CardContent>

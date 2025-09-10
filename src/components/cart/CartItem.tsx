@@ -1,3 +1,4 @@
+
 'use client';
 
 import Image from 'next/image';
@@ -14,6 +15,7 @@ interface CartItemProps {
 
 export function CartItem({ item }: CartItemProps) {
   const { updateQuantity, removeFromCart } = useCart();
+  const productUrl = `/products/${item.product.handle || item.product.id}`;
 
   const handleQuantityChange = (newQuantity: number) => {
     updateQuantity(item.product.id, newQuantity);
@@ -31,7 +33,7 @@ export function CartItem({ item }: CartItemProps) {
         />
       </div>
       <div className="flex-1">
-        <Link href={`/products/${item.product.id}`} className="font-semibold hover:underline">
+        <Link href={productUrl} className="font-semibold hover:underline">
           {item.product.name}
         </Link>
         <p className="text-sm text-muted-foreground">${item.product.price.toFixed(2)}</p>

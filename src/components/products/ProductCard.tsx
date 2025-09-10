@@ -1,3 +1,4 @@
+
 'use client';
 
 import Image from 'next/image';
@@ -14,11 +15,12 @@ interface ProductCardProps {
 
 export function ProductCard({ product }: ProductCardProps) {
   const { addToCart } = useCart();
+  const productUrl = `/products/${product.handle || product.id}`;
 
   return (
     <Card className="flex flex-col overflow-hidden h-full transition-all hover:shadow-lg">
       <CardHeader className="p-0">
-        <Link href={`/products/${product.id}`} className="block group">
+        <Link href={productUrl} className="block group">
           <div className="aspect-square relative overflow-hidden">
             <Image
               src={product.images[0]}
@@ -33,7 +35,7 @@ export function ProductCard({ product }: ProductCardProps) {
       </CardHeader>
       <CardContent className="p-4 flex-grow">
         <CardTitle className="text-lg font-headline leading-tight mb-1">
-          <Link href={`/products/${product.id}`} className="hover:text-primary transition-colors">
+          <Link href={productUrl} className="hover:text-primary transition-colors">
             {product.name}
           </Link>
         </CardTitle>

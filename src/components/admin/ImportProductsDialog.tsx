@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useTransition } from 'react';
@@ -27,8 +26,8 @@ interface ImportProductsDialogProps {
   onImported: () => void;
 }
 
-const csvTemplateHeaders = "name,description,longDescription,price,category,images,variants,inventory,status,compareAtPrice,costPerItem,isTaxable,trackQuantity,allowOutOfStockPurchase,sku,barcode";
-const csvTemplateData = `"Example T-Shirt","A cool example shirt.","This is a longer description for the cool example shirt.",19.99,"Apparel","https://picsum.photos/400/400?random=1,https://picsum.photos/400/400?random=2","[{""type"":""Size"",""options"":[{""value"":""S""},{""value"":""M""},{""value"":""L""}]},{""type"":""Color"",""options"":[{""value"":""Red""},{""value"":""Blue""}]}]","[{""id"":""S-Red"",""price"":21.99,""stock"":10,""sku"":""TS-S-R""},{""id"":""M-Blue"",""price"":22.99,""stock"":5,""sku"":""TS-M-B""}]","active",24.99,10.00,TRUE,TRUE,FALSE,"",""`;
+const csvTemplateHeaders = "name,handle,description,longDescription,price,category,vendor,tags,images,variants,inventory,status,compareAtPrice,costPerItem,isTaxable,trackQuantity,allowOutOfStockPurchase";
+const csvTemplateData = `"Example T-Shirt","example-t-shirt","A cool example shirt.","This is a longer description for the cool example shirt.",19.99,"Apparel","Example Brand","shirt,summer","https://picsum.photos/400/400?random=1,https://picsum.photos/400/400?random=2","[{""type"":""Size"",""options"":[{""value"":""S""},{""value"":""M""},{""value"":""L""}]},{""type"":""Color"",""options"":[{""value"":""Red""},{""value"":""Blue""}]}]","[{""id"":""S-Red"",""price"":21.99,""stock"":10,""sku"":""TS-S-R"",""grams"":150},{""id"":""M-Blue"",""price"":22.99,""stock"":5,""sku"":""TS-M-B"",""grams"":170}]","active",24.99,10.00,TRUE,TRUE,FALSE`;
 const csvTemplate = `${csvTemplateHeaders}\n${csvTemplateData}`;
 
 
@@ -91,18 +90,21 @@ export function ImportProductsDialog({ isOpen, onClose, onImported }: ImportProd
             
             const productsToImport: Omit<Product, 'id'>[] = results.data.map(row => {
               const price = parseFloat(row.price);
-              if (isNaN(price)) {
-                console.warn(`Skipping row with invalid price:`, row);
+              if (isNaN(price) || !row.name || !row.handle) {
+                console.warn(`Skipping row with invalid or missing required fields (name, handle, price):`, row);
                 return null;
               }
 
               return {
-                name: row.name || 'Untitled Product',
+                name: row.name,
+                handle: row.handle,
                 description: row.description || '',
                 longDescription: row.longDescription || '',
                 price: price,
                 category: row.category || 'Uncategorized',
-                images: row.images ? row.images.split(',').map(s => s.trim()) : [],
+                vendor: row.vendor || '',
+                tags: row.tags ? row.tags.split(',').map((s:string) => s.trim()) : [],
+                images: row.images ? row.images.split(',').map((s:string) => s.trim()) : [],
                 variants: parseJsonField(row.variants),
                 inventory: parseJsonField(row.inventory),
                 status: row.status === 'active' || row.status === 'draft' ? row.status : 'draft',

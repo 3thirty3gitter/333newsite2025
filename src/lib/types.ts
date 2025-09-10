@@ -3,11 +3,14 @@
 export type Product = {
   id: string;
   name: string;
+  handle: string;
   description: string;
   longDescription: string;
   price: number;
   images: string[];
   category: string;
+  vendor?: string;
+  tags?: string[];
   variants: Variant[];
   inventory: InventoryItem[];
   status: 'active' | 'draft';
@@ -34,6 +37,7 @@ export type InventoryItem = {
     stock: number;
     sku?: string;
     barcode?: string;
+    grams?: number;
 }
 
 export type CartItem = {

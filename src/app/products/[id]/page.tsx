@@ -3,8 +3,8 @@
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { notFound } from 'next/navigation';
-import { getProductById } from '@/lib/data';
+import { notFound, useParams } from 'next/navigation';
+import { getProductBySlug, getProductById } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/context/CartProvider';
 import { useHistory } from '@/context/HistoryProvider';
@@ -15,13 +15,9 @@ import type { Product } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ProductImageGallery } from '@/components/products/ProductImageGallery';
 
-type ProductPageProps = {
-  params: {
-    id: string;
-  };
-};
-
-export default function ProductPage({ params }: ProductPageProps) {
+export default function ProductPage() {
+  const params = useParams();
+  const slug = params.slug as string;
   const { addToCart } = useCart();
   const { addToHistory } = useHistory();
   const [product, setProduct] = useState<Product | null>(null);
@@ -29,7 +25,16 @@ export default function ProductPage({ params }: ProductPageProps) {
 
   useEffect(() => {
     async function fetchProduct() {
-      const fetchedProduct = await getProductById(params.id);
+      if (!slug) return;
+
+      let fetchedProduct = await getProductBySlug(slug);
+      
+      // Fallback for old products that might not have a handle/slug
+      // and are being accessed by ID via a redirect or old link.
+      if (!fetchedProduct) {
+        fetchedProduct = await getProductById(slug);
+      }
+
       if (fetchedProduct) {
         if (fetchedProduct.status === 'active') {
             setProduct(fetchedProduct);
@@ -43,7 +48,7 @@ export default function ProductPage({ params }: ProductPageProps) {
       setLoading(false);
     }
     fetchProduct();
-  }, [params.id, addToHistory]);
+  }, [slug, addToHistory]);
 
   if (loading) {
     return (

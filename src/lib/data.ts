@@ -64,6 +64,17 @@ export async function getProductById(id: string): Promise<Product | null> {
   }
 }
 
+export async function getProductBySlug(slug: string): Promise<Product | null> {
+    const productsRef = collection(db, 'products');
+    const q = query(productsRef, where("handle", "==", slug));
+    const querySnapshot = await getDocs(q);
+    if (!querySnapshot.empty) {
+        const docSnap = querySnapshot.docs[0];
+        return toProduct(docSnap);
+    }
+    return null;
+}
+
 export async function addProduct(product: Omit<Product, 'id'>): Promise<string> {
   const productsCol = collection(db, 'products');
   const newProduct = { ...product };

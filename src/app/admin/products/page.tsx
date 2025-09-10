@@ -110,7 +110,7 @@ export default function AdminProductsPage() {
                           <Link href={`/admin/products/${product.id}/edit`}>Edit</Link>
                         </DropdownMenuItem>
                          <DropdownMenuItem asChild>
-                            <a href={`/products/${product.id}`} target="_blank" rel="noopener noreferrer" className="flex items-center">
+                            <a href={`/products/${product.handle || product.id}`} target="_blank" rel="noopener noreferrer" className="flex items-center">
                                 <Eye className="mr-2 h-4 w-4" />
                                 Preview
                             </a>
