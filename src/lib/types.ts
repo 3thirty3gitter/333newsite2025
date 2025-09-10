@@ -19,6 +19,8 @@ export type Product = {
   isTaxable: boolean;
   trackQuantity: boolean;
   allowOutOfStockPurchase: boolean;
+  seoTitle?: string;
+  seoDescription?: string;
 };
 
 export type Variant = {

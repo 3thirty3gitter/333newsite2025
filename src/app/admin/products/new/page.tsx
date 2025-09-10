@@ -60,6 +60,8 @@ const formSchema = z.object({
   isTaxable: z.boolean(),
   trackQuantity: z.boolean(),
   allowOutOfStockPurchase: z.boolean(),
+  seoTitle: z.string().optional(),
+  seoDescription: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -110,6 +112,8 @@ export default function NewProductPage() {
       isTaxable: true,
       trackQuantity: true,
       allowOutOfStockPurchase: false,
+      seoTitle: '',
+      seoDescription: '',
     },
   });
 
@@ -538,6 +542,40 @@ export default function NewProductPage() {
                             </CardContent>
                         </Card>
                     )}
+                    
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Search engine listing preview</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            <FormField
+                                control={form.control}
+                                name="seoTitle"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>SEO Title</FormLabel>
+                                    <FormControl>
+                                    <Input placeholder="e.g., The Best Astro-Grip Sneakers" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="seoDescription"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>SEO Description</FormLabel>
+                                    <FormControl>
+                                    <Textarea placeholder="A great description for search engines." {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                        </CardContent>
+                    </Card>
                 </div>
                 <div className="md:col-span-1 space-y-8">
                      <Card>
