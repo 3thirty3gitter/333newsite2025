@@ -140,12 +140,34 @@ const sectionDefaults: Record<SectionType, Omit<PageSection, 'id'>> = {
 
 function PageSectionsEditor({ activePageIndex }: { activePageIndex: number }) {
   const form = useFormContext();
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, move } = useFieldArray({
     control: form.control,
     name: `pages.${activePageIndex}.sections`,
     keyName: "keyId", // To avoid conflicts with our `id` field
   });
   const [editingSection, setEditingSection] = useState<{ pageIndex: number; section: PageSection; sectionIndex: number } | null>(null);
+  const dragItem = useRef<number | null>(null);
+  const dragOverItem = useRef<number | null>(null);
+
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+    dragItem.current = index;
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+    e.preventDefault();
+    dragOverItem.current = index;
+  };
+  
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if (dragItem.current !== null && dragOverItem.current !== null) {
+      move(dragItem.current, dragOverItem.current);
+      dragItem.current = null;
+      dragOverItem.current = null;
+    }
+  };
+
 
   const handleAddSection = (type: SectionType) => {
     const newSection = {
@@ -175,9 +197,20 @@ function PageSectionsEditor({ activePageIndex }: { activePageIndex: number }) {
     <AccordionItem value="item-2" key={activePageIndex}>
       <AccordionTrigger className="font-semibold text-lg">Page Sections</AccordionTrigger>
       <AccordionContent className="space-y-6 pt-4">
-        <div className="space-y-3">
+        <div 
+          className="space-y-3" 
+          onDrop={handleDrop}
+          onDragOver={(e) => e.preventDefault()} // Necessary to allow drop
+        >
           {fields.map((field, index) => (
-            <Card key={field.keyId} className="p-3">
+            <Card 
+              key={field.keyId} 
+              className="p-3"
+              draggable
+              onDragStart={(e) => handleDragStart(e, index)}
+              onDragOver={(e) => handleDragOver(e, index)}
+              onDragEnd={() => { dragItem.current = null; dragOverItem.current = null; }}
+            >
               <div className="flex items-center gap-3">
                 <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab" />
                 <div className="flex-1">
@@ -577,6 +610,8 @@ export default function WebsiteBuilderPage() {
     </>
   );
 }
+
+    
 
     
 
