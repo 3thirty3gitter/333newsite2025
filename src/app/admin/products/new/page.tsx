@@ -12,7 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, PlusCircle, Trash2, X, GripVertical, Upload, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Trash2, X, GripVertical, Upload, Image as ImageIcon, Loader2, Sparkles } from 'lucide-react';
 import { addProduct, getCollections, uploadImageAndGetURL } from '@/lib/data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useEffect, useState, useMemo, useRef } from 'react';
@@ -22,6 +22,7 @@ import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import Image from 'next/image';
 import { Switch } from '@/components/ui/switch';
+import { generateProductDetails } from '@/ai/flows/generate-product-details';
 
 const variantOptionSchema = z.object({
   value: z.string().min(1, 'Value cannot be empty.'),
@@ -72,6 +73,7 @@ export default function NewProductPage() {
   const [collections, setCollections] = useState<Collection[]>([]);
   const [isLoadingCollections, setIsLoadingCollections] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
 
@@ -232,6 +234,40 @@ export default function NewProductPage() {
     }
   };
 
+  const handleGenerateDetails = async () => {
+    const productName = form.getValues('name');
+    if (!productName) {
+      toast({
+        variant: 'destructive',
+        title: 'Product Name Required',
+        description: 'Please enter a product name first.',
+      });
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      const result = await generateProductDetails({ productName });
+      form.setValue('description', result.description, { shouldDirty: true });
+      form.setValue('longDescription', result.longDescription, { shouldDirty: true });
+      form.setValue('seoTitle', result.seoTitle, { shouldDirty: true });
+      form.setValue('seoDescription', result.seoDescription, { shouldDirty: true });
+      toast({
+        title: 'Content Generated',
+        description: 'AI has generated new content for product fields.',
+      });
+    } catch (error) {
+      console.error('Failed to generate product details:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Could not generate content. Please try again.',
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   async function onSubmit(values: FormValues) {
     try {
       const productData = {
@@ -294,7 +330,13 @@ export default function NewProductPage() {
                             name="description"
                             render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Short Description</FormLabel>
+                                <div className="flex items-center justify-between">
+                                    <FormLabel>Short Description</FormLabel>
+                                    <Button type="button" variant="outline" size="sm" onClick={handleGenerateDetails} disabled={isGenerating}>
+                                        <Sparkles className="mr-2 h-4 w-4" />
+                                        {isGenerating ? 'Generating...' : 'Generate with AI'}
+                                    </Button>
+                                </div>
                                 <FormControl>
                                 <Input placeholder="A brief, catchy description." {...field} />
                                 </FormControl>
@@ -307,7 +349,9 @@ export default function NewProductPage() {
                             name="longDescription"
                             render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Full Description</FormLabel>
+                                <div className="flex items-center justify-between">
+                                    <FormLabel>Full Description</FormLabel>
+                                </div>
                                 <FormControl>
                                 <Textarea placeholder="Describe the product in detail." {...field} />
                                 </FormControl>
@@ -553,7 +597,13 @@ export default function NewProductPage() {
                                 name="seoTitle"
                                 render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>SEO Title</FormLabel>
+                                    <div className="flex items-center justify-between">
+                                        <FormLabel>SEO Title</FormLabel>
+                                         <Button type="button" variant="outline" size="sm" onClick={handleGenerateDetails} disabled={isGenerating}>
+                                            <Sparkles className="mr-2 h-4 w-4" />
+                                            {isGenerating ? 'Generating...' : 'Generate with AI'}
+                                        </Button>
+                                    </div>
                                     <FormControl>
                                     <Input placeholder="e.g., The Best Astro-Grip Sneakers" {...field} />
                                     </FormControl>
@@ -736,7 +786,7 @@ export default function NewProductPage() {
                 <Button type="button" variant="outline" onClick={() => router.back()}>
                 Cancel
                 </Button>
-                <Button type="submit" disabled={form.formState.isSubmitting || isUploading}>
+                <Button type="submit" disabled={form.formState.isSubmitting || isUploading || isGenerating}>
                 {form.formState.isSubmitting ? 'Creating...' : 'Create Product'}
                 </Button>
             </div>
