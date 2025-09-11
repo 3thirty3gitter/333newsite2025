@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Package, Settings, Home, ShoppingBag, Folder, Palette, ChevronsLeft, ChevronsRight, Users } from 'lucide-react';
+import { Package, Settings, Home, ShoppingBag, Folder, Palette, ChevronsLeft, ChevronsRight, Users, Brush } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,7 @@ const navItems = [
   { href: '/admin/collections', label: 'Collections', icon: Folder },
   { href: '/admin/customers', label: 'Customers', icon: Users },
   { href: '/admin/website-builder', label: 'Website Editor', icon: Palette },
+  { href: '/design', label: 'Mockup Tool', icon: Brush },
   { href: '/admin/settings', label: 'Settings', icon: Settings },
 ];
 
@@ -42,7 +43,7 @@ export function AdminSidebar() {
                             href={item.href}
                             className={cn(
                                 'flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary hover:bg-muted',
-                                (pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href))) && 'bg-muted text-primary',
+                                (pathname === item.href || (item.href !== '/admin' && !item.href.startsWith('/admin/') && pathname.startsWith(item.href))) && 'bg-muted text-primary',
                                 isCollapsed && 'justify-center'
                             )}
                             >
