@@ -1,10 +1,10 @@
 
 'use client';
 
-import { Suspense, useEffect, useState, useRef } from 'react';
+import { Suspense, useEffect, useState, useRef, useMemo } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { getProductById, getProducts } from '@/lib/data';
-import type { Product } from '@/lib/types';
+import type { Product, Variant } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
@@ -24,6 +24,8 @@ function MockupTool() {
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedColor, setSelectedColor] = useState<string>('');
+  const [selectedSize, setSelectedSize] = useState<string>('');
 
   const initialImageState = {
     src: null,
@@ -79,6 +81,8 @@ function MockupTool() {
     async function fetchProduct() {
       setIsLoading(true);
       setError(null);
+      setSelectedColor('');
+      setSelectedSize('');
       try {
         const fetchedProduct = await getProductById(productId as string);
         if (fetchedProduct) {
@@ -96,6 +100,14 @@ function MockupTool() {
 
     fetchProduct();
   }, [productId]);
+
+  const colorVariant = useMemo(() => 
+    product?.variants.find(v => v.type.toLowerCase() === 'color'), 
+  [product]);
+
+  const sizeVariant = useMemo(() =>
+    product?.variants.find(v => v.type.toLowerCase() === 'size'),
+  [product]);
   
   const handleProductSelect = (selectedProductId: string) => {
     const params = new URLSearchParams(searchParams);
@@ -229,7 +241,7 @@ function MockupTool() {
             </CardHeader>
             <CardContent className="space-y-4">
                <div className="space-y-2">
-                 <Label>Select a Product</Label>
+                 <Label>1. Select a Product</Label>
                  <Select onValueChange={handleProductSelect} value={productId || ''}>
                     <SelectTrigger>
                         <SelectValue placeholder="Choose a product..." />
@@ -241,8 +253,38 @@ function MockupTool() {
                     </SelectContent>
                  </Select>
                </div>
-               <div className="space-y-2">
-                 <Label>Add Text</Label>
+               {colorVariant && (
+                <div className="space-y-2">
+                  <Label>2. Select Color</Label>
+                  <Select onValueChange={setSelectedColor} value={selectedColor} disabled={!productId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose a color..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {colorVariant.options.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>{opt.value}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+               )}
+               {sizeVariant && (
+                <div className="space-y-2">
+                  <Label>3. Select Size</Label>
+                  <Select onValueChange={setSelectedSize} value={selectedSize} disabled={!productId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose a size..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {sizeVariant.options.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>{opt.value}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+               )}
+               <div className="space-y-2 pt-4">
+                 <Label>4. Customize</Label>
                  <Input 
                    placeholder="Your Text Here"
                    value={textElement.text}
