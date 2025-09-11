@@ -26,6 +26,7 @@ function MockupTool() {
   const [error, setError] = useState<string | null>(null);
   const [selectedColor, setSelectedColor] = useState<string>('');
   const [selectedSize, setSelectedSize] = useState<string>('');
+  const [activeImageUrl, setActiveImageUrl] = useState<string>('');
 
   const initialImageState = {
     src: null,
@@ -83,10 +84,14 @@ function MockupTool() {
       setError(null);
       setSelectedColor('');
       setSelectedSize('');
+      setActiveImageUrl('');
       try {
         const fetchedProduct = await getProductById(productId as string);
         if (fetchedProduct) {
           setProduct(fetchedProduct);
+          if (fetchedProduct.images && fetchedProduct.images.length > 0) {
+            setActiveImageUrl(fetchedProduct.images[0]);
+          }
         } else {
           setError('Product not found.');
         }
@@ -109,6 +114,19 @@ function MockupTool() {
     product?.variants.find(v => v.type.toLowerCase() === 'size'),
   [product]);
   
+  useEffect(() => {
+    if (selectedColor && colorVariant) {
+        const colorOption = colorVariant.options.find(opt => opt.value === selectedColor);
+        if (colorOption?.image) {
+            setActiveImageUrl(colorOption.image);
+        } else if (product?.images?.[0]) {
+            setActiveImageUrl(product.images[0]);
+        }
+    } else if (product?.images?.[0]) {
+        setActiveImageUrl(product.images[0]);
+    }
+  }, [selectedColor, colorVariant, product]);
+
   const handleProductSelect = (selectedProductId: string) => {
     const params = new URLSearchParams(searchParams);
     params.set('productId', selectedProductId);
@@ -325,15 +343,16 @@ function MockupTool() {
                   <Skeleton className="w-full h-full" />
                 ) : error ? (
                   <p className="text-destructive font-medium">{error}</p>
-                ) : product ? (
+                ) : product && activeImageUrl ? (
                    <>
                     <Image
-                      src={product.images[0]}
+                      src={activeImageUrl}
                       alt={product.name}
                       fill
                       className="object-contain"
                       sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                       priority
+                      key={activeImageUrl}
                     />
                     {textElement.text && (
                        <div
