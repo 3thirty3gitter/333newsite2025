@@ -1,7 +1,7 @@
 
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useState, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { getProductById } from '@/lib/data';
 import type { Product } from '@/lib/types';
@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Text, Upload, Brush } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 
 function MockupTool() {
   const searchParams = useSearchParams();
@@ -17,6 +18,13 @@ function MockupTool() {
   const [product, setProduct] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [text, setText] = useState('');
+  const [textPosition, setTextPosition] = useState({ x: 50, y: 50 });
+  const [isDragging, setIsDragging] = useState(false);
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const textRef = useRef<HTMLDivElement>(null);
+
 
   useEffect(() => {
     if (!productId) {
@@ -44,6 +52,30 @@ function MockupTool() {
 
     fetchProduct();
   }, [productId]);
+  
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsDragging(true);
+  };
+  
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isDragging && canvasRef.current && textRef.current) {
+      const canvasRect = canvasRef.current.getBoundingClientRect();
+      const textRect = textRef.current.getBoundingClientRect();
+      
+      let x = e.clientX - canvasRect.left - textRect.width / 2;
+      let y = e.clientY - canvasRect.top - textRect.height / 2;
+
+      // Constrain within canvas boundaries
+      x = Math.max(0, Math.min(x, canvasRect.width - textRect.width));
+      y = Math.max(0, Math.min(y, canvasRect.height - textRect.height));
+
+      setTextPosition({ x, y });
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
 
   return (
     <div className="container mx-auto max-w-7xl px-4 py-8 md:py-12">
@@ -57,14 +89,18 @@ function MockupTool() {
               <CardTitle>Design Controls</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-muted-foreground text-sm">Select a tool to start designing your product.</p>
-              <Button variant="outline" className="w-full justify-start">
-                <Text className="mr-2" /> Add Text
-              </Button>
-               <Button variant="outline" className="w-full justify-start">
+               <div className="space-y-2">
+                 <label className="text-sm font-medium">Add Text</label>
+                 <Input 
+                   placeholder="Your Text Here"
+                   value={text}
+                   onChange={(e) => setText(e.target.value)}
+                 />
+               </div>
+              <Button variant="outline" className="w-full justify-start" disabled>
                 <Upload className="mr-2" /> Upload Image
               </Button>
-               <Button variant="outline" className="w-full justify-start">
+               <Button variant="outline" className="w-full justify-start" disabled>
                 <Brush className="mr-2" /> Choose Clipart
               </Button>
               {/* More controls will be added here */}
@@ -76,13 +112,20 @@ function MockupTool() {
         <div className="lg:col-span-2">
           <Card>
             <CardContent className="p-4 sm:p-6 md:p-8">
-              <div className="aspect-square w-full bg-muted/50 rounded-lg flex items-center justify-center relative overflow-hidden">
+              <div 
+                ref={canvasRef}
+                className="aspect-square w-full bg-muted/50 rounded-lg flex items-center justify-center relative overflow-hidden"
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp} // Stop dragging if mouse leaves canvas
+              >
                 {isLoading ? (
                   <Skeleton className="w-full h-full" />
                 ) : error ? (
                   <p className="text-destructive font-medium">{error}</p>
                 ) : product ? (
-                   <Image
+                   <>
+                    <Image
                       src={product.images[0]}
                       alt={product.name}
                       fill
@@ -90,6 +133,22 @@ function MockupTool() {
                       sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                       priority
                     />
+                    {text && (
+                       <div
+                          ref={textRef}
+                          className="absolute text-4xl font-bold p-2 cursor-grab select-none"
+                          style={{ 
+                            left: `${textPosition.x}px`, 
+                            top: `${textPosition.y}px`,
+                            color: '#000000', // Basic color, can be made customizable later
+                            textShadow: '1px 1px 2px #ffffff',
+                          }}
+                          onMouseDown={handleMouseDown}
+                        >
+                          {text}
+                        </div>
+                    )}
+                   </>
                 ) : null}
               </div>
             </CardContent>
