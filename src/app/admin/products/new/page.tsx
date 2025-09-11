@@ -116,6 +116,8 @@ export default function NewProductPage() {
       allowOutOfStockPurchase: false,
       seoTitle: '',
       seoDescription: '',
+      compareAtPrice: undefined,
+      costPerItem: undefined,
     },
   });
 
