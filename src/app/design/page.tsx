@@ -25,18 +25,30 @@ function MockupTool() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [text, setText] = useState('');
-  const [textPosition, setTextPosition] = useState({ x: 50, y: 50 });
-  
-  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
-  const [imagePosition, setImagePosition] = useState({ x: 70, y: 70 });
+  const [textElement, setTextElement] = useState({
+    text: '',
+    position: { x: 50, y: 50 },
+    fontSize: 32,
+  });
+
+  const [imageElement, setImageElement] = useState<{
+    src: string | null;
+    position: { x: 70, y: 70 };
+    size: { width: number, height: number };
+    aspectRatio: number;
+  }>({
+    src: null,
+    position: { x: 70, y: 70 },
+    size: { width: 150, height: 150 },
+    aspectRatio: 1,
+  });
+
   const [draggingElement, setDraggingElement] = useState<'text' | 'image' | null>(null);
+  const [resizingElement, setResizingElement] = useState<'text' | 'image' | null>(null);
   
   const canvasRef = useRef<HTMLDivElement>(null);
-  const textRef = useRef<HTMLDivElement>(null);
-  const imageRef = useRef<HTMLDivElement>(null);
+  const dragStartRef = useRef({ x: 0, y: 0 });
   const fileInputRef = useRef<HTMLInputElement>(null);
-
 
   useEffect(() => {
     async function fetchAllProducts() {
@@ -88,38 +100,49 @@ function MockupTool() {
   const handleMouseDown = (e: React.MouseEvent, element: 'text' | 'image') => {
     e.preventDefault();
     setDraggingElement(element);
+    dragStartRef.current = { x: e.clientX, y: e.clientY };
+  };
+
+  const handleResizeMouseDown = (e: React.MouseEvent, element: 'text' | 'image') => {
+    e.preventDefault();
+    e.stopPropagation();
+    setResizingElement(element);
+    dragStartRef.current = { x: e.clientX, y: e.clientY };
   };
   
   useEffect(() => {
     const handleMouseUp = () => {
       setDraggingElement(null);
+      setResizingElement(null);
     };
 
     const handleMouseMove = (e: MouseEvent) => {
-      if (!draggingElement || !canvasRef.current) return;
-
+      if (!canvasRef.current) return;
       const canvasRect = canvasRef.current.getBoundingClientRect();
-      let newX = e.clientX - canvasRect.left;
-      let newY = e.clientY - canvasRect.top;
+      const dx = e.clientX - dragStartRef.current.x;
+      const dy = e.clientY - dragStartRef.current.y;
 
-      if (draggingElement === 'text' && textRef.current) {
-        const textRect = textRef.current.getBoundingClientRect();
-        newX -= textRect.width / 2;
-        newY -= textRect.height / 2;
-        newX = Math.max(0, Math.min(newX, canvasRect.width - textRect.width));
-        newY = Math.max(0, Math.min(newY, canvasRect.height - textRect.height));
-        setTextPosition({ x: newX, y: newY });
-      } else if (draggingElement === 'image' && imageRef.current) {
-        const imgRect = imageRef.current.getBoundingClientRect();
-        newX -= imgRect.width / 2;
-        newY -= imgRect.height / 2;
-        newX = Math.max(0, Math.min(newX, canvasRect.width - imgRect.width));
-        newY = Math.max(0, Math.min(newY, canvasRect.height - imgRect.height));
-        setImagePosition({ x: newX, y: newY });
+      if (draggingElement === 'text') {
+        const newX = textElement.position.x + dx;
+        const newY = textElement.position.y + dy;
+        setTextElement(prev => ({ ...prev, position: { x: newX, y: newY }}));
+      } else if (draggingElement === 'image' && imageElement.src) {
+        const newX = imageElement.position.x + dx;
+        const newY = imageElement.position.y + dy;
+        setImageElement(prev => ({ ...prev, position: { x: newX, y: newY }}));
+      } else if (resizingElement === 'text') {
+        const newSize = Math.max(12, textElement.fontSize + (dx + dy) * 0.1);
+        setTextElement(prev => ({ ...prev, fontSize: newSize }));
+      } else if (resizingElement === 'image' && imageElement.src) {
+        const newWidth = Math.max(20, imageElement.size.width + dx);
+        const newHeight = newWidth / imageElement.aspectRatio;
+        setImageElement(prev => ({ ...prev, size: { width: newWidth, height: newHeight }}));
       }
+      
+      dragStartRef.current = { x: e.clientX, y: e.clientY };
     };
     
-    if (draggingElement) {
+    if (draggingElement || resizingElement) {
         window.addEventListener('mousemove', handleMouseMove);
         window.addEventListener('mouseup', handleMouseUp);
     }
@@ -128,14 +151,24 @@ function MockupTool() {
         window.removeEventListener('mousemove', handleMouseMove);
         window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [draggingElement]);
+  }, [draggingElement, resizingElement, textElement, imageElement]);
   
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       const reader = new FileReader();
       reader.onload = (e) => {
-        setUploadedImage(e.target?.result as string);
+        const img = new window.Image();
+        img.onload = () => {
+            const aspectRatio = img.width / img.height;
+            setImageElement(prev => ({
+                ...prev,
+                src: e.target?.result as string,
+                aspectRatio: aspectRatio,
+                size: { width: 150, height: 150 / aspectRatio }
+            }));
+        };
+        img.src = e.target?.result as string;
       };
       reader.readAsDataURL(file);
     }
@@ -170,8 +203,8 @@ function MockupTool() {
                  <Label>Add Text</Label>
                  <Input 
                    placeholder="Your Text Here"
-                   value={text}
-                   onChange={(e) => setText(e.target.value)}
+                   value={textElement.text}
+                   onChange={(e) => setTextElement(prev => ({...prev, text: e.target.value}))}
                  />
                </div>
               <input 
@@ -187,7 +220,6 @@ function MockupTool() {
                <Button variant="outline" className="w-full justify-start" disabled>
                 <Brush className="mr-2" /> Choose Clipart
               </Button>
-              {/* More controls will be added here */}
             </CardContent>
           </Card>
         </div>
@@ -214,38 +246,45 @@ function MockupTool() {
                       sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                       priority
                     />
-                    {text && (
+                    {textElement.text && (
                        <div
-                          ref={textRef}
-                          className="absolute text-4xl font-bold p-2 cursor-grab select-none"
+                          className="absolute p-2 cursor-grab select-none group"
                           style={{ 
-                            left: `${textPosition.x}px`, 
-                            top: `${textPosition.y}px`,
-                            color: '#000000', // Basic color, can be made customizable later
+                            left: `${textElement.position.x}px`, 
+                            top: `${textElement.position.y}px`,
+                            fontSize: `${textElement.fontSize}px`,
+                            color: '#000000',
                             textShadow: '1px 1px 2px #ffffff',
                           }}
                           onMouseDown={(e) => handleMouseDown(e, 'text')}
                         >
-                          {text}
+                          {textElement.text}
+                          <div 
+                            className="absolute -right-1 -bottom-1 w-4 h-4 bg-primary rounded-full border-2 border-white cursor-se-resize opacity-0 group-hover:opacity-100"
+                            onMouseDown={(e) => handleResizeMouseDown(e, 'text')}
+                          />
                         </div>
                     )}
-                    {uploadedImage && (
+                    {imageElement.src && (
                         <div
-                            ref={imageRef}
-                            className="absolute cursor-grab select-none"
+                            className="absolute cursor-grab select-none group"
                             style={{
-                                left: `${imagePosition.x}px`,
-                                top: `${imagePosition.y}px`,
-                                width: '150px', // Example static size
-                                height: '150px', // Example static size
+                                left: `${imageElement.position.x}px`,
+                                top: `${imageElement.position.y}px`,
+                                width: `${imageElement.size.width}px`,
+                                height: `${imageElement.size.height}px`,
                             }}
                             onMouseDown={(e) => handleMouseDown(e, 'image')}
                         >
                            <Image 
-                                src={uploadedImage} 
+                                src={imageElement.src} 
                                 alt="User uploaded design" 
                                 layout="fill" 
-                                className="object-contain" 
+                                className="object-contain pointer-events-none" 
+                            />
+                            <div 
+                              className="absolute -right-1 -bottom-1 w-4 h-4 bg-primary rounded-full border-2 border-white cursor-se-resize opacity-0 group-hover:opacity-100"
+                              onMouseDown={(e) => handleResizeMouseDown(e, 'image')}
                             />
                         </div>
                     )}
