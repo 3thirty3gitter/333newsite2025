@@ -107,11 +107,11 @@ function MockupTool() {
   }, [productId]);
 
   const colorVariant = useMemo(() => 
-    product?.variants.find(v => v.type.toLowerCase() === 'color'), 
+    product?.variants.find(v => v.type.toLowerCase().includes('color')), 
   [product]);
 
   const sizeVariant = useMemo(() =>
-    product?.variants.find(v => v.type.toLowerCase() === 'size'),
+    product?.variants.find(v => v.type.toLowerCase().includes('size')),
   [product]);
   
   useEffect(() => {
