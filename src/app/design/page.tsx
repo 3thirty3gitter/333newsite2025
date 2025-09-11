@@ -86,36 +86,49 @@ function MockupTool() {
   }
 
   const handleMouseDown = (e: React.MouseEvent, element: 'text' | 'image') => {
+    e.preventDefault();
     setDraggingElement(element);
   };
   
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!draggingElement || !canvasRef.current) return;
+  useEffect(() => {
+    const handleMouseUp = () => {
+      setDraggingElement(null);
+    };
 
-    const canvasRect = canvasRef.current.getBoundingClientRect();
-    let newX = e.clientX - canvasRect.left;
-    let newY = e.clientY - canvasRect.top;
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!draggingElement || !canvasRef.current) return;
 
-    if (draggingElement === 'text' && textRef.current) {
+      const canvasRect = canvasRef.current.getBoundingClientRect();
+      let newX = e.clientX - canvasRect.left;
+      let newY = e.clientY - canvasRect.top;
+
+      if (draggingElement === 'text' && textRef.current) {
         const textRect = textRef.current.getBoundingClientRect();
         newX -= textRect.width / 2;
         newY -= textRect.height / 2;
         newX = Math.max(0, Math.min(newX, canvasRect.width - textRect.width));
         newY = Math.max(0, Math.min(newY, canvasRect.height - textRect.height));
         setTextPosition({ x: newX, y: newY });
-    } else if (draggingElement === 'image' && imageRef.current) {
+      } else if (draggingElement === 'image' && imageRef.current) {
         const imgRect = imageRef.current.getBoundingClientRect();
         newX -= imgRect.width / 2;
         newY -= imgRect.height / 2;
         newX = Math.max(0, Math.min(newX, canvasRect.width - imgRect.width));
         newY = Math.max(0, Math.min(newY, canvasRect.height - imgRect.height));
         setImagePosition({ x: newX, y: newY });
+      }
+    };
+    
+    if (draggingElement) {
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
     }
-  };
 
-  const handleMouseUp = () => {
-    setDraggingElement(null);
-  };
+    return () => {
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [draggingElement]);
   
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -186,9 +199,6 @@ function MockupTool() {
               <div 
                 ref={canvasRef}
                 className="aspect-square w-full bg-muted/50 rounded-lg flex items-center justify-center relative overflow-hidden"
-                onMouseMove={handleMouseMove}
-                onMouseUp={handleMouseUp}
-                onMouseLeave={handleMouseUp} // Stop dragging if mouse leaves canvas
               >
                 {isLoading ? (
                   <Skeleton className="w-full h-full" />
