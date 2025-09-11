@@ -77,10 +77,20 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
 
 export async function addProduct(product: Omit<Product, 'id'>): Promise<string> {
   const productsCol = collection(db, 'products');
-  const newProduct = { ...product };
+  
+  const newProduct: Partial<Product> = { ...product };
+
+  if (newProduct.compareAtPrice === undefined) {
+    newProduct.compareAtPrice = null;
+  }
+  if (newProduct.costPerItem === undefined) {
+    newProduct.costPerItem = null;
+  }
+
   if (!newProduct.images || newProduct.images.length === 0) {
       newProduct.images = [`https://picsum.photos/600/600?random=${Math.floor(Math.random() * 1000)}`];
   }
+  
   const docRef = await addDoc(productsCol, newProduct);
   return docRef.id;
 }

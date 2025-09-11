@@ -12,7 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, PlusCircle, Trash2, X, GripVertical, Upload, Image as ImageIcon, Loader2, Sparkles } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Trash2, X, GripVertical, Upload, Image as ImageIcon, Loader2, Sparkles, MinusCircle } from 'lucide-react';
 import { getCollections, getProductById, updateProduct, deleteProduct, uploadImageAndGetURL } from '@/lib/data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useEffect, useState, useMemo, useRef } from 'react';
@@ -59,8 +59,8 @@ const formSchema = z.object({
   variants: z.array(variantSchema).optional(),
   inventory: z.array(inventoryItemSchema).optional(),
   status: z.enum(['active', 'draft']),
-  compareAtPrice: z.coerce.number().optional(),
-  costPerItem: z.coerce.number().optional(),
+  compareAtPrice: z.coerce.number().optional().nullable(),
+  costPerItem: z.coerce.number().optional().nullable(),
   isTaxable: z.boolean(),
   trackQuantity: z.boolean(),
   allowOutOfStockPurchase: z.boolean(),
@@ -84,8 +84,7 @@ export default function EditProductPage() {
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const productId = params.id as string;
   const imageInputRef = useRef<HTMLInputElement>(null);
-  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
-
+  
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -106,8 +105,12 @@ export default function EditProductPage() {
       allowOutOfStockPurchase: false,
       seoTitle: '',
       seoDescription: '',
+      compareAtPrice: null,
+      costPerItem: null,
     },
   });
+  
+  const imagePreviews = form.watch('images') || [];
 
   useEffect(() => {
     async function fetchData() {
@@ -122,19 +125,19 @@ export default function EditProductPage() {
         
         if (fetchedProduct) {
           setProduct(fetchedProduct);
-          const productImages = fetchedProduct.images || [];
-          setImagePreviews(productImages);
           
           form.reset({
             ...fetchedProduct,
             description: fetchedProduct.description || '',
             longDescription: fetchedProduct.longDescription || '',
-            images: productImages,
+            images: fetchedProduct.images || [],
             variants: fetchedProduct.variants || [],
             inventory: fetchedProduct.inventory || [],
             tags: fetchedProduct.tags ? fetchedProduct.tags.join(', ') : '',
             seoTitle: fetchedProduct.seoTitle || '',
             seoDescription: fetchedProduct.seoDescription || '',
+            compareAtPrice: fetchedProduct.compareAtPrice || null,
+            costPerItem: fetchedProduct.costPerItem || null,
           });
         } else {
           toast({ variant: 'destructive', title: 'Error', description: 'Product not found.' });
@@ -211,6 +214,13 @@ export default function EditProductPage() {
       setNewOptions(updatedNewOptions);
     }
   };
+  
+  const handleAddOptionKeyPress = (e: React.KeyboardEvent<HTMLInputElement>, variantIndex: number) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddOption(variantIndex);
+    }
+  };
 
   const handleRemoveOption = (variantIndex: number, optionIndex: number) => {
     const currentOptions = form.getValues(`variants.${variantIndex}.options`);
@@ -220,41 +230,51 @@ export default function EditProductPage() {
     }
   };
   
-  const processAndUploadImage = async (file: File, context: string) => {
+  const processAndUploadImages = async (files: FileList) => {
     setIsUploading(true);
+    const productName = form.getValues('name');
+    if (!productName) {
+      toast({ variant: 'destructive', title: 'Product name required', description: 'Please provide a product name before uploading an image.'});
+      setIsUploading(false);
+      return;
+    }
+
     try {
-        const dataUrl = await new Promise<string>((resolve) => {
+      const uploadPromises = Array.from(files).map(file => {
+        return new Promise<string>((resolve) => {
             const reader = new FileReader();
             reader.onload = (e) => resolve(e.target?.result as string);
             reader.readAsDataURL(file);
-        });
+        }).then(dataUrl => uploadImageAndGetURL(dataUrl, 'products', `${productName}-${file.name}`));
+      });
 
-        const uploadedUrl = await uploadImageAndGetURL(dataUrl, 'products', context);
-        
-        const currentImages = form.getValues('images') || [];
-        const newImages = [...currentImages, uploadedUrl];
-        
-        setImagePreviews(newImages);
-        form.setValue('images', newImages, { shouldDirty: true });
+      const uploadedUrls = await Promise.all(uploadPromises);
+      
+      const currentImages = form.getValues('images') || [];
+      const newImages = [...currentImages, ...uploadedUrls];
+      form.setValue('images', newImages, { shouldDirty: true });
 
     } catch (error) {
         console.error("Image upload failed:", error);
-        toast({ variant: "destructive", title: "Upload Failed", description: "Could not upload the image." });
+        toast({ variant: "destructive", title: "Upload Failed", description: "Could not upload one or more images." });
     } finally {
         setIsUploading(false);
     }
   };
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    const productName = form.getValues('name');
-    if (file && productName) {
-      processAndUploadImage(file, productName);
+    const files = event.target.files;
+    if (files && files.length > 0) {
+      processAndUploadImages(files);
       event.target.value = '';
-    } else if (!productName) {
-      toast({ variant: 'destructive', title: 'Product name required', description: 'Please provide a product name before uploading an image.'})
     }
   };
+  
+  const handleRemoveImage = (index: number) => {
+      const currentImages = form.getValues('images') || [];
+      const newImages = currentImages.filter((_, i) => i !== index);
+      form.setValue('images', newImages, { shouldDirty: true });
+  }
 
   const handleGenerateDetails = async () => {
     const productName = form.getValues('name');
@@ -482,7 +502,7 @@ export default function EditProductPage() {
                                         <FormItem>
                                             <FormLabel>Compare-at price</FormLabel>
                                             <FormControl>
-                                                <Input type="number" step="0.01" placeholder="e.g., 159.99" {...field} />
+                                                <Input type="number" step="0.01" placeholder="e.g., 159.99" {...field} value={field.value ?? ''} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -513,7 +533,7 @@ export default function EditProductPage() {
                                     <FormItem>
                                         <FormLabel>Cost per item</FormLabel>
                                         <FormControl>
-                                            <Input type="number" step="0.01" placeholder="e.g., 50.00" {...field} />
+                                            <Input type="number" step="0.01" placeholder="e.g., 50.00" {...field} value={field.value ?? ''} />
                                         </FormControl>
                                         <FormDescription>Customers won’t see this.</FormDescription>
                                         <FormMessage />
@@ -580,14 +600,9 @@ export default function EditProductPage() {
                                                     updatedNewOptions[index] = e.target.value;
                                                     setNewOptions(updatedNewOptions);
                                                 }}
-                                                onKeyDown={(e) => {
-                                                    if (e.key === 'Enter') {
-                                                        e.preventDefault();
-                                                        handleAddOption(index);
-                                                    }
-                                                }}
+                                                onKeyDown={(e) => handleAddOptionKeyPress(e, index)}
                                             />
-                                            <Button type="button" variant="outline" onClick={() => handleAddOption(index)}>Add</Button>
+                                            <Button type="button" variant="outline" onMouseDown={(e) => e.preventDefault()} onClick={() => handleAddOption(index)}>Add</Button>
                                         </div>
                                         <FormMessage>{form.formState.errors.variants?.[index]?.options?.message}</FormMessage>
                                     </FormItem>
@@ -814,10 +829,10 @@ export default function EditProductPage() {
                                                         onChange={handleImageChange}
                                                         className="hidden"
                                                         accept="image/*"
-                                                        multiple={false}
+                                                        multiple
                                                     />
                                                     <div 
-                                                        className="aspect-square w-full rounded-md border-2 border-dashed border-muted-foreground/40 flex items-center justify-center text-center cursor-pointer"
+                                                        className="aspect-video w-full rounded-md border-2 border-dashed border-muted-foreground/40 flex items-center justify-center text-center cursor-pointer"
                                                         onClick={() => imageInputRef.current?.click()}
                                                     >
                                                          {isUploading ? (
@@ -825,8 +840,6 @@ export default function EditProductPage() {
                                                                 <Loader2 className="mx-auto h-12 w-12 animate-spin" />
                                                                 <p className="mt-2">Uploading...</p>
                                                             </div>
-                                                        ) : imagePreviews[0] ? (
-                                                            <Image src={imagePreviews[0]} alt="Product preview" width={400} height={400} className="object-cover rounded-md" />
                                                         ) : (
                                                             <div className="text-center text-muted-foreground">
                                                                 <Upload className="mx-auto h-12 w-12" />
@@ -842,19 +855,24 @@ export default function EditProductPage() {
                                     )}
                                 />
                                 
-                                <div className="grid grid-cols-4 gap-2">
-                                    {[...Array(4)].map((_, i) => (
-                                        <div key={i} className="relative aspect-square bg-muted rounded-md flex items-center justify-center">
-                                            {imagePreviews[i] ? (
-                                                    <Image src={imagePreviews[i]} alt={`Product preview ${i + 1}`} fill className="object-cover rounded-md" />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center">
-                                                    <ImageIcon className="h-6 w-6 text-muted-foreground" />
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
+                                {imagePreviews.length > 0 && (
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {imagePreviews.map((imgSrc, i) => (
+                                            <div key={i} className="relative aspect-square">
+                                                <Image src={imgSrc} alt={`Product preview ${i + 1}`} fill className="object-cover rounded-md" />
+                                                 <Button 
+                                                    type="button" 
+                                                    variant="destructive" 
+                                                    size="icon" 
+                                                    className="absolute top-1 right-1 h-6 w-6 opacity-80 hover:opacity-100"
+                                                    onClick={() => handleRemoveImage(i)}
+                                                >
+                                                    <MinusCircle className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         </CardContent>
                     </Card>
