@@ -2,8 +2,8 @@
 'use client';
 
 import { Suspense, useEffect, useState, useRef } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { getProductById } from '@/lib/data';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
+import { getProductById, getProducts } from '@/lib/data';
 import type { Product } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -11,11 +11,17 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Text, Upload, Brush } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 
 function MockupTool() {
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const productId = searchParams.get('productId');
+  
   const [product, setProduct] = useState<Product | null>(null);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,14 +33,28 @@ function MockupTool() {
 
 
   useEffect(() => {
+    async function fetchAllProducts() {
+        try {
+            const fetchedProducts = await getProducts();
+            setAllProducts(fetchedProducts);
+        } catch (e) {
+            console.error("Failed to load products list", e);
+        }
+    }
+    fetchAllProducts();
+  }, []);
+
+  useEffect(() => {
     if (!productId) {
       setError('No product selected. Please choose a product to design.');
       setIsLoading(false);
+      setProduct(null);
       return;
     }
 
     async function fetchProduct() {
       setIsLoading(true);
+      setError(null);
       try {
         const fetchedProduct = await getProductById(productId as string);
         if (fetchedProduct) {
@@ -53,6 +73,12 @@ function MockupTool() {
     fetchProduct();
   }, [productId]);
   
+  const handleProductSelect = (selectedProductId: string) => {
+    const params = new URLSearchParams(searchParams);
+    params.set('productId', selectedProductId);
+    router.push(`${pathname}?${params.toString()}`);
+  }
+
   const handleMouseDown = (e: React.MouseEvent) => {
     setIsDragging(true);
   };
@@ -90,7 +116,20 @@ function MockupTool() {
             </CardHeader>
             <CardContent className="space-y-4">
                <div className="space-y-2">
-                 <label className="text-sm font-medium">Add Text</label>
+                 <Label>Select a Product</Label>
+                 <Select onValueChange={handleProductSelect} value={productId || ''}>
+                    <SelectTrigger>
+                        <SelectValue placeholder="Choose a product..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {allProducts.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                 </Select>
+               </div>
+               <div className="space-y-2">
+                 <Label>Add Text</Label>
                  <Input 
                    placeholder="Your Text Here"
                    value={text}
