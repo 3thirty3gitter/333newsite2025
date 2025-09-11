@@ -27,9 +27,15 @@ function MockupTool() {
 
   const [text, setText] = useState('');
   const [textPosition, setTextPosition] = useState({ x: 50, y: 50 });
-  const [isDragging, setIsDragging] = useState(false);
+  
+  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [imagePosition, setImagePosition] = useState({ x: 70, y: 70 });
+  const [draggingElement, setDraggingElement] = useState<'text' | 'image' | null>(null);
+  
   const canvasRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
+  const imageRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
 
   useEffect(() => {
@@ -79,28 +85,47 @@ function MockupTool() {
     router.push(`${pathname}?${params.toString()}`);
   }
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    setIsDragging(true);
+  const handleMouseDown = (e: React.MouseEvent, element: 'text' | 'image') => {
+    setDraggingElement(element);
   };
   
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (isDragging && canvasRef.current && textRef.current) {
-      const canvasRect = canvasRef.current.getBoundingClientRect();
-      const textRect = textRef.current.getBoundingClientRect();
-      
-      let x = e.clientX - canvasRect.left - textRect.width / 2;
-      let y = e.clientY - canvasRect.top - textRect.height / 2;
+    if (!draggingElement || !canvasRef.current) return;
 
-      // Constrain within canvas boundaries
-      x = Math.max(0, Math.min(x, canvasRect.width - textRect.width));
-      y = Math.max(0, Math.min(y, canvasRect.height - textRect.height));
+    const canvasRect = canvasRef.current.getBoundingClientRect();
+    let newX = e.clientX - canvasRect.left;
+    let newY = e.clientY - canvasRect.top;
 
-      setTextPosition({ x, y });
+    if (draggingElement === 'text' && textRef.current) {
+        const textRect = textRef.current.getBoundingClientRect();
+        newX -= textRect.width / 2;
+        newY -= textRect.height / 2;
+        newX = Math.max(0, Math.min(newX, canvasRect.width - textRect.width));
+        newY = Math.max(0, Math.min(newY, canvasRect.height - textRect.height));
+        setTextPosition({ x: newX, y: newY });
+    } else if (draggingElement === 'image' && imageRef.current) {
+        const imgRect = imageRef.current.getBoundingClientRect();
+        newX -= imgRect.width / 2;
+        newY -= imgRect.height / 2;
+        newX = Math.max(0, Math.min(newX, canvasRect.width - imgRect.width));
+        newY = Math.max(0, Math.min(newY, canvasRect.height - imgRect.height));
+        setImagePosition({ x: newX, y: newY });
     }
   };
 
   const handleMouseUp = () => {
-    setIsDragging(false);
+    setDraggingElement(null);
+  };
+  
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setUploadedImage(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   return (
@@ -136,7 +161,14 @@ function MockupTool() {
                    onChange={(e) => setText(e.target.value)}
                  />
                </div>
-              <Button variant="outline" className="w-full justify-start" disabled>
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                className="hidden" 
+                accept="image/*" 
+                onChange={handleImageUpload} 
+              />
+              <Button variant="outline" className="w-full justify-start" onClick={() => fileInputRef.current?.click()}>
                 <Upload className="mr-2" /> Upload Image
               </Button>
                <Button variant="outline" className="w-full justify-start" disabled>
@@ -182,9 +214,29 @@ function MockupTool() {
                             color: '#000000', // Basic color, can be made customizable later
                             textShadow: '1px 1px 2px #ffffff',
                           }}
-                          onMouseDown={handleMouseDown}
+                          onMouseDown={(e) => handleMouseDown(e, 'text')}
                         >
                           {text}
+                        </div>
+                    )}
+                    {uploadedImage && (
+                        <div
+                            ref={imageRef}
+                            className="absolute cursor-grab select-none"
+                            style={{
+                                left: `${imagePosition.x}px`,
+                                top: `${imagePosition.y}px`,
+                                width: '150px', // Example static size
+                                height: '150px', // Example static size
+                            }}
+                            onMouseDown={(e) => handleMouseDown(e, 'image')}
+                        >
+                           <Image 
+                                src={uploadedImage} 
+                                alt="User uploaded design" 
+                                layout="fill" 
+                                className="object-contain" 
+                            />
                         </div>
                     )}
                    </>
