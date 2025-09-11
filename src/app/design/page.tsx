@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { Text, Upload, Brush, RotateCw } from 'lucide-react';
+import { Text, Upload, Brush, RotateCw, Undo } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -25,6 +25,14 @@ function MockupTool() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const initialImageState = {
+    src: null,
+    position: { x: 70, y: 70 },
+    size: { width: 150, height: 150 },
+    aspectRatio: 1,
+    rotation: 0,
+  };
+
   const [textElement, setTextElement] = useState({
     text: '',
     position: { x: 50, y: 50 },
@@ -34,17 +42,11 @@ function MockupTool() {
 
   const [imageElement, setImageElement] = useState<{
     src: string | null;
-    position: { x: 70, y: 70 };
+    position: { x: number, y: number };
     size: { width: number, height: number };
     aspectRatio: number;
     rotation: number;
-  }>({
-    src: null,
-    position: { x: 70, y: 70 },
-    size: { width: 150, height: 150 },
-    aspectRatio: 1,
-    rotation: 0,
-  });
+  }>(initialImageState);
 
   const [draggingElement, setDraggingElement] = useState<'text' | 'image' | null>(null);
   const [resizingElement, setResizingElement] = useState<'text' | 'image' | null>(null);
@@ -193,7 +195,7 @@ function MockupTool() {
         img.onload = () => {
             const aspectRatio = img.width / img.height;
             setImageElement(prev => ({
-                ...prev,
+                ...initialImageState,
                 src: e.target?.result as string,
                 aspectRatio: aspectRatio,
                 size: { width: 150, height: 150 / aspectRatio }
@@ -204,6 +206,15 @@ function MockupTool() {
       reader.readAsDataURL(file);
     }
   };
+
+  const handleImageReset = () => {
+      setImageElement(prev => ({
+        ...initialImageState,
+        src: prev.src,
+        aspectRatio: prev.aspectRatio,
+        size: { width: 150, height: 150 / prev.aspectRatio }
+      }));
+  }
 
   return (
     <div className="container mx-auto max-w-7xl px-4 py-8 md:py-12">
@@ -248,6 +259,11 @@ function MockupTool() {
               <Button variant="outline" className="w-full justify-start" onClick={() => fileInputRef.current?.click()}>
                 <Upload className="mr-2" /> Upload Image
               </Button>
+               {imageElement.src && (
+                  <Button variant="outline" className="w-full justify-start" onClick={handleImageReset}>
+                    <Undo className="mr-2" /> Reset Image
+                  </Button>
+                )}
                <Button variant="outline" className="w-full justify-start" disabled>
                 <Brush className="mr-2" /> Choose Clipart
               </Button>
