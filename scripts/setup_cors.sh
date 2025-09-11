@@ -8,7 +8,7 @@ if [ -z "$PROJECT_ID" ]; then
   exit 1
 fi
 
-BUCKET_NAME="${PROJECT_ID}.appspot.com"
+BUCKET_NAME="${PROJECT_ID}.firebasestorage.app"
 
 echo "Configuring CORS for bucket: gs://${BUCKET_NAME}"
 
