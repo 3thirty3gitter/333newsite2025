@@ -20,11 +20,13 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 interface QuoteRequestDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  productName: string;
+  productName?: string;
+  isPage?: boolean;
 }
 
 const formSchema = z.object({
@@ -37,8 +39,9 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-export function QuoteRequestDialog({ isOpen, onClose, productName }: QuoteRequestDialogProps) {
+export function QuoteRequestDialog({ isOpen, onClose, productName, isPage = false }: QuoteRequestDialogProps) {
   const { toast } = useToast();
+  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<FormValues>({
@@ -55,7 +58,7 @@ export function QuoteRequestDialog({ isOpen, onClose, productName }: QuoteReques
   async function onSubmit(values: FormValues) {
     setIsSubmitting(true);
     console.log('Quote Request Submitted:', {
-        productName,
+        productName: productName || 'General Inquiry',
         ...values
     });
 
@@ -69,16 +72,20 @@ export function QuoteRequestDialog({ isOpen, onClose, productName }: QuoteReques
 
     setIsSubmitting(false);
     form.reset();
-    onClose();
+    if (!isPage) {
+        onClose();
+    }
   }
 
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+  const content = (
+    <>
         <DialogHeader>
           <DialogTitle>Request a Quote</DialogTitle>
           <DialogDescription>
-            Interested in a bulk order or custom request for "{productName}"? Fill out the form below.
+            {productName 
+                ? `Interested in a bulk order or custom request for "${productName}"? Fill out the form below.`
+                : "Let us know what you're looking for, and we'll get back to you with a quote."
+            }
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -152,11 +159,13 @@ export function QuoteRequestDialog({ isOpen, onClose, productName }: QuoteReques
               )}
             />
              <DialogFooter>
-              <DialogClose asChild>
-                <Button type="button" variant="outline" disabled={isSubmitting}>
-                    Cancel
-                </Button>
-              </DialogClose>
+                 {!isPage && (
+                    <DialogClose asChild>
+                        <Button type="button" variant="outline" disabled={isSubmitting}>
+                            Cancel
+                        </Button>
+                    </DialogClose>
+                 )}
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {isSubmitting ? 'Sending...' : 'Send Request'}
@@ -164,6 +173,21 @@ export function QuoteRequestDialog({ isOpen, onClose, productName }: QuoteReques
             </DialogFooter>
           </form>
         </Form>
+    </>
+  );
+
+  if (isPage) {
+    return (
+        <div className="w-full">
+            {content}
+        </div>
+    )
+  }
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[425px]">
+        {content}
       </DialogContent>
     </Dialog>
   );

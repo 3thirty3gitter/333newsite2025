@@ -84,9 +84,22 @@ export type Customer = {
     gstNumber?: string;
 };
 
+export type MenuItemChild = {
+  label: string;
+  href: string;
+  description?: string;
+}
+
+export type MegaMenuColumn = {
+  title: string;
+  children: MenuItemChild[];
+}
+
 export type MenuItem = {
   label: string;
   href: string;
+  children?: MenuItemChild[];
+  megaMenu?: MegaMenuColumn[];
 };
 
 export type Page = {

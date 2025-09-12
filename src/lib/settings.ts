@@ -15,7 +15,57 @@ const defaultSettings: ThemeSettings = {
   logoWidth: 140,
   menuItems: [
     { label: 'Home', href: '/' },
-    { label: 'All Products', href: '/products' },
+    { 
+      label: 'Apparel', 
+      href: '/apparel',
+      megaMenu: [
+        {
+          title: 'Product Type',
+          children: [
+            { label: 'T-Shirts', href: '/products/t-shirts', description: 'Comfortable and stylish tees.'},
+            { label: 'Hoodies', href: '/products/hoodies', description: 'Stay warm with our hoodies.'},
+            { label: 'Hats', href: '/products/hats', description: 'Top off your look.'},
+          ]
+        },
+        {
+          title: 'Men',
+          children: [
+            { label: 'All Men\'s', href: '/collections/men', description: 'Shop the entire collection.'},
+            { label: 'New Arrivals', href: '/collections/men-new', description: 'The latest trends.'},
+            { label: 'Best Sellers', href: '/collections/men-best', description: 'Our most popular items.'},
+          ]
+        },
+        {
+          title: 'Women',
+          children: [
+            { label: 'All Women\'s', href: '/collections/women', description: 'Shop the entire collection.'},
+            { label: 'New Arrivals', href: '/collections/women-new', description: 'The latest trends.'},
+            { label: 'Best Sellers', href: '/collections/women-best', description: 'Our most popular items.'},
+          ]
+        },
+        {
+          title: 'Youth',
+          children: [
+            { label: 'All Youth', href: '/collections/youth', description: 'Styles for the next generation.'},
+            { label: 'New Arrivals', href: '/collections/youth-new', description: 'Fresh looks for kids.'},
+            { label: 'Best Sellers', href: '/collections/youth-best', description: 'Kid-approved favorites.'},
+          ]
+        },
+      ]
+    },
+    { 
+      label: 'DTF Transfers', 
+      href: '/dtf-transfers',
+      children: [
+        { label: 'Gang Sheets', href: '/dtf/gang-sheets', description: 'Customizable gang sheets for your designs.' },
+        { label: 'Single Images', href: '/dtf/single-images', description: 'Perfect for individual prints.' },
+        { label: 'Transfer Patches', href: '/dtf/patches', description: 'Add a professional touch.' },
+      ]
+    },
+    { label: 'Full Print Services', href: '/full-print-services' },
+    { label: 'Labels & Packaging', href: '/labels-packaging' },
+    { label: 'Stickers & Decals', href: '/stickers-decals' },
+    { label: 'Request a Quote', href: '/request-a-quote' },
   ],
   headerType: 'standard',
   pages: [

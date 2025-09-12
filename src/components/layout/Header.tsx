@@ -9,16 +9,35 @@ import { getThemeSettings } from '@/lib/settings';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import type { MenuItem } from '@/lib/types';
+import { NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMenuLink, NavigationMenuList, NavigationMenuTrigger, navigationMenuTriggerStyle } from '../ui/navigation-menu';
+import React from 'react';
 
-const NavLinks = ({ items }: { items: MenuItem[] }) => (
-    <>
-        {items.map((item, index) => (
-            <Link key={index} href={item.href} className="text-foreground/80 hover:text-foreground transition-colors text-sm">
-                {item.label}
-            </Link>
-        ))}
-    </>
-);
+const ListItem = React.forwardRef<
+  React.ElementRef<"a">,
+  React.ComponentPropsWithoutRef<"a">
+>(({ className, title, children, ...props }, ref) => {
+  return (
+    <li>
+      <NavigationMenuLink asChild>
+        <a
+          ref={ref}
+          className={cn(
+            "block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
+            className
+          )}
+          {...props}
+        >
+          <div className="text-sm font-medium leading-none">{title}</div>
+          <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
+            {children}
+          </p>
+        </a>
+      </NavigationMenuLink>
+    </li>
+  );
+});
+ListItem.displayName = "ListItem";
+
 
 const Logo = ({ logoUrl, logoWidth }: { logoUrl?: string, logoWidth?: number }) => (
     <Link href="/" className="flex items-center space-x-2">
@@ -45,104 +64,79 @@ const HeaderActions = () => (
     </div>
 );
 
+function HeaderContent({ settings }: { settings: any }) {
+    'use client';
+    const { logoUrl, logoWidth, menuItems = [] } = settings;
+
+    return (
+        <div className="container flex items-center justify-between py-2">
+             <div className="mr-6">
+                <Logo logoUrl={logoUrl} logoWidth={logoWidth} />
+            </div>
+
+             <NavigationMenu>
+                <NavigationMenuList>
+                    {menuItems.map((item: MenuItem, index: number) => (
+                         <NavigationMenuItem key={index}>
+                            {item.children && item.children.length > 0 ? (
+                                <>
+                                 <NavigationMenuTrigger>{item.label}</NavigationMenuTrigger>
+                                 <NavigationMenuContent>
+                                     <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px] ">
+                                         {item.children.map((child) => (
+                                             <ListItem key={child.label} href={child.href} title={child.label}>
+                                                 {child.description}
+                                             </ListItem>
+                                         ))}
+                                     </ul>
+                                 </NavigationMenuContent>
+                                </>
+                            ) : item.megaMenu && item.megaMenu.length > 0 ? (
+                                <>
+                                 <NavigationMenuTrigger>{item.label}</NavigationMenuTrigger>
+                                 <NavigationMenuContent>
+                                     <div className="grid w-[600px] gap-3 p-4 md:w-[700px] md:grid-cols-4 lg:w-[800px]">
+                                         {item.megaMenu.map((column) => (
+                                             <div key={column.title} className="flex flex-col">
+                                                  <h3 className="font-medium text-lg text-foreground px-3 py-2">{column.title}</h3>
+                                                  <ul>
+                                                     {column.children.map((child) => (
+                                                         <ListItem key={child.label} href={child.href} title={child.label} />
+                                                     ))}
+                                                  </ul>
+                                             </div>
+                                         ))}
+                                     </div>
+                                 </NavigationMenuContent>
+                                </>
+                            ) : (
+                                 <Link href={item.href} legacyBehavior passHref>
+                                    <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                                        {item.label}
+                                    </NavigationMenuLink>
+                                </Link>
+                            )}
+                         </NavigationMenuItem>
+                    ))}
+                </NavigationMenuList>
+            </NavigationMenu>
+            <HeaderActions />
+        </div>
+    )
+}
+
+function HeaderClientWrapper({ settings }: { settings: any }) {
+    'use client';
+
+    return <HeaderContent settings={settings} />
+}
 
 export async function Header() {
   const settings = await getThemeSettings();
-  const { logoUrl, logoWidth, menuItems = [], headerType } = settings;
-  const midPoint = Math.ceil(menuItems.length / 2);
-  const firstHalfMenu = menuItems.slice(0, midPoint);
-  const secondHalfMenu = menuItems.slice(midPoint);
-
-  const standardLayout = (
-    <div className="container flex items-center py-2">
-        <div className="mr-6">
-            <Logo logoUrl={logoUrl} logoWidth={logoWidth} />
-        </div>
-        <nav className="hidden md:flex flex-1 items-center gap-6">
-           <NavLinks items={menuItems} />
-        </nav>
-        <HeaderActions />
-      </div>
-  );
-
-  const centeredLayout = (
-    <div className="container relative flex flex-col items-center py-4">
-       <div className="mb-4">
-          <Logo logoUrl={logoUrl} logoWidth={logoWidth} />
-       </div>
-        <nav className="flex items-center gap-6">
-            <NavLinks items={menuItems} />
-        </nav>
-        <div className="absolute top-1/2 right-4 -translate-y-1/2">
-            <HeaderActions />
-        </div>
-    </div>
-  );
-
-  const splitLayout = (
-      <div className="container flex items-center justify-between py-2">
-        <nav className="hidden md:flex items-center gap-6">
-            <NavLinks items={firstHalfMenu} />
-        </nav>
-        <Logo logoUrl={logoUrl} logoWidth={logoWidth} />
-        <nav className="hidden md:flex items-center gap-6">
-            <NavLinks items={secondHalfMenu} />
-        </nav>
-        <div className="absolute top-1/2 right-4 -translate-y-1/2">
-            <HeaderActions />
-        </div>
-      </div>
-  );
-  
-  const minimalistLayout = (
-     <div className="container flex items-center justify-between py-2">
-        <div className="mr-6">
-            <Logo logoUrl={logoUrl} logoWidth={logoWidth} />
-        </div>
-        <div className="flex items-center gap-6">
-            <nav className="hidden md:flex items-center gap-6">
-                <NavLinks items={menuItems} />
-            </nav>
-            <HeaderActions />
-        </div>
-     </div>
-  );
-
-  const logoTopLayout = (
-    <div className="container flex flex-col items-center py-4">
-        <div className="mb-4">
-            <Logo logoUrl={logoUrl} logoWidth={logoWidth} />
-        </div>
-        <div className="w-full border-t">
-            <nav className="flex items-center justify-center gap-6 pt-4">
-                 <NavLinks items={menuItems} />
-            </nav>
-        </div>
-        <div className="absolute top-4 right-4">
-            <HeaderActions />
-        </div>
-    </div>
-  );
-  
-  const renderLayout = () => {
-      switch (headerType) {
-          case 'centered':
-              return centeredLayout;
-          case 'split':
-              return splitLayout;
-          case 'minimalist':
-              return minimalistLayout;
-          case 'logo-top':
-              return logoTopLayout;
-          case 'standard':
-          default:
-              return standardLayout;
-      }
-  }
-
+ 
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      {renderLayout()}
+        <HeaderClientWrapper settings={settings} />
     </header>
   );
 }
