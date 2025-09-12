@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
@@ -11,10 +11,6 @@ interface ProductImageGalleryProps {
 
 export function ProductImageGallery({ images }: ProductImageGalleryProps) {
   const [selectedImage, setSelectedImage] = useState(images[0]);
-
-  useEffect(() => {
-    setSelectedImage(images[0]);
-  }, [images]);
 
   return (
     <div>
