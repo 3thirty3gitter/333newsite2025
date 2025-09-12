@@ -84,6 +84,8 @@ export default function EditProductPage() {
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const productId = params.id as string;
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const dragItem = useRef<number | null>(null);
+  const dragOverItem = useRef<number | null>(null);
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -275,6 +277,18 @@ export default function EditProductPage() {
       const newImages = currentImages.filter((_, i) => i !== index);
       form.setValue('images', newImages, { shouldDirty: true });
   }
+
+  const handleImageDrop = () => {
+    if (dragItem.current === null || dragOverItem.current === null) return;
+    
+    const currentImages = [...imagePreviews];
+    const draggedItemContent = currentImages.splice(dragItem.current, 1)[0];
+    currentImages.splice(dragOverItem.current, 0, draggedItemContent);
+
+    dragItem.current = null;
+    dragOverItem.current = null;
+    form.setValue('images', currentImages, { shouldDirty: true });
+  };
 
   const handleGenerateDetails = async () => {
     const productName = form.getValues('name');
@@ -812,6 +826,7 @@ export default function EditProductPage() {
                     <Card>
                         <CardHeader>
                             <CardTitle>Product Images</CardTitle>
+                            <CardDescription>Drag and drop to reorder images. The first image is the primary one.</CardDescription>
                         </CardHeader>
                          <CardContent>
                             <div className="space-y-4">
@@ -858,8 +873,19 @@ export default function EditProductPage() {
                                 {imagePreviews.length > 0 && (
                                     <div className="grid grid-cols-3 gap-2">
                                         {imagePreviews.map((imgSrc, i) => (
-                                            <div key={i} className="relative aspect-square">
+                                            <div 
+                                                key={i} 
+                                                className="relative aspect-square cursor-grab"
+                                                draggable
+                                                onDragStart={() => dragItem.current = i}
+                                                onDragEnter={() => dragOverItem.current = i}
+                                                onDragEnd={handleImageDrop}
+                                                onDragOver={(e) => e.preventDefault()}
+                                            >
                                                 <Image src={imgSrc} alt={`Product preview ${i + 1}`} fill className="object-cover rounded-md" />
+                                                 {i === 0 && (
+                                                    <Badge variant="secondary" className="absolute top-1 left-1">Primary</Badge>
+                                                 )}
                                                  <Button 
                                                     type="button" 
                                                     variant="destructive" 
