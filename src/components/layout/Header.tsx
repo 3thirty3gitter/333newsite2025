@@ -110,7 +110,7 @@ export function Header({ settings }: { settings: ThemeSettings }) {
                                     </NavigationMenuContent>
                                     </>
                                 ) : (
-                                    <Link href={item.href} legacyBehavior passHref>
+                                    <Link href={item.href} passHref>
                                         <NavigationMenuLink className={navigationMenuTriggerStyle()}>
                                             {item.label}
                                         </NavigationMenuLink>
