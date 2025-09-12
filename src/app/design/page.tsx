@@ -13,6 +13,7 @@ import { Text, Upload, Brush, RotateCw, Undo, Trash2, ArrowUp, ArrowDown } from 
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 
 type DesignElement = {
     id: string;
@@ -507,6 +508,30 @@ function MockupTool() {
               </div>
             </CardContent>
           </Card>
+           {product && product.images && product.images.length > 1 && (
+                <div className="mt-4">
+                    <div className="grid grid-cols-5 gap-4">
+                        {product.images.map((image, index) => (
+                            <button
+                                key={index}
+                                onClick={() => setActiveImageUrl(image)}
+                                className={cn(
+                                "aspect-square relative overflow-hidden rounded-md border-2 transition-all",
+                                activeImageUrl === image ? "border-primary shadow-md" : "border-transparent hover:border-primary/50"
+                                )}
+                            >
+                                <Image
+                                src={image}
+                                alt={`Product view ${index + 1}`}
+                                fill
+                                className="object-cover"
+                                sizes="10vw"
+                                />
+                            </button>
+                        ))}
+                    </div>
+                </div>
+           )}
         </div>
 
       </div>
@@ -521,3 +546,5 @@ export default function DesignPage() {
         </Suspense>
     )
 }
+
+    
