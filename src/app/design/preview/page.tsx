@@ -98,9 +98,11 @@ function PreviewPage() {
     useEffect(() => {
         const calculateScale = () => {
             if (containerRef.current) {
+                // The design canvas is a square, so we base the scale on the width.
                 const availableWidth = containerRef.current.offsetWidth;
-                // Assuming original canvas was around 600px wide for scaling purposes
-                const originalWidth = 600; 
+                // The original canvas has an aspect-ratio of 1/1, and we'll use a fixed
+                // virtual size for positioning (e.g., 600px).
+                const originalWidth = 600;
                 setScale(availableWidth / originalWidth);
             }
         };
@@ -166,8 +168,16 @@ function PreviewPage() {
                                         <div className="aspect-square w-full bg-muted/50 rounded-lg flex items-center justify-center relative overflow-hidden">
                                             <Image src={imgUrl} alt="Product view" fill className="object-contain" />
                                             {/* Render design elements on top */}
-                                            <div className="absolute inset-0" style={{ transform: `scale(${scale})`, transformOrigin: 'top left' }}>
-                                                <div className="relative" style={{ width: 600, height: 600}}>
+                                            <div
+                                                className="absolute top-0 left-0"
+                                                style={{
+                                                    width: 600,
+                                                    height: 600,
+                                                    transform: `scale(${scale})`,
+                                                    transformOrigin: 'top left',
+                                                }}
+                                            >
+                                                <div className="relative w-full h-full">
                                                     {viewDesign.imageElements.map(el => (
                                                         <div key={el.id} className="absolute" style={{ left: el.position.x, top: el.position.y, width: el.size.width, height: el.size.height, transform: `rotate(${el.rotation}deg)` }}>
                                                             <Image src={el.src} alt="" layout="fill" className="object-contain" />
@@ -247,3 +257,5 @@ export default function PreviewPageWrapper() {
     );
 }
 
+
+    
