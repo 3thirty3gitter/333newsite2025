@@ -78,7 +78,7 @@ const sectionDefaults: Record<SectionType, Omit<PageSection, 'id'>> = {
     props: {
       title: 'New Featured Products',
       subtitle: 'Our finest selection, just for you.',
-      count: 4,
+      productIds: [],
     }
   },
   testimonials: {
@@ -205,7 +205,7 @@ function PageSectionsEditor({ activePageIndex }: { activePageIndex: number }) {
 
   return (
     <>
-    <AccordionItem value="item-2" key={activePageIndex}>
+    <AccordionItem value="item-2">
       <AccordionTrigger className="font-semibold text-lg">Page Sections</AccordionTrigger>
       <AccordionContent className="space-y-6 pt-4">
         <div 
@@ -427,10 +427,14 @@ export default function WebsiteBuilderPage() {
     const handleDeletePage = () => {
         if (pageToDelete !== null) {
             removePage(pageToDelete);
-            setPageToDelete(null);
+            
             if (activePageIndex === pageToDelete) {
                 setActivePageIndex(0); // Go back to home if active page is deleted
+            } else if (activePageIndex > pageToDelete) {
+                setActivePageIndex(activePageIndex - 1);
             }
+
+            setPageToDelete(null);
             toast({ title: "Page Deleted", description: "The page has been removed." });
         }
     };
@@ -688,7 +692,7 @@ export default function WebsiteBuilderPage() {
                                     </AccordionItem>
                                     
                                     {pages && pages.length > 0 && (
-                                        <PageSectionsEditor activePageIndex={activePageIndex} />
+                                        <PageSectionsEditor key={activePageIndex} activePageIndex={activePageIndex} />
                                     )}
 
                                 </Accordion>
