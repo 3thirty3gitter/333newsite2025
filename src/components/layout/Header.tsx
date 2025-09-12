@@ -78,7 +78,7 @@ export function Header({ settings }: { settings: ThemeSettings }) {
                     <NavigationMenuList>
                         {menuItems.map((item: MenuItem, index: number) => (
                             <NavigationMenuItem key={index}>
-                                {item.children && item.children.length > 0 ? (
+                                {item.menuType === 'simple' && item.children && item.children.length > 0 ? (
                                     <>
                                     <NavigationMenuTrigger>{item.label}</NavigationMenuTrigger>
                                     <NavigationMenuContent>
@@ -91,7 +91,7 @@ export function Header({ settings }: { settings: ThemeSettings }) {
                                         </ul>
                                     </NavigationMenuContent>
                                     </>
-                                ) : item.megaMenu && item.megaMenu.length > 0 ? (
+                                ) : item.menuType === 'mega' && item.megaMenu && item.megaMenu.length > 0 ? (
                                     <>
                                     <NavigationMenuTrigger>{item.label}</NavigationMenuTrigger>
                                     <NavigationMenuContent>
@@ -101,7 +101,9 @@ export function Header({ settings }: { settings: ThemeSettings }) {
                                                     <h3 className="font-medium text-lg text-foreground px-3 py-2">{column.title}</h3>
                                                     <ul>
                                                         {column.children.map((child) => (
-                                                            <ListItem key={child.label} href={child.href} title={child.label} />
+                                                            <ListItem key={child.label} href={child.href} title={child.label}>
+                                                              {child.description}
+                                                            </ListItem>
                                                         ))}
                                                     </ul>
                                                 </div>
@@ -110,11 +112,11 @@ export function Header({ settings }: { settings: ThemeSettings }) {
                                     </NavigationMenuContent>
                                     </>
                                 ) : (
-                                    <NavigationMenuLink asChild>
-                                        <Link href={item.href} className={navigationMenuTriggerStyle()}>
+                                    <Link href={item.href} legacyBehavior passHref>
+                                        <NavigationMenuLink className={navigationMenuTriggerStyle()}>
                                             {item.label}
-                                        </Link>
-                                    </NavigationMenuLink>
+                                        </NavigationMenuLink>
+                                    </Link>
                                 )}
                             </NavigationMenuItem>
                         ))}
