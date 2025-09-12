@@ -11,6 +11,7 @@ import type { MenuItem, ThemeSettings } from '@/lib/types';
 import { NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMenuLink, NavigationMenuList, NavigationMenuTrigger, navigationMenuTriggerStyle } from '../ui/navigation-menu';
 import React from 'react';
 
+
 const ListItem = React.forwardRef<
   React.ElementRef<"a">,
   React.ComponentPropsWithoutRef<"a">
@@ -112,7 +113,7 @@ export function Header({ settings }: { settings: ThemeSettings }) {
                                     </NavigationMenuContent>
                                     </>
                                 ) : (
-                                    <Link href={item.href} passHref>
+                                    <Link href={item.href} legacyBehavior passHref>
                                         <NavigationMenuLink className={navigationMenuTriggerStyle()}>
                                             {item.label}
                                         </NavigationMenuLink>
