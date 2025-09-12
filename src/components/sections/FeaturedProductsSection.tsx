@@ -15,7 +15,7 @@ type FeaturedProductsSectionProps = {
 };
 
 export const FeaturedProductsSection = ({ section, products: initialProducts }: FeaturedProductsSectionProps) => {
-  const [products, setProducts] = useState<Product[]>(initialProducts || []);
+  const [allProducts, setAllProducts] = useState<Product[]>(initialProducts || []);
   const [isLoading, setIsLoading] = useState(!initialProducts);
 
   useEffect(() => {
@@ -24,13 +24,17 @@ export const FeaturedProductsSection = ({ section, products: initialProducts }: 
     if (!initialProducts) {
       setIsLoading(true);
       getProducts()
-        .then(setProducts)
+        .then(setAllProducts)
         .catch(console.error)
         .finally(() => setIsLoading(false));
     }
   }, [initialProducts]);
 
-  const productCount = section.props.count || 8;
+  const { title, subtitle, productIds = [] } = section.props;
+
+  const featuredProducts = productIds
+      .map((id: string) => allProducts.find(p => p.id === id))
+      .filter((p: Product | undefined): p is Product => !!p);
 
   if (isLoading) {
     return (
@@ -47,26 +51,32 @@ export const FeaturedProductsSection = ({ section, products: initialProducts }: 
       <div className="container px-4 md:px-6">
         <div className="flex flex-col items-center justify-center space-y-4 text-center mb-12">
           <div className="inline-block rounded-lg bg-secondary px-3 py-1 text-sm">New Arrivals</div>
-          <h2 className="text-3xl font-headline font-bold tracking-tighter sm:text-5xl">{section.props.title}</h2>
+          <h2 className="text-3xl font-headline font-bold tracking-tighter sm:text-5xl">{title}</h2>
           <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-            {section.props.subtitle}
+            {subtitle}
           </p>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8 justify-center">
-          {products.slice(0, productCount).map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
-        {products.length > productCount && (
-          <div className="mt-12 text-center">
-            <Button variant="outline" asChild>
-              <Link href="/products">
-                <Package className="mr-2" />
-                View All Products
-              </Link>
-            </Button>
+        
+        {featuredProducts.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8 justify-center">
+            {featuredProducts.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12 text-muted-foreground">
+            <p>No products selected for this section yet.</p>
           </div>
         )}
+
+        <div className="mt-12 text-center">
+          <Button variant="outline" asChild>
+            <Link href="/products">
+              <Package className="mr-2" />
+              View All Products
+            </Link>
+          </Button>
+        </div>
       </div>
     </section>
   );

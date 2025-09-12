@@ -1,5 +1,4 @@
 
-
 'use server';
 
 import { doc, getDoc, setDoc } from 'firebase/firestore';
@@ -42,7 +41,7 @@ const defaultSettings: ThemeSettings = {
           props: {
             title: 'Featured Products',
             subtitle: 'Check out our latest collection of hand-picked items.',
-            count: 8,
+            productIds: [],
           }
         },
         {

@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { Collection, PageSection, Product } from '@/lib/types';
 import Image from 'next/image';
-import { Upload, Loader2, Sparkles } from 'lucide-react';
+import { Upload, Loader2, Sparkles, X, Check } from 'lucide-react';
 import { HeroSection } from '../sections/HeroSection';
 import { FeaturedProductsSection } from '../sections/FeaturedProductsSection';
 import { Slider } from '../ui/slider';
@@ -24,6 +24,10 @@ import { useToast } from '@/hooks/use-toast';
 import { generateHeroText } from '@/ai/flows/generate-hero-text';
 import { GenerateImageDialog } from './GenerateImageDialog';
 import { SpacerSection } from '../sections/SpacerSection';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '../ui/command';
+import { cn } from '@/lib/utils';
+import { Badge } from '../ui/badge';
 
 
 interface EditSectionDrawerProps {
@@ -330,8 +334,7 @@ const HeroForm = ({ control, setValue, watch, getValues }: { control: any, setVa
     </>
 )};
 
-const FeaturedProductsForm = ({ control, watch }: { control: any, watch: any }) => {
-    const count = watch('count');
+const FeaturedProductsForm = ({ control, products = [] }: { control: any; products: Product[] }) => {
     return (
         <div className="space-y-4">
             <FormField
@@ -358,19 +361,77 @@ const FeaturedProductsForm = ({ control, watch }: { control: any, watch: any }) 
             />
             <FormField
                 control={control}
-                name="count"
+                name="productIds"
                 render={({ field }) => (
                     <FormItem>
-                        <FormLabel>Number of products: {count}</FormLabel>
-                        <FormControl>
-                            <Slider
-                                value={[field.value]}
-                                onValueChange={(value) => field.onChange(value[0])}
-                                min={2}
-                                max={12}
-                                step={1}
-                            />
-                        </FormControl>
+                        <FormLabel>Products</FormLabel>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <FormControl>
+                                    <Button variant="outline" role="combobox" className="w-full justify-between h-auto">
+                                        <div className="flex gap-2 flex-wrap">
+                                            {field.value?.length > 0 ? (
+                                                field.value.map((productId: string) => {
+                                                    const product = products.find(p => p.id === productId);
+                                                    return (
+                                                        <Badge
+                                                            key={productId}
+                                                            variant="secondary"
+                                                            className="flex items-center gap-1"
+                                                        >
+                                                            {product?.name || 'Unknown'}
+                                                            <button
+                                                                type="button"
+                                                                className="h-3 w-3"
+                                                                onClick={(e) => {
+                                                                    e.preventDefault();
+                                                                    field.onChange(field.value.filter((id: string) => id !== productId));
+                                                                }}
+                                                            >
+                                                                <X className="h-3 w-3" />
+                                                            </button>
+                                                        </Badge>
+                                                    );
+                                                })
+                                            ) : (
+                                                <span className="font-normal text-muted-foreground">Select products</span>
+                                            )}
+                                        </div>
+                                    </Button>
+                                </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[300px] p-0" align="start">
+                                <Command>
+                                    <CommandInput placeholder="Search products..." />
+                                    <CommandEmpty>No products found.</CommandEmpty>
+                                    <CommandGroup className="max-h-60 overflow-auto">
+                                        {products.map((product) => (
+                                            <CommandItem
+                                                key={product.id}
+                                                onSelect={() => {
+                                                    const selected = field.value || [];
+                                                    const isSelected = selected.includes(product.id);
+                                                    const newSelection = isSelected
+                                                        ? selected.filter((id: string) => id !== product.id)
+                                                        : [...selected, product.id];
+                                                    field.onChange(newSelection);
+                                                }}
+                                                className="cursor-pointer"
+                                            >
+                                                <Check
+                                                    className={cn(
+                                                        "mr-2 h-4 w-4",
+                                                        field.value?.includes(product.id) ? "opacity-100" : "opacity-0"
+                                                    )}
+                                                />
+                                                <span>{product.name}</span>
+                                            </CommandItem>
+                                        ))}
+                                    </CommandGroup>
+                                </Command>
+                            </PopoverContent>
+                        </Popover>
+                        <FormMessage />
                     </FormItem>
                 )}
             />
@@ -510,12 +571,12 @@ const SpacerForm = ({ control, watch }: { control: any, watch: any }) => {
     );
 };
 
-const SectionForm = ({ section, control, setValue, watch, getValues }: { section: PageSection, control: any, setValue: any, watch: any, getValues: any }) => {
+const SectionForm = ({ section, control, setValue, watch, getValues, products }: { section: PageSection, control: any, setValue: any, watch: any, getValues: any, products: Product[] }) => {
     switch (section.type) {
         case 'hero':
             return <HeroForm control={control} setValue={setValue} watch={watch} getValues={getValues} />;
         case 'featured-products':
-            return <FeaturedProductsForm control={control} watch={watch} />;
+            return <FeaturedProductsForm control={control} products={products} />;
         case 'collections':
             return <CollectionsForm control={control} />;
         case 'image-with-text':
@@ -529,7 +590,10 @@ const SectionForm = ({ section, control, setValue, watch, getValues }: { section
 
 export function EditSectionDrawer({ isOpen, onClose, section, onSave }: EditSectionDrawerProps) {
     const form = useForm({
-        defaultValues: section.props,
+        defaultValues: {
+            ...section.props,
+            productIds: section.props.productIds || [], // Ensure productIds is an array
+        }
     });
     
     const [products, setProducts] = useState<Product[]>([]);
@@ -540,10 +604,11 @@ export function EditSectionDrawer({ isOpen, onClose, section, onSave }: EditSect
         async function loadData() {
             setIsLoading(true);
             try {
-                if (section.type === 'featured-products') {
-                    const productsData = await getProducts();
-                    setProducts(productsData);
-                } else if (section.type === 'collections') {
+                // Fetch all products for the multi-select, regardless of section type
+                const productsData = await getProducts();
+                setProducts(productsData);
+
+                if (section.type === 'collections') {
                     const collectionsData = await getCollections();
                     setCollections(collectionsData);
                 }
@@ -566,7 +631,10 @@ export function EditSectionDrawer({ isOpen, onClose, section, onSave }: EditSect
     };
 
     useEffect(() => {
-        form.reset(section.props);
+        form.reset({
+            ...section.props,
+            productIds: section.props.productIds || [],
+        });
     }, [section, form]);
 
     const onSubmit = (data: any) => {
@@ -586,7 +654,14 @@ export function EditSectionDrawer({ isOpen, onClose, section, onSave }: EditSect
                         <div className="p-4 border rounded-lg overflow-y-auto">
                             <Form {...form}>
                                 <form onSubmit={form.handleSubmit(onSubmit)} id="section-edit-form" className="space-y-6">
-                                    <SectionForm section={section} control={form.control} setValue={form.setValue} watch={form.watch} getValues={form.getValues} />
+                                    <SectionForm 
+                                        section={section} 
+                                        control={form.control} 
+                                        setValue={form.setValue} 
+                                        watch={form.watch} 
+                                        getValues={form.getValues}
+                                        products={products}
+                                    />
                                 </form>
                             </Form>
                         </div>
