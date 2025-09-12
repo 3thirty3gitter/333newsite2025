@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -46,7 +47,7 @@ export function ProductRecommendations({ currentProductId }: ProductRecommendati
       }
     }
     fetchRecommendations();
-  }, [viewingHistory, currentProductId]);
+  }, [viewingHistory.join(','), currentProductId]);
   
   if (isLoading) {
     return (
@@ -96,3 +97,4 @@ export function ProductRecommendations({ currentProductId }: ProductRecommendati
     </div>
   );
 }
+
