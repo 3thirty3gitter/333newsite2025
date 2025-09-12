@@ -65,8 +65,27 @@ function MockupTool() {
   const [rotatingElementId, setRotatingElementId] = useState<string | null>(null);
   
   const canvasRef = useRef<HTMLDivElement>(null);
+  const thumbnailContainerRef = useRef<HTMLDivElement>(null);
   const dragStartRef = useRef({ x: 0, y: 0 });
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [thumbnailScale, setThumbnailScale] = useState(0.2);
+
+  useEffect(() => {
+    const calculateScale = () => {
+      if (canvasRef.current && thumbnailContainerRef.current) {
+        const canvasWidth = canvasRef.current.offsetWidth;
+        const thumbnailWidth = thumbnailContainerRef.current.offsetWidth / 5 - 16; // 5 items, with gap
+        if (canvasWidth > 0 && thumbnailWidth > 0) {
+            setThumbnailScale(thumbnailWidth / canvasWidth);
+        }
+      }
+    };
+
+    calculateScale();
+    window.addEventListener('resize', calculateScale);
+    return () => window.removeEventListener('resize', calculateScale);
+  }, [product]);
 
   const currentDesign = useMemo(() => {
     if (!activeImageUrl) return { textElements: [], imageElements: [] };
@@ -324,16 +343,6 @@ function MockupTool() {
       updateCurrentDesign({ imageElements: newImageElements });
   }
 
-  const getThumbnailScale = () => {
-    if (!canvasRef.current) return 0.1;
-    // This is an approximation. A more accurate scaling would require knowing the thumbnail's rendered size.
-    // Assuming thumbnails are around 100px wide and canvas is around 500-600px.
-    const canvasWidth = canvasRef.current.clientWidth;
-    const thumbnailWidth = 100; // Approximate width
-    return thumbnailWidth / canvasWidth;
-  };
-
-
   return (
     <div className="container mx-auto max-w-7xl px-4 py-8 md:py-12">
       <h1 className="text-3xl md:text-4xl font-headline font-bold mb-8">Product Mockup Tool</h1>
@@ -542,11 +551,10 @@ function MockupTool() {
             </CardContent>
           </Card>
            {product && product.images && product.images.length > 1 && (
-                <div className="mt-4">
+                <div className="mt-4" ref={thumbnailContainerRef}>
                     <div className="grid grid-cols-5 gap-4">
                         {product.images.map((image, index) => {
-                            const designForThumbnail = designs[image] || { imageElements: [], textElements: [] };
-                            const thumbnailScale = getThumbnailScale();
+                            const designForThumbnail = designs[image] || { textElements: [], imageElements: [] };
                             return (
                                 <div key={index} className="relative">
                                     <button
@@ -563,32 +571,34 @@ function MockupTool() {
                                             className="object-cover"
                                             sizes="10vw"
                                         />
-                                        <div className="absolute inset-0 overflow-hidden">
-                                        {designForThumbnail.imageElements.map(el => (
-                                            <div key={el.id} className="absolute" style={{
-                                                left: el.position.x * thumbnailScale,
-                                                top: el.position.y * thumbnailScale,
-                                                width: el.size.width * thumbnailScale,
-                                                height: el.size.height * thumbnailScale,
-                                                transform: `rotate(${el.rotation}deg)`,
-                                                zIndex: designForThumbnail.imageElements.findIndex(e => e.id === el.id) + 1
-                                            }}>
-                                                <Image src={el.src} alt="" layout="fill" className="object-contain pointer-events-none" />
+                                        <div className="absolute inset-0 overflow-hidden" style={{ transform: `scale(${thumbnailScale})`, transformOrigin: 'top left' }}>
+                                            <div className='relative' style={{ width: canvasRef.current?.offsetWidth, height: canvasRef.current?.offsetHeight}}>
+                                                {designForThumbnail.imageElements.map(el => (
+                                                    <div key={el.id} className="absolute" style={{
+                                                        left: el.position.x,
+                                                        top: el.position.y,
+                                                        width: el.size.width,
+                                                        height: el.size.height,
+                                                        transform: `rotate(${el.rotation}deg)`,
+                                                        zIndex: designForThumbnail.imageElements.findIndex(e => e.id === el.id) + 1
+                                                    }}>
+                                                        <Image src={el.src} alt="" layout="fill" className="object-contain pointer-events-none" />
+                                                    </div>
+                                                ))}
+                                                {designForThumbnail.textElements.map(el => (
+                                                    <div key={el.id} className="absolute whitespace-nowrap" style={{
+                                                        left: el.position.x,
+                                                        top: el.position.y,
+                                                        fontSize: el.fontSize,
+                                                        color: '#000000',
+                                                        textShadow: '0.5px 0.5px 1px #ffffff',
+                                                        transform: `rotate(${el.rotation}deg)`,
+                                                        zIndex: designForThumbnail.imageElements.length + designForThumbnail.textElements.findIndex(e => e.id === el.id) + 1,
+                                                    }}>
+                                                        {el.text}
+                                                    </div>
+                                                ))}
                                             </div>
-                                        ))}
-                                        {designForThumbnail.textElements.map(el => (
-                                            <div key={el.id} className="absolute whitespace-nowrap" style={{
-                                                left: el.position.x * thumbnailScale,
-                                                top: el.position.y * thumbnailScale,
-                                                fontSize: el.fontSize * thumbnailScale,
-                                                color: '#000000',
-                                                textShadow: '0.5px 0.5px 1px #ffffff',
-                                                transform: `rotate(${el.rotation}deg)`,
-                                                zIndex: designForThumbnail.imageElements.length + designForThumbnail.textElements.findIndex(e => e.id === el.id) + 1,
-                                            }}>
-                                                {el.text}
-                                            </div>
-                                        ))}
                                         </div>
                                     </button>
                                 </div>
