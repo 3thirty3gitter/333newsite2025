@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -293,10 +294,29 @@ export default function WebsiteBuilderPage() {
         },
     });
 
-    const { fields: menuFields, append: appendMenu, remove: removeMenu } = useFieldArray({
+    const { fields: menuFields, append: appendMenu, remove: removeMenu, move: moveMenu } = useFieldArray({
         control: form.control,
         name: "menuItems",
     });
+    
+    const dragMenuItem = useRef<number | null>(null);
+    const dragOverMenuItem = useRef<number | null>(null);
+
+    const handleMenuDragStart = (index: number) => {
+        dragMenuItem.current = index;
+    };
+
+    const handleMenuDragEnter = (index: number) => {
+        dragOverMenuItem.current = index;
+    };
+
+    const handleMenuDrop = () => {
+        if (dragMenuItem.current !== null && dragOverMenuItem.current !== null) {
+            moveMenu(dragMenuItem.current, dragOverMenuItem.current);
+            dragMenuItem.current = null;
+            dragOverMenuItem.current = null;
+        }
+    };
 
     const { fields: pageFields, append: appendPage, remove: removePage, update: updatePage } = useFieldArray({
         control: form.control,
@@ -549,9 +569,16 @@ export default function WebsiteBuilderPage() {
                                                         <Plus className="mr-2 h-4 w-4" /> Add Link
                                                     </Button>
                                                 </div>
-                                                <div className="space-y-3">
+                                                <div className="space-y-3" onDrop={handleMenuDrop} onDragOver={(e) => e.preventDefault()}>
                                                     {menuFields.map((field, index) => (
-                                                        <Card key={field.id} className="p-3">
+                                                        <Card 
+                                                            key={field.id} 
+                                                            className="p-3"
+                                                            draggable
+                                                            onDragStart={() => handleMenuDragStart(index)}
+                                                            onDragEnter={() => handleMenuDragEnter(index)}
+                                                            onDragEnd={handleMenuDrop}
+                                                        >
                                                             <div className="flex items-start gap-2">
                                                                 <GripVertical className="h-5 w-5 text-muted-foreground mt-8 cursor-grab" />
                                                                 <div className="flex-1 space-y-2">
