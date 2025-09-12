@@ -164,6 +164,39 @@ const HeroForm = ({ control, setValue, watch, getValues }: { control: any, setVa
                 </FormItem>
             )}
         />
+         <div className="grid grid-cols-2 gap-4">
+            <FormField
+                control={control}
+                name="titleColor"
+                render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Title Color</FormLabel>
+                        <FormControl>
+                            <Input type="color" {...field} className="p-1 h-10"/>
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                )}
+            />
+            <FormField
+                control={control}
+                name="titleStyle"
+                render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Title Style</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                            <SelectContent>
+                                <SelectItem value="normal">Normal</SelectItem>
+                                <SelectItem value="bold">Bold</SelectItem>
+                                <SelectItem value="italic">Italic</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                )}
+            />
+        </div>
         <FormField
             control={control}
             name="subtitle"
@@ -181,6 +214,39 @@ const HeroForm = ({ control, setValue, watch, getValues }: { control: any, setVa
                 </FormItem>
             )}
         />
+        <div className="grid grid-cols-2 gap-4">
+            <FormField
+                control={control}
+                name="subtitleColor"
+                render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Subtitle Color</FormLabel>
+                        <FormControl>
+                            <Input type="color" {...field} className="p-1 h-10"/>
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                )}
+            />
+            <FormField
+                control={control}
+                name="subtitleStyle"
+                render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Subtitle Style</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                            <SelectContent>
+                                <SelectItem value="normal">Normal</SelectItem>
+                                <SelectItem value="bold">Bold</SelectItem>
+                                <SelectItem value="italic">Italic</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                )}
+            />
+        </div>
         
         <div>
             <div className="flex items-center justify-between mb-2">
@@ -519,3 +585,5 @@ export function EditSectionDrawer({ isOpen, onClose, section, onSave }: EditSect
         </Dialog>
     );
 }
+
+    
