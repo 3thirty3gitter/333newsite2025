@@ -8,12 +8,14 @@ import { generateFilename } from '@/ai/flows/generate-filename';
 
 function toProduct(doc: any): Product {
     const data = doc.data();
+    const images = data.images && Array.isArray(data.images) && data.images.length > 0 
+        ? data.images 
+        : ['https://placehold.co/600x600'];
+
     return {
         id: doc.id,
         ...data,
-        images: data.images && Array.isArray(data.images) && data.images.length > 0 
-            ? data.images 
-            : ['https://placehold.co/600x600'],
+        images,
     } as Product;
 }
 
@@ -112,7 +114,7 @@ export async function updateProduct(id: string, productData: Partial<Product>): 
   const updateData = { ...productData };
 
   // Ensure images array is not empty before updating
-  if (!updateData.images || updateData.images.length === 0) {
+  if (Array.isArray(updateData.images) && updateData.images.length === 0) {
       updateData.images = [`https://picsum.photos/600/600?random=${Math.floor(Math.random() * 1000)}`];
   }
   
@@ -269,5 +271,3 @@ export async function importCustomers(customers: Omit<Customer, 'id'>[]): Promis
     });
     return Promise.resolve();
 }
-
-    
