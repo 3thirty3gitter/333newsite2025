@@ -28,7 +28,7 @@ import { AddPageDialog } from "@/components/admin/AddPageDialog";
 import { uploadImageAndGetURL } from "@/lib/data";
 import { fontMap } from "@/lib/theme";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Textarea } from "../ui/textarea";
+import { Textarea } from "@/components/ui/textarea";
 
 const menuItemChildSchema = z.object({
     label: z.string().min(1, "Label is required"),
