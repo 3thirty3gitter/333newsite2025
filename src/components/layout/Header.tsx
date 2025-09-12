@@ -1,14 +1,13 @@
 
-'use server';
+'use client';
 
 import Link from 'next/link';
 import { ShoppingBag, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CartIcon } from '../cart/CartIcon';
-import { getThemeSettings } from '@/lib/settings';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
-import type { MenuItem } from '@/lib/types';
+import type { MenuItem, ThemeSettings } from '@/lib/types';
 import { NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMenuLink, NavigationMenuList, NavigationMenuTrigger, navigationMenuTriggerStyle } from '../ui/navigation-menu';
 import React from 'react';
 
@@ -64,79 +63,66 @@ const HeaderActions = () => (
     </div>
 );
 
-function HeaderContent({ settings }: { settings: any }) {
-    'use client';
+
+export function Header({ settings }: { settings: ThemeSettings }) {
     const { logoUrl, logoWidth, menuItems = [] } = settings;
 
     return (
-        <div className="container flex items-center justify-between py-2">
-             <div className="mr-6">
-                <Logo logoUrl={logoUrl} logoWidth={logoWidth} />
+        <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <div className="container flex items-center justify-between py-2">
+                <div className="mr-6">
+                    <Logo logoUrl={logoUrl} logoWidth={logoWidth} />
+                </div>
+
+                <NavigationMenu>
+                    <NavigationMenuList>
+                        {menuItems.map((item: MenuItem, index: number) => (
+                            <NavigationMenuItem key={index}>
+                                {item.children && item.children.length > 0 ? (
+                                    <>
+                                    <NavigationMenuTrigger>{item.label}</NavigationMenuTrigger>
+                                    <NavigationMenuContent>
+                                        <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px] ">
+                                            {item.children.map((child) => (
+                                                <ListItem key={child.label} href={child.href} title={child.label}>
+                                                    {child.description}
+                                                </ListItem>
+                                            ))}
+                                        </ul>
+                                    </NavigationMenuContent>
+                                    </>
+                                ) : item.megaMenu && item.megaMenu.length > 0 ? (
+                                    <>
+                                    <NavigationMenuTrigger>{item.label}</NavigationMenuTrigger>
+                                    <NavigationMenuContent>
+                                        <div className="grid w-[600px] gap-3 p-4 md:w-[700px] md:grid-cols-4 lg:w-[800px]">
+                                            {item.megaMenu.map((column) => (
+                                                <div key={column.title} className="flex flex-col">
+                                                    <h3 className="font-medium text-lg text-foreground px-3 py-2">{column.title}</h3>
+                                                    <ul>
+                                                        {column.children.map((child) => (
+                                                            <ListItem key={child.label} href={child.href} title={child.label} />
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </NavigationMenuContent>
+                                    </>
+                                ) : (
+                                    <Link href={item.href} legacyBehavior passHref>
+                                        <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                                            {item.label}
+                                        </NavigationMenuLink>
+                                    </Link>
+                                )}
+                            </NavigationMenuItem>
+                        ))}
+                    </NavigationMenuList>
+                </NavigationMenu>
+                <div className="flex-1" />
+                <HeaderActions />
             </div>
-
-             <NavigationMenu>
-                <NavigationMenuList>
-                    {menuItems.map((item: MenuItem, index: number) => (
-                         <NavigationMenuItem key={index}>
-                            {item.children && item.children.length > 0 ? (
-                                <>
-                                 <NavigationMenuTrigger>{item.label}</NavigationMenuTrigger>
-                                 <NavigationMenuContent>
-                                     <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px] ">
-                                         {item.children.map((child) => (
-                                             <ListItem key={child.label} href={child.href} title={child.label}>
-                                                 {child.description}
-                                             </ListItem>
-                                         ))}
-                                     </ul>
-                                 </NavigationMenuContent>
-                                </>
-                            ) : item.megaMenu && item.megaMenu.length > 0 ? (
-                                <>
-                                 <NavigationMenuTrigger>{item.label}</NavigationMenuTrigger>
-                                 <NavigationMenuContent>
-                                     <div className="grid w-[600px] gap-3 p-4 md:w-[700px] md:grid-cols-4 lg:w-[800px]">
-                                         {item.megaMenu.map((column) => (
-                                             <div key={column.title} className="flex flex-col">
-                                                  <h3 className="font-medium text-lg text-foreground px-3 py-2">{column.title}</h3>
-                                                  <ul>
-                                                     {column.children.map((child) => (
-                                                         <ListItem key={child.label} href={child.href} title={child.label} />
-                                                     ))}
-                                                  </ul>
-                                             </div>
-                                         ))}
-                                     </div>
-                                 </NavigationMenuContent>
-                                </>
-                            ) : (
-                                 <Link href={item.href} legacyBehavior passHref>
-                                    <NavigationMenuLink className={navigationMenuTriggerStyle()}>
-                                        {item.label}
-                                    </NavigationMenuLink>
-                                </Link>
-                            )}
-                         </NavigationMenuItem>
-                    ))}
-                </NavigationMenuList>
-            </NavigationMenu>
-            <HeaderActions />
-        </div>
+        </header>
     )
-}
-
-function HeaderClientWrapper({ settings }: { settings: any }) {
-    'use client';
-
-    return <HeaderContent settings={settings} />
-}
-
-export async function Header() {
-  const settings = await getThemeSettings();
- 
-  return (
-    <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <HeaderClientWrapper settings={settings} />
-    </header>
-  );
 }

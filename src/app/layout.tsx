@@ -3,8 +3,7 @@ import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
-import { CartProvider } from '@/context/CartProvider';
-import { HistoryProvider } from '@/context/HistoryProvider';
+import { Providers } from '@/components/layout/Providers';
 import { getThemeSettings } from '@/lib/settings';
 import { fontMap, palettes, Palette } from '@/lib/theme';
 
@@ -64,14 +63,12 @@ export default async function RootLayout({
         <link href={`https://fonts.googleapis.com/css2?family=${headlineFont.family.replace(/ /g, '+')}:wght@400;600;700&family=${bodyFont.family.replace(/ /g, '+')}:wght@400;700&display=swap`} rel="stylesheet" />
       </head>
       <body className="font-body antialiased flex flex-col">
-        <HistoryProvider>
-          <CartProvider>
-            <Header />
+        <Providers>
+            <Header settings={settings} />
             <main className="flex-grow">{children}</main>
             <Footer />
             <Toaster />
-          </CartProvider>
-        </HistoryProvider>
+        </Providers>
       </body>
     </html>
   );
