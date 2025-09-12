@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getThemeSettings, updateThemeSettings } from "@/lib/settings";
 import { MenuItem, Page, PageSection, SectionType, ThemeSettings } from "@/lib/types";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { GripVertical, Plus, Trash2, Upload, LayoutTemplate, Pencil, Home, File, Settings, Loader2 } from "lucide-react";
+import { GripVertical, Plus, Trash2, Upload, LayoutTemplate, Pencil, Home, File, Settings, Loader2, MoreVertical } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useFieldArray, useForm, useFormContext } from "react-hook-form";
 import * as z from 'zod';
@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 import { AddPageDialog } from "@/components/admin/AddPageDialog";
 import { uploadImageAndGetURL } from "@/lib/data";
 import { fontMap } from "@/lib/theme";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 const menuItemSchema = z.object({
     label: z.string().min(1, "Label is required"),
@@ -280,6 +281,7 @@ export default function WebsiteBuilderPage() {
     const imageInputRef = useRef<HTMLInputElement>(null);
     const [activePageIndex, setActivePageIndex] = useState(0);
     const [isAddPageDialogOpen, setIsAddPageDialogOpen] = useState(false);
+    const [pageToDelete, setPageToDelete] = useState<number | null>(null);
 
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
@@ -422,6 +424,17 @@ export default function WebsiteBuilderPage() {
         setIsAddPageDialogOpen(false);
     }
     
+    const handleDeletePage = () => {
+        if (pageToDelete !== null) {
+            removePage(pageToDelete);
+            setPageToDelete(null);
+            if (activePageIndex === pageToDelete) {
+                setActivePageIndex(0); // Go back to home if active page is deleted
+            }
+            toast({ title: "Page Deleted", description: "The page has been removed." });
+        }
+    };
+
     const logoUrl = form.watch('logoUrl');
 
     if (isLoading) {
@@ -466,13 +479,29 @@ export default function WebsiteBuilderPage() {
                                         <AccordionContent className="space-y-4 pt-4">
                                             <div className="space-y-2">
                                                 {pageFields.map((page, index) => (
-                                                     <Card key={page.id} className={cn("cursor-pointer hover:bg-muted/50", activePageIndex === index && "border-primary ring-1 ring-primary")}>
-                                                        <CardContent className="p-3 flex items-center gap-3" onClick={() => setActivePageIndex(index)}>
-                                                            {page.path === '/' ? <Home className="h-4 w-4 text-muted-foreground" /> : <File className="h-4 w-4 text-muted-foreground" />}
-                                                            <span className="flex-1 font-medium">{page.name}</span>
-                                                            <Button variant="ghost" size="icon" className="h-8 w-8"><Settings className="h-4 w-4" /></Button>
-                                                        </CardContent>
-                                                    </Card>
+                                                     <div key={page.id} className={cn("flex items-center gap-2 rounded-md", activePageIndex === index && "bg-muted")}>
+                                                        <Card className={cn("flex-1 cursor-pointer hover:bg-muted/50 border-0 shadow-none bg-transparent", activePageIndex === index && "border-primary ring-1 ring-primary")}>
+                                                            <CardContent className="p-3 flex items-center gap-3" onClick={() => setActivePageIndex(index)}>
+                                                                {page.path === '/' ? <Home className="h-4 w-4 text-muted-foreground" /> : <File className="h-4 w-4 text-muted-foreground" />}
+                                                                <span className="flex-1 font-medium">{page.name}</span>
+                                                            </CardContent>
+                                                        </Card>
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                                <Button variant="ghost" size="icon" className="h-8 w-8 mr-2 flex-shrink-0">
+                                                                    <MoreVertical className="h-4 w-4" />
+                                                                </Button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent>
+                                                                <DropdownMenuItem onSelect={() => alert('Editing page settings is not yet implemented.')}>
+                                                                    <Settings className="mr-2 h-4 w-4" /> Page Settings
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuItem onSelect={() => setPageToDelete(index)} className="text-destructive" disabled={page.path === '/'}>
+                                                                    <Trash2 className="mr-2 h-4 w-4" /> Delete Page
+                                                                </DropdownMenuItem>
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
+                                                    </div>
                                                 ))}
                                             </div>
                                             <Button type="button" variant="outline" className="w-full" onClick={() => setIsAddPageDialogOpen(true)}>
@@ -689,6 +718,21 @@ export default function WebsiteBuilderPage() {
         onAddPage={handleAddNewPage}
         existingPaths={pages?.map(p => p.path) || []}
     />
+
+    <AlertDialog open={pageToDelete !== null} onOpenChange={() => setPageToDelete(null)}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the page and all its sections.
+            </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeletePage} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
     </>
   );
 }
