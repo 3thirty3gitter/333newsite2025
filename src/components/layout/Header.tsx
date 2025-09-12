@@ -110,7 +110,7 @@ export function Header({ settings }: { settings: ThemeSettings }) {
                                     </NavigationMenuContent>
                                     </>
                                 ) : (
-                                    <Link href={item.href} passHref>
+                                    <Link href={item.href} passHref asChild>
                                         <NavigationMenuLink className={navigationMenuTriggerStyle()}>
                                             {item.label}
                                         </NavigationMenuLink>
