@@ -17,7 +17,7 @@ export const TestimonialsSection = ({ section }: { section: PageSection }) => {
     const { title, subtitle, testimonials = [] } = section.props;
     
     return (
-        <section className="bg-muted/50 w-full py-12 md:py-24 lg:py-32">
+        <section className="bg-muted/50 w-full">
             <div className="container px-4 md:px-6">
                 <div className="flex flex-col items-center justify-center space-y-4 text-center mb-12">
                     <h2 className="text-3xl font-headline font-bold tracking-tighter sm:text-5xl">{title}</h2>

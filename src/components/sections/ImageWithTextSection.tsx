@@ -11,7 +11,7 @@ export const ImageWithTextSection = ({ section }: { section: PageSection }) => {
     const { title, text, imageUrl, buttonLabel, buttonHref, imagePosition } = section.props;
     
     return (
-        <section className="bg-background w-full py-12 md:py-24 lg:py-32">
+        <section className="bg-background w-full">
             <div className="container grid items-center gap-8 px-4 md:px-6 lg:grid-cols-2 lg:gap-16">
                 <div className={cn("relative aspect-video overflow-hidden rounded-xl", imagePosition === 'right' && 'lg:order-last')}>
                      {imageUrl ? (

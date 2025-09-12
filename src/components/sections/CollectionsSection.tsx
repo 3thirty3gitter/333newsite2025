@@ -31,7 +31,7 @@ export const CollectionsSection = ({ section, collections: initialCollections }:
 
   if (isLoading) {
     return (
-      <section className="w-full py-12 md:py-24 lg:py-32">
+      <section className="w-full">
         <div className="container px-4 md:px-6">
              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8 justify-center">
                 {[...Array(4)].map((_, i) => (
@@ -44,7 +44,7 @@ export const CollectionsSection = ({ section, collections: initialCollections }:
   }
 
   return (
-    <section id="collections" className="w-full py-12 md:py-24 lg:py-32 bg-muted/50">
+    <section id="collections" className="w-full bg-muted/50">
       <div className="container px-4 md:px-6">
         <div className="flex flex-col items-center justify-center space-y-4 text-center mb-12">
           <h2 className="text-3xl font-headline font-bold tracking-tighter sm:text-5xl">{section.props.title}</h2>

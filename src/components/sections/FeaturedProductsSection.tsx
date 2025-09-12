@@ -34,7 +34,7 @@ export const FeaturedProductsSection = ({ section, products: initialProducts }: 
 
   if (isLoading) {
     return (
-      <section className="w-full py-12 md:py-24 lg:py-32">
+      <section className="w-full">
         <div className="container px-4 md:px-6 text-center">
           <p>Loading products...</p>
         </div>
@@ -43,7 +43,7 @@ export const FeaturedProductsSection = ({ section, products: initialProducts }: 
   }
 
   return (
-    <section id="products" className="w-full py-12 md:py-24 lg:py-32">
+    <section id="products" className="w-full">
       <div className="container px-4 md:px-6">
         <div className="flex flex-col items-center justify-center space-y-4 text-center mb-12">
           <div className="inline-block rounded-lg bg-secondary px-3 py-1 text-sm">New Arrivals</div>
