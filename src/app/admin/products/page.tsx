@@ -83,7 +83,7 @@ export default function AdminProductsPage() {
                       alt={product.name}
                       className="aspect-square rounded-md object-cover"
                       height="64"
-                      src={product.images?.[0] || 'https://placehold.co/64x64'}
+                      src={product.images?.[0] || `https://picsum.photos/64/64?random=${product.id}`}
                       width="64"
                       data-ai-hint="product image"
                     />
