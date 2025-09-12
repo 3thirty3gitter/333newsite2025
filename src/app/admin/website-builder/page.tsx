@@ -138,6 +138,12 @@ const sectionDefaults: Record<SectionType, Omit<PageSection, 'id'>> = {
       title: 'Shop by Collection',
       subtitle: 'Browse our curated collections to find exactly what you need.',
     }
+  },
+  'spacer': {
+    type: 'spacer',
+    props: {
+      height: 48,
+    }
   }
 }
 
@@ -245,6 +251,7 @@ function PageSectionsEditor({ activePageIndex }: { activePageIndex: number }) {
             <DropdownMenuItem onSelect={() => handleAddSection('testimonials')}>Testimonials</DropdownMenuItem>
             <DropdownMenuItem onSelect={() => handleAddSection('image-with-text')}>Image With Text</DropdownMenuItem>
             <DropdownMenuItem onSelect={() => handleAddSection('faq')}>FAQ</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => handleAddSection('spacer')}>Spacer</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
 
@@ -658,9 +665,3 @@ export default function WebsiteBuilderPage() {
     </>
   );
 }
-
-    
-
-    
-
-    

@@ -8,6 +8,7 @@ import { FaqSection } from '@/components/sections/FaqSection';
 import { HeroSection } from '@/components/sections/HeroSection';
 import { FeaturedProductsSection } from '@/components/sections/FeaturedProductsSection';
 import { CollectionsSection } from '@/components/sections/CollectionsSection';
+import { SpacerSection } from '@/components/sections/SpacerSection';
 
 type PageProps = {
   params: {
@@ -22,6 +23,7 @@ const sectionComponents = {
   'image-with-text': ImageWithTextSection,
   'faq': FaqSection,
   'collections': CollectionsSection,
+  'spacer': SpacerSection,
 };
 
 export default async function Page({ params }: PageProps) {

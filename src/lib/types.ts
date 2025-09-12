@@ -92,7 +92,7 @@ export type Page = {
   sections: PageSection[];
 }
 
-export type SectionType = 'hero' | 'featured-products' | 'testimonials' | 'image-with-text' | 'faq' | 'collections';
+export type SectionType = 'hero' | 'featured-products' | 'testimonials' | 'image-with-text' | 'faq' | 'collections' | 'spacer';
 
 export type PageSection = {
   id: string;

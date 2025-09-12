@@ -23,6 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { generateHeroText } from '@/ai/flows/generate-hero-text';
 import { GenerateImageDialog } from './GenerateImageDialog';
+import { SpacerSection } from '../sections/SpacerSection';
 
 
 interface EditSectionDrawerProps {
@@ -48,6 +49,8 @@ const SectionPreview = ({ section, products, collections }: { section: PageSecti
             return <ImageWithTextSection section={section} />;
         case 'testimonials':
             return <TestimonialsSection section={section} />;
+        case 'spacer':
+            return <SpacerSection section={section} />;
         default:
             return (
                 <div className="flex items-center justify-center h-48 bg-muted rounded-md">
@@ -480,6 +483,33 @@ const ImageWithTextForm = ({ control, setValue, watch }: { control: any, setValu
     );
 };
 
+const SpacerForm = ({ control, watch }: { control: any, watch: any }) => {
+    const height = watch('height');
+    return (
+        <div className="space-y-4">
+            <FormField
+                control={control}
+                name="height"
+                render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Height: {height || 24}px</FormLabel>
+                        <FormControl>
+                            <Slider
+                                value={[field.value || 24]}
+                                onValueChange={(value) => field.onChange(value[0])}
+                                min={8}
+                                max={400}
+                                step={4}
+                            />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                )}
+            />
+        </div>
+    );
+};
+
 const SectionForm = ({ section, control, setValue, watch, getValues }: { section: PageSection, control: any, setValue: any, watch: any, getValues: any }) => {
     switch (section.type) {
         case 'hero':
@@ -490,6 +520,8 @@ const SectionForm = ({ section, control, setValue, watch, getValues }: { section
             return <CollectionsForm control={control} />;
         case 'image-with-text':
             return <ImageWithTextForm control={control} setValue={setValue} watch={watch}/>;
+        case 'spacer':
+            return <SpacerForm control={control} watch={watch} />;
         default:
             return <p>This section type cannot be edited yet.</p>;
     }
@@ -585,5 +617,3 @@ export function EditSectionDrawer({ isOpen, onClose, section, onSave }: EditSect
         </Dialog>
     );
 }
-
-    
