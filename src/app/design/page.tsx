@@ -82,7 +82,7 @@ function MockupTool() {
     setDesigns(prev => ({
       ...prev,
       [activeImageUrl]: {
-        ...currentDesign,
+        ...(prev[activeImageUrl] || { textElements: [], imageElements: [] }),
         ...newDesign,
       }
     }));
@@ -245,7 +245,7 @@ function MockupTool() {
         window.removeEventListener('mousemove', handleMouseMove);
         window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [draggingElementId, resizingElementId, rotatingElementId, allDesignElements]);
+  }, [draggingElementId, resizingElementId, rotatingElementId, allDesignElements, updateCurrentDesign]);
   
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -294,18 +294,19 @@ function MockupTool() {
   };
   
   const handleLayerOrderChange = (id: string, direction: 'up' | 'down') => {
-    const newImageElements = [...currentDesign.imageElements];
-    const index = newImageElements.findIndex(el => el.id === id);
+    const allElements = [...currentDesign.imageElements, ...currentDesign.textElements];
+    const index = allElements.findIndex(el => el.id === id);
     if (index === -1) return;
 
     const newIndex = direction === 'up' ? index + 1 : index - 1;
-    if (newIndex < 0 || newIndex >= newImageElements.length) return;
-
-    const temp = newImageElements[index];
-    newImageElements[index] = newImageElements[newIndex];
-    newImageElements[newIndex] = temp;
+    if (newIndex < 0 || newIndex >= allElements.length) return;
     
-    updateCurrentDesign({ imageElements: newImageElements });
+    [allElements[index], allElements[newIndex]] = [allElements[newIndex], allElements[index]];
+    
+    updateCurrentDesign({ 
+        imageElements: allElements.filter(el => el.type === 'image') as ImageElement[],
+        textElements: allElements.filter(el => el.type === 'text') as TextElement[]
+    });
   }
 
   const handleResetImage = (id: string) => {
@@ -322,6 +323,15 @@ function MockupTool() {
       });
       updateCurrentDesign({ imageElements: newImageElements });
   }
+
+  const getThumbnailScale = () => {
+    if (!canvasRef.current) return 0.1;
+    // This is an approximation. A more accurate scaling would require knowing the thumbnail's rendered size.
+    // Assuming thumbnails are around 100px wide and canvas is around 500-600px.
+    const canvasWidth = canvasRef.current.clientWidth;
+    const thumbnailWidth = 100; // Approximate width
+    return thumbnailWidth / canvasWidth;
+  };
 
 
   return (
@@ -414,21 +424,19 @@ function MockupTool() {
             <CardContent>
                 {allDesignElements.length > 0 ? (
                     <div className="space-y-2">
-                        {allDesignElements.map((el, index) => (
+                        {[...allDesignElements].reverse().map((el, index) => (
                              <div key={el.id} className="flex items-center gap-2 p-2 border rounded-md">
                                 <span className="flex-1 truncate">{el.type === 'text' ? el.text : `Image ${currentDesign.imageElements.findIndex(img => img.id === el.id) + 1}`}</span>
-                                {el.type === 'image' && (
-                                    <>
-                                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleLayerOrderChange(el.id, 'down')} disabled={index === 0}>
-                                            <ArrowDown className="h-4 w-4" />
-                                        </Button>
-                                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleLayerOrderChange(el.id, 'up')} disabled={index === currentDesign.imageElements.length - 1}>
-                                            <ArrowUp className="h-4 w-4" />
-                                        </Button>
-                                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleResetImage(el.id)}>
-                                            <Undo className="h-4 w-4" />
-                                        </Button>
-                                    </>
+                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleLayerOrderChange(el.id, 'down')} disabled={index === allDesignElements.length - 1}>
+                                    <ArrowDown className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleLayerOrderChange(el.id, 'up')} disabled={index === 0}>
+                                    <ArrowUp className="h-4 w-4" />
+                                </Button>
+                                 {el.type === 'image' && (
+                                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleResetImage(el.id)}>
+                                        <Undo className="h-4 w-4" />
+                                    </Button>
                                 )}
                                 <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDeleteElement(el.id)}>
                                     <Trash2 className="h-4 w-4" />
@@ -466,7 +474,7 @@ function MockupTool() {
                       priority
                       key={activeImageUrl}
                     />
-                    {currentDesign.imageElements.map((imgEl) => (
+                    {currentDesign.imageElements.map((imgEl, index) => (
                         <div
                             key={imgEl.id}
                             id={imgEl.id}
@@ -477,7 +485,7 @@ function MockupTool() {
                                 width: `${imgEl.size.width}px`,
                                 height: `${imgEl.size.height}px`,
                                 transform: `rotate(${imgEl.rotation}deg)`,
-                                zIndex: currentDesign.imageElements.findIndex(el => el.id === imgEl.id) + 1, // Basic layering
+                                zIndex: index + 1,
                             }}
                             onMouseDown={(e) => handleMouseDown(e, imgEl.id)}
                         >
@@ -499,7 +507,7 @@ function MockupTool() {
                             />
                         </div>
                     ))}
-                    {currentDesign.textElements.map((txtEl) => (
+                    {currentDesign.textElements.map((txtEl, index) => (
                        <div
                           key={txtEl.id}
                           id={txtEl.id}
@@ -511,7 +519,7 @@ function MockupTool() {
                             color: '#000000',
                             textShadow: '1px 1px 2px #ffffff',
                             transform: `rotate(${txtEl.rotation}deg)`,
-                            zIndex: currentDesign.imageElements.length + currentDesign.textElements.findIndex(el => el.id === txtEl.id) + 2,
+                            zIndex: currentDesign.imageElements.length + index + 1,
                           }}
                           onMouseDown={(e) => handleMouseDown(e, txtEl.id)}
                         >
@@ -536,24 +544,56 @@ function MockupTool() {
            {product && product.images && product.images.length > 1 && (
                 <div className="mt-4">
                     <div className="grid grid-cols-5 gap-4">
-                        {product.images.map((image, index) => (
-                            <button
-                                key={index}
-                                onClick={() => setActiveImageUrl(image)}
-                                className={cn(
-                                "aspect-square relative overflow-hidden rounded-md border-2 transition-all",
-                                activeImageUrl === image ? "border-primary shadow-md" : "border-transparent hover:border-primary/50"
-                                )}
-                            >
-                                <Image
-                                src={image}
-                                alt={`Product view ${index + 1}`}
-                                fill
-                                className="object-cover"
-                                sizes="10vw"
-                                />
-                            </button>
-                        ))}
+                        {product.images.map((image, index) => {
+                            const designForThumbnail = designs[image] || { imageElements: [], textElements: [] };
+                            const thumbnailScale = getThumbnailScale();
+                            return (
+                                <div key={index} className="relative">
+                                    <button
+                                        onClick={() => setActiveImageUrl(image)}
+                                        className={cn(
+                                        "aspect-square w-full relative overflow-hidden rounded-md border-2 transition-all",
+                                        activeImageUrl === image ? "border-primary shadow-md" : "border-transparent hover:border-primary/50"
+                                        )}
+                                    >
+                                        <Image
+                                            src={image}
+                                            alt={`Product view ${index + 1}`}
+                                            fill
+                                            className="object-cover"
+                                            sizes="10vw"
+                                        />
+                                        <div className="absolute inset-0 overflow-hidden">
+                                        {designForThumbnail.imageElements.map(el => (
+                                            <div key={el.id} className="absolute" style={{
+                                                left: el.position.x * thumbnailScale,
+                                                top: el.position.y * thumbnailScale,
+                                                width: el.size.width * thumbnailScale,
+                                                height: el.size.height * thumbnailScale,
+                                                transform: `rotate(${el.rotation}deg)`,
+                                                zIndex: designForThumbnail.imageElements.findIndex(e => e.id === el.id) + 1
+                                            }}>
+                                                <Image src={el.src} alt="" layout="fill" className="object-contain pointer-events-none" />
+                                            </div>
+                                        ))}
+                                        {designForThumbnail.textElements.map(el => (
+                                            <div key={el.id} className="absolute whitespace-nowrap" style={{
+                                                left: el.position.x * thumbnailScale,
+                                                top: el.position.y * thumbnailScale,
+                                                fontSize: el.fontSize * thumbnailScale,
+                                                color: '#000000',
+                                                textShadow: '0.5px 0.5px 1px #ffffff',
+                                                transform: `rotate(${el.rotation}deg)`,
+                                                zIndex: designForThumbnail.imageElements.length + designForThumbnail.textElements.findIndex(e => e.id === el.id) + 1,
+                                            }}>
+                                                {el.text}
+                                            </div>
+                                        ))}
+                                        </div>
+                                    </button>
+                                </div>
+                            )
+                        })}
                     </div>
                 </div>
            )}
