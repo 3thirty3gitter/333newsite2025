@@ -28,6 +28,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '../ui/command';
 import { cn } from '@/lib/utils';
 import { Badge } from '../ui/badge';
+import { buttonVariants } from '../ui/button';
 
 
 interface EditSectionDrawerProps {
@@ -368,7 +369,13 @@ const FeaturedProductsForm = ({ control, products = [] }: { control: any; produc
                         <Popover>
                             <PopoverTrigger asChild>
                                 <FormControl>
-                                    <Button variant="outline" role="combobox" className="w-full justify-between h-auto">
+                                    <div
+                                        role="combobox"
+                                        className={cn(
+                                            buttonVariants({ variant: "outline" }),
+                                            "w-full justify-between h-auto"
+                                        )}
+                                    >
                                         <div className="flex gap-2 flex-wrap">
                                             {field.value?.length > 0 ? (
                                                 field.value.map((productId: string) => {
@@ -384,7 +391,7 @@ const FeaturedProductsForm = ({ control, products = [] }: { control: any; produc
                                                                 type="button"
                                                                 className="h-3 w-3"
                                                                 onClick={(e) => {
-                                                                    e.preventDefault();
+                                                                    e.stopPropagation(); // Prevent popover from closing
                                                                     field.onChange(field.value.filter((id: string) => id !== productId));
                                                                 }}
                                                             >
@@ -397,7 +404,7 @@ const FeaturedProductsForm = ({ control, products = [] }: { control: any; produc
                                                 <span className="font-normal text-muted-foreground">Select products</span>
                                             )}
                                         </div>
-                                    </Button>
+                                    </div>
                                 </FormControl>
                             </PopoverTrigger>
                             <PopoverContent className="w-[300px] p-0" align="start">
