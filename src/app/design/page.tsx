@@ -346,7 +346,7 @@ function MockupTool() {
   }
 
   const handleNextStep = () => {
-    if (!product || !selectedSize) {
+    if (!product || !selectedSize || !canvasRef.current) {
         toast({
             variant: 'destructive',
             title: 'Missing Selection',
@@ -362,6 +362,8 @@ function MockupTool() {
         designs,
         productName: product.name,
         productImages: product.images,
+        canvasWidth: canvasRef.current.offsetWidth,
+        canvasHeight: canvasRef.current.offsetHeight,
     };
     
     localStorage.setItem('customDesign', JSON.stringify(designData));

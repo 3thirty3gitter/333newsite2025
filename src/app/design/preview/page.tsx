@@ -53,7 +53,43 @@ type DesignData = {
     designs: AllDesignsState;
     productName: string;
     productImages: string[];
+    canvasWidth: number;
+    canvasHeight: number;
 };
+
+function DesignPreview({ design, image, scale }: { design: DesignViewState, image: string, scale: number }) {
+    return (
+        <Card>
+            <CardContent className="p-4">
+                <div className="aspect-square w-full bg-muted/50 rounded-lg flex items-center justify-center relative overflow-hidden">
+                    <Image src={image} alt="Product view" fill className="object-contain" />
+                    <div
+                        className="absolute top-0 left-0"
+                        style={{
+                            width: design.canvasWidth,
+                            height: design.canvasHeight,
+                            transform: `scale(${scale})`,
+                            transformOrigin: 'top left',
+                        }}
+                    >
+                        <div className="relative w-full h-full">
+                            {design.designs[image]?.imageElements.map(el => (
+                                <div key={el.id} className="absolute" style={{ left: el.position.x, top: el.position.y, width: el.size.width, height: el.size.height, transform: `rotate(${el.rotation}deg)` }}>
+                                    <Image src={el.src} alt="" layout="fill" className="object-contain" />
+                                </div>
+                            ))}
+                            {design.designs[image]?.textElements.map(el => (
+                                <div key={el.id} className="absolute whitespace-nowrap" style={{ left: el.position.x, top: el.position.y, fontSize: el.fontSize, color: '#000000', textShadow: '1px 1px 2px #ffffff', transform: `rotate(${el.rotation}deg)` }}>
+                                    {el.text}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
 
 
 function PreviewPage() {
@@ -97,13 +133,9 @@ function PreviewPage() {
     
     useEffect(() => {
         const calculateScale = () => {
-            if (containerRef.current) {
-                // The design canvas is a square, so we base the scale on the width.
+            if (containerRef.current && design?.canvasWidth) {
                 const availableWidth = containerRef.current.offsetWidth;
-                // The original canvas has an aspect-ratio of 1/1, and we'll use a fixed
-                // virtual size for positioning (e.g., 600px).
-                const originalWidth = 600;
-                setScale(availableWidth / originalWidth);
+                setScale(availableWidth / design.canvasWidth);
             }
         };
 
@@ -160,41 +192,14 @@ function PreviewPage() {
                     <h2 className="text-2xl font-headline font-semibold mb-6">Your Custom Product</h2>
                      {designedViews.length > 0 ? (
                         <div className="space-y-8">
-                            {designedViews.map(imgUrl => {
-                                const viewDesign = design.designs[imgUrl];
-                                return (
-                                <Card key={imgUrl}>
-                                    <CardContent className="p-4">
-                                        <div className="aspect-square w-full bg-muted/50 rounded-lg flex items-center justify-center relative overflow-hidden">
-                                            <Image src={imgUrl} alt="Product view" fill className="object-contain" />
-                                            {/* Render design elements on top */}
-                                            <div
-                                                className="absolute top-0 left-0"
-                                                style={{
-                                                    width: 600,
-                                                    height: 600,
-                                                    transform: `scale(${scale})`,
-                                                    transformOrigin: 'top left',
-                                                }}
-                                            >
-                                                <div className="relative w-full h-full">
-                                                    {viewDesign.imageElements.map(el => (
-                                                        <div key={el.id} className="absolute" style={{ left: el.position.x, top: el.position.y, width: el.size.width, height: el.size.height, transform: `rotate(${el.rotation}deg)` }}>
-                                                            <Image src={el.src} alt="" layout="fill" className="object-contain" />
-                                                        </div>
-                                                    ))}
-                                                    {viewDesign.textElements.map(el => (
-                                                        <div key={el.id} className="absolute whitespace-nowrap" style={{ left: el.position.x, top: el.position.y, fontSize: el.fontSize, color: '#000000', textShadow: '1px 1px 2px #ffffff', transform: `rotate(${el.rotation}deg)` }}>
-                                                            {el.text}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                                )
-                            })}
+                            {designedViews.map(imgUrl => (
+                                <DesignPreview 
+                                    key={imgUrl}
+                                    design={design} 
+                                    image={imgUrl} 
+                                    scale={scale} 
+                                />
+                            ))}
                         </div>
                      ) : (
                          <p className="text-muted-foreground">You haven't added any design elements yet. Go back to add some!</p>
@@ -256,6 +261,3 @@ export default function PreviewPageWrapper() {
         </Suspense>
     );
 }
-
-
-    
