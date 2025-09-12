@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -10,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCart } from '@/context/CartProvider';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import Link from 'next/link';
 
 const formSchema = z.object({
   name: z.string().min(2, 'Name is too short'),
@@ -53,6 +55,9 @@ export default function CheckoutPage() {
       <div className="container mx-auto max-w-2xl text-center py-20">
         <h1 className="text-2xl font-bold">Your cart is empty.</h1>
         <p className="text-muted-foreground mt-2">Add items to your cart before proceeding to checkout.</p>
+        <Button asChild className="mt-6">
+            <Link href="/">Continue Shopping</Link>
+        </Button>
       </div>
     );
   }
@@ -117,15 +122,16 @@ export default function CheckoutPage() {
           <Card>
             <CardContent className="p-6 space-y-4">
               {cartItems.map(item => (
-                <div key={item.product.id} className="flex items-center gap-4">
+                <div key={item.id} className="flex items-center gap-4">
                   <div className="relative h-16 w-16 rounded-md overflow-hidden border">
-                    <Image src={item.product.images[0]} alt={item.product.name} fill className="object-cover" />
+                    <Image src={item.image} alt={item.product.name} fill className="object-cover" />
                   </div>
                   <div className="flex-1">
                     <p className="font-medium">{item.product.name}</p>
+                    {item.variantLabel && <p className="text-sm text-muted-foreground">{item.variantLabel}</p>}
                     <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
                   </div>
-                  <p className="font-semibold">${(item.product.price * item.quantity).toFixed(2)}</p>
+                  <p className="font-semibold">${(item.price * item.quantity).toFixed(2)}</p>
                 </div>
               ))}
               <div className="border-t pt-4 mt-4 space-y-2">

@@ -18,14 +18,14 @@ export function CartItem({ item }: CartItemProps) {
   const productUrl = `/products/${item.product.handle || item.product.id}`;
 
   const handleQuantityChange = (newQuantity: number) => {
-    updateQuantity(item.product.id, newQuantity);
+    updateQuantity(item.id, newQuantity);
   };
 
   return (
     <div className="flex items-start gap-4">
       <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-md border">
         <Image
-          src={item.product.images[0]}
+          src={item.image}
           alt={item.product.name}
           fill
           className="object-cover"
@@ -36,7 +36,10 @@ export function CartItem({ item }: CartItemProps) {
         <Link href={productUrl} className="font-semibold hover:underline">
           {item.product.name}
         </Link>
-        <p className="text-sm text-muted-foreground">${item.product.price.toFixed(2)}</p>
+        {item.variantLabel && (
+            <p className="text-sm text-muted-foreground">{item.variantLabel}</p>
+        )}
+        <p className="text-sm text-muted-foreground">${item.price.toFixed(2)}</p>
         <div className="mt-2 flex items-center gap-2">
           <Button
             variant="outline"
@@ -67,7 +70,7 @@ export function CartItem({ item }: CartItemProps) {
         variant="ghost"
         size="icon"
         className="text-muted-foreground"
-        onClick={() => removeFromCart(item.product.id)}
+        onClick={() => removeFromCart(item.id)}
       >
         <X className="h-4 w-4" />
         <span className="sr-only">Remove item</span>

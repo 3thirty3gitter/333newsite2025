@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useCart } from '@/context/CartProvider';
@@ -20,7 +21,7 @@ export default function CartPage() {
               <CardContent className="p-0">
                 <div className="flex flex-col divide-y">
                   {cartItems.map((item) => (
-                    <div key={item.product.id} className="p-4">
+                    <div key={item.id} className="p-4">
                       <CartItem item={item} />
                     </div>
                   ))}

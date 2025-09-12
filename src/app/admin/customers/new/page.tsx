@@ -92,13 +92,15 @@ export default function NewCustomerPage() {
 
   async function onSubmit(values: FormValues) {
     try {
+      const submissionValues = { ...values };
       if (isSameAsBilling) {
-        values.shippingStreet = values.billingStreet;
-        values.shippingCity = values.billingCity;
-        values.shippingState = values.billingState;
-        values.shippingZip = values.billingZip;
+        submissionValues.shippingStreet = submissionValues.billingStreet;
+        submissionValues.shippingCity = submissionValues.billingCity;
+        submissionValues.shippingState = submissionValues.billingState;
+        submissionValues.shippingZip = submissionValues.billingZip;
       }
-      await addCustomer(values);
+      
+      await addCustomer(submissionValues);
       toast({
         title: 'Customer Created',
         description: `The customer has been successfully created.`,
@@ -165,7 +167,7 @@ export default function NewCustomerPage() {
                         <FormItem>
                           <FormLabel>Company Name</FormLabel>
                           <FormControl>
-                            <Input placeholder="e.g., Piedmont Corp" {...field} />
+                            <Input placeholder="e.g., Piedmont Corp" {...field} value={field.value || ''}/>
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -229,11 +231,11 @@ export default function NewCustomerPage() {
                             </div>
                         </div>
                          <div className={cn("space-y-4", isSameAsBilling && "hidden")}>
-                            <FormField control={form.control} name="shippingStreet" render={({ field }) => (<FormItem><FormLabel>Street</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                            <FormField control={form.control} name="shippingStreet" render={({ field }) => (<FormItem><FormLabel>Street</FormLabel><FormControl><Input {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>)} />
                             <div className="grid grid-cols-3 gap-4">
-                                <FormField control={form.control} name="shippingCity" render={({ field }) => (<FormItem><FormLabel>City</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                <FormField control={form.control} name="shippingState" render={({ field }) => (<FormItem><FormLabel>State</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                <FormField control={form.control} name="shippingZip" render={({ field }) => (<FormItem><FormLabel>ZIP</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                <FormField control={form.control} name="shippingCity" render={({ field }) => (<FormItem><FormLabel>City</FormLabel><FormControl><Input {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>)} />
+                                <FormField control={form.control} name="shippingState" render={({ field }) => (<FormItem><FormLabel>State</FormLabel><FormControl><Input {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>)} />
+                                <FormField control={form.control} name="shippingZip" render={({ field }) => (<FormItem><FormLabel>ZIP</FormLabel><FormControl><Input {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>)} />
                             </div>
                         </div>
                     </div>
@@ -261,9 +263,9 @@ export default function NewCustomerPage() {
                             )}
                         />
                         {form.watch('taxExempt') && (
-                             <FormField control={form.control} name="taxExemptionNumber" render={({ field }) => (<FormItem><FormLabel>Tax Exemption #</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                             <FormField control={form.control} name="taxExemptionNumber" render={({ field }) => (<FormItem><FormLabel>Tax Exemption #</FormLabel><FormControl><Input {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>)} />
                         )}
-                        <FormField control={form.control} name="gstNumber" render={({ field }) => (<FormItem><FormLabel>GST Number</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                        <FormField control={form.control} name="gstNumber" render={({ field }) => (<FormItem><FormLabel>GST Number</FormLabel><FormControl><Input {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>)} />
                     </CardContent>
                 </Card>
             </div>

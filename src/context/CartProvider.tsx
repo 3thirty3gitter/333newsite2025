@@ -1,14 +1,23 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import type { CartItem, Product } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
+interface AddToCartParams {
+    product: Product;
+    variantId?: string;
+    variantLabel?: string;
+    price: number;
+    image: string;
+}
+
 interface CartContextType {
   cartItems: CartItem[];
-  addToCart: (product: Product) => void;
-  removeFromCart: (productId: string) => void;
-  updateQuantity: (productId: string, quantity: number) => void;
+  addToCart: (params: AddToCartParams) => void;
+  removeFromCart: (cartItemId: string) => void;
+  updateQuantity: (cartItemId: string, quantity: number) => void;
   clearCart: () => void;
   cartCount: number;
   cartTotal: number;
@@ -20,33 +29,43 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const { toast } = useToast();
 
-  const addToCart = (product: Product) => {
+  const addToCart = ({ product, variantId, variantLabel, price, image }: AddToCartParams) => {
+    const cartItemId = `${product.id}${variantId ? `-${variantId}` : ''}`;
+    
     setCartItems((prevItems) => {
-      const existingItem = prevItems.find((item) => item.product.id === product.id);
+      const existingItem = prevItems.find((item) => item.id === cartItemId);
       if (existingItem) {
         return prevItems.map((item) =>
-          item.product.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+          item.id === cartItemId ? { ...item, quantity: item.quantity + 1 } : item
         );
       }
-      return [...prevItems, { product, quantity: 1 }];
+      return [...prevItems, { 
+          id: cartItemId, 
+          product, 
+          quantity: 1, 
+          variantId, 
+          variantLabel, 
+          price, 
+          image 
+      }];
     });
     toast({
       title: 'Added to cart',
-      description: `${product.name} has been added to your cart.`,
+      description: `${product.name} ${variantLabel ? `(${variantLabel})` : ''} has been added.`,
     });
   };
 
-  const removeFromCart = (productId: string) => {
-    setCartItems((prevItems) => prevItems.filter((item) => item.product.id !== productId));
+  const removeFromCart = (cartItemId: string) => {
+    setCartItems((prevItems) => prevItems.filter((item) => item.id !== cartItemId));
   };
 
-  const updateQuantity = (productId: string, quantity: number) => {
+  const updateQuantity = (cartItemId: string, quantity: number) => {
     if (quantity <= 0) {
-      removeFromCart(productId);
+      removeFromCart(cartItemId);
       return;
     }
     setCartItems((prevItems) =>
-      prevItems.map((item) => (item.product.id === productId ? { ...item, quantity } : item))
+      prevItems.map((item) => (item.id === cartItemId ? { ...item, quantity } : item))
     );
   };
 
@@ -55,7 +74,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const cartCount = cartItems.reduce((count, item) => count + item.quantity, 0);
-  const cartTotal = cartItems.reduce((total, item) => total + item.product.price * item.quantity, 0);
+  const cartTotal = cartItems.reduce((total, item) => total + item.price * item.quantity, 0);
 
   return (
     <CartContext.Provider

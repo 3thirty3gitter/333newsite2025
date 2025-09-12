@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import Image from 'next/image';
 import { notFound, useParams } from 'next/navigation';
 import { getProductBySlug, getProductById } from '@/lib/data';
@@ -11,20 +11,56 @@ import { useHistory } from '@/context/HistoryProvider';
 import { ShoppingCart, Star, Pencil, FileText } from 'lucide-react';
 import { ProductRecommendations } from '@/components/products/ProductRecommendations';
 import { Separator } from '@/components/ui/separator';
-import type { Product } from '@/lib/types';
+import type { Product, Variant, VariantOption } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ProductImageGallery } from '@/components/products/ProductImageGallery';
 import Link from 'next/link';
 import { QuoteRequestDialog } from '@/components/products/QuoteRequestDialog';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
+
+function VariantSelector({ variant, selectedOptions, onOptionSelect }: { variant: Variant, selectedOptions: Record<string, string>, onOptionSelect: (type: string, value: string) => void }) {
+    const isColor = variant.type.toLowerCase().includes('color');
+
+    return (
+        <div className="space-y-3">
+            <Label className="font-semibold">{variant.type}</Label>
+            <RadioGroup
+                value={selectedOptions[variant.type]}
+                onValueChange={(value) => onOptionSelect(variant.type, value)}
+                className="flex flex-wrap items-center gap-2"
+            >
+                {variant.options.map((option) => (
+                     <FormItem key={option.value} className="flex items-center space-x-0 space-y-0">
+                        <RadioGroupItem value={option.value} id={`${variant.type}-${option.value}`} className="sr-only" />
+                        <Label
+                            htmlFor={`${variant.type}-${option.value}`}
+                            className={cn(
+                                "cursor-pointer rounded-md border-2 border-muted bg-popover px-4 py-2 hover:bg-accent hover:text-accent-foreground",
+                                selectedOptions[variant.type] === option.value && "border-primary bg-primary/10 text-primary"
+                            )}
+                        >
+                            {option.value}
+                        </Label>
+                    </FormItem>
+                ))}
+            </RadioGroup>
+        </div>
+    )
+}
 
 export default function ProductPage() {
   const params = useParams();
   const slug = params.slug as string;
   const { addToCart } = useCart();
+  const { toast } = useToast();
   const { addToHistory } = useHistory();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false);
+  const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
 
   useEffect(() => {
     async function fetchProduct() {
@@ -32,8 +68,6 @@ export default function ProductPage() {
 
       let fetchedProduct = await getProductBySlug(slug);
       
-      // Fallback for old products that might not have a handle/slug
-      // and are being accessed by ID via a redirect or old link.
       if (!fetchedProduct) {
         fetchedProduct = await getProductById(slug);
       }
@@ -42,6 +76,14 @@ export default function ProductPage() {
         if (fetchedProduct.status === 'active') {
             setProduct(fetchedProduct);
             addToHistory(fetchedProduct.id);
+            // Set default selected variants
+            const initialSelections: Record<string, string> = {};
+            fetchedProduct.variants.forEach(v => {
+                if(v.options.length > 0) {
+                    initialSelections[v.type] = v.options[0].value;
+                }
+            });
+            setSelectedOptions(initialSelections);
         } else {
             notFound();
         }
@@ -52,6 +94,63 @@ export default function ProductPage() {
     }
     fetchProduct();
   }, [slug, addToHistory]);
+
+  const handleOptionSelect = (type: string, value: string) => {
+    setSelectedOptions(prev => ({ ...prev, [type]: value }));
+  };
+
+  const selectedVariantCombination = useMemo(() => {
+      if (!product || product.variants.length === 0) return null;
+      const idParts = product.variants.map(v => selectedOptions[v.type]).filter(Boolean);
+      if (idParts.length !== product.variants.length) return null;
+      return idParts.join('-');
+  }, [product, selectedOptions]);
+
+  const selectedInventoryItem = useMemo(() => {
+      if (!product || !selectedVariantCombination) return null;
+      return product.inventory.find(item => item.id === selectedVariantCombination);
+  }, [product, selectedVariantCombination]);
+
+  const displayPrice = selectedInventoryItem?.price ?? product?.price ?? 0;
+
+  const displayImage = useMemo(() => {
+    if (!product) return '';
+    
+    // Find the 'Color' variant if it exists
+    const colorVariant = product.variants.find(v => v.type.toLowerCase().includes('color'));
+    
+    if (colorVariant) {
+      const selectedColorValue = selectedOptions[colorVariant.type];
+      const colorOption = colorVariant.options.find(opt => opt.value === selectedColorValue);
+      if (colorOption?.image) {
+        return colorOption.image;
+      }
+    }
+    
+    return product.images[0];
+  }, [product, selectedOptions]);
+
+  const handleAddToCart = () => {
+    if (!product) return;
+
+    if(product.variants.length > 0 && !selectedVariantCombination) {
+        toast({
+            variant: "destructive",
+            title: "Please select options",
+            description: "You must select all product options before adding to cart.",
+        });
+        return;
+    }
+
+    addToCart({
+        product,
+        variantId: selectedVariantCombination || undefined,
+        variantLabel: Object.values(selectedOptions).join(' / '),
+        price: displayPrice,
+        image: displayImage,
+    });
+  }
+
 
   if (loading) {
     return (
@@ -94,7 +193,7 @@ export default function ProductPage() {
       />
       <div className="container mx-auto max-w-6xl px-4 py-8 md:py-12">
         <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
-          <ProductImageGallery images={product.images || []} />
+          <ProductImageGallery images={product.images || []} mainImage={displayImage} />
           <div className="flex flex-col">
             <div className="mb-2">
               <span className="text-sm font-medium text-primary bg-primary/10 py-1 px-3 rounded-full">
@@ -112,11 +211,27 @@ export default function ProductPage() {
               </div>
               <span className="text-sm text-muted-foreground">(123 reviews)</span>
             </div>
-            <p className="text-3xl font-bold text-primary mb-6">${product.price.toFixed(2)}</p>
+            <p className="text-3xl font-bold text-primary mb-6">${displayPrice.toFixed(2)}</p>
+            
+            <div className="space-y-6 mb-6">
+                {product.variants.map((variant) => (
+                    <VariantSelector 
+                        key={variant.type} 
+                        variant={variant}
+                        selectedOptions={selectedOptions}
+                        onOptionSelect={handleOptionSelect}
+                    />
+                ))}
+            </div>
+
             <p className="text-muted-foreground leading-relaxed">{product.longDescription}</p>
             
             <div className="mt-auto pt-6 space-y-4">
-              <Button size="lg" className="w-full" asChild>
+                <Button size="lg" className="w-full" onClick={handleAddToCart}>
+                    <ShoppingCart className="mr-2" />
+                    Add to Cart
+                </Button>
+                <Button size="lg" variant="outline" className="w-full" asChild>
                   <Link href={`/design?productId=${product.id}`}>
                       <Pencil className="mr-2" />
                       Design Your Own

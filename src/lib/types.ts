@@ -43,9 +43,13 @@ export type InventoryItem = {
 }
 
 export type CartItem = {
+  id: string; // Combination of product ID and variant ID
   product: Product;
   quantity: number;
-  variant?: VariantOption;
+  variantId?: string;
+  variantLabel?: string;
+  price: number;
+  image: string;
 };
 
 export type Collection = {

@@ -17,6 +17,14 @@ export function ProductCard({ product }: ProductCardProps) {
   const { addToCart } = useCart();
   const productUrl = `/products/${product.handle || product.id}`;
 
+  const handleAddToCart = () => {
+    addToCart({
+      product,
+      price: product.price,
+      image: product.images[0]
+    });
+  }
+
   return (
     <Card className="flex flex-col overflow-hidden h-full transition-all hover:shadow-lg">
       <CardHeader className="p-0">
@@ -43,9 +51,9 @@ export function ProductCard({ product }: ProductCardProps) {
       </CardContent>
       <CardFooter className="p-4 pt-0 flex justify-between items-center">
         <p className="text-lg font-semibold text-primary">${product.price.toFixed(2)}</p>
-        <Button size="sm" onClick={() => addToCart(product)}>
+        <Button size="sm" onClick={handleAddToCart} disabled={product.variants && product.variants.length > 0}>
           <ShoppingCart className="mr-2 h-4 w-4" />
-          Add to Cart
+          {product.variants && product.variants.length > 0 ? 'Select Options' : 'Add to Cart'}
         </Button>
       </CardFooter>
     </Card>
