@@ -25,6 +25,7 @@ import { EditSectionDrawer } from "@/components/admin/EditSectionDrawer";
 import { cn } from "@/lib/utils";
 import { AddPageDialog } from "@/components/admin/AddPageDialog";
 import { uploadImageAndGetURL } from "@/lib/data";
+import { fontMap } from "@/lib/theme";
 
 const menuItemSchema = z.object({
     label: z.string().min(1, "Label is required"),
@@ -51,6 +52,8 @@ const formSchema = z.object({
     logoWidth: z.number().min(20).max(300),
     menuItems: z.array(menuItemSchema),
     headerType: z.string().optional(),
+    headlineFont: z.string().optional(),
+    bodyFont: z.string().optional(),
     pages: z.array(pageSchema).optional(),
 });
 
@@ -277,6 +280,8 @@ export default function WebsiteBuilderPage() {
             logoWidth: 140,
             menuItems: [],
             headerType: 'standard',
+            headlineFont: 'poppins',
+            bodyFont: 'pt-sans',
             pages: [],
         },
     });
@@ -301,6 +306,8 @@ export default function WebsiteBuilderPage() {
                     logoWidth: settings.logoWidth || 140,
                     menuItems: settings.menuItems || [{ label: 'Home', href: '/' }, { label: 'All Products', href: '/products' }],
                     headerType: settings.headerType || 'standard',
+                    headlineFont: settings.headlineFont || 'poppins',
+                    bodyFont: settings.bodyFont || 'pt-sans',
                     pages: settings.pages || [],
                 });
             } catch (error) {
@@ -426,7 +433,7 @@ export default function WebsiteBuilderPage() {
                        </div>
                        <div className="flex-1 overflow-y-auto">
                             <div className="p-6">
-                                <Accordion type="multiple" defaultValue={['item-0', 'item-1', 'item-2']} className="w-full">
+                                <Accordion type="multiple" defaultValue={['item-0', 'item-1', 'item-2', 'item-3']} className="w-full">
                                     <AccordionItem value="item-0">
                                         <AccordionTrigger className="font-semibold text-lg">Pages</AccordionTrigger>
                                         <AccordionContent className="space-y-4 pt-4">
@@ -573,6 +580,47 @@ export default function WebsiteBuilderPage() {
                                                 </div>
                                             </div>
 
+                                        </AccordionContent>
+                                    </AccordionItem>
+                                     <AccordionItem value="item-3">
+                                        <AccordionTrigger className="font-semibold text-lg">Fonts</AccordionTrigger>
+                                        <AccordionContent className="space-y-6 pt-4">
+                                             <FormField
+                                                control={form.control}
+                                                name="headlineFont"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Headline Font</FormLabel>
+                                                        <Select onValueChange={field.onChange} value={field.value}>
+                                                            <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                                            <SelectContent>
+                                                                {Object.entries(fontMap).map(([key, font]) => (
+                                                                    <SelectItem key={key} value={key}>{font.name}</SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                             <FormField
+                                                control={form.control}
+                                                name="bodyFont"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Body Font</FormLabel>
+                                                        <Select onValueChange={field.onChange} value={field.value}>
+                                                            <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                                            <SelectContent>
+                                                                {Object.entries(fontMap).map(([key, font]) => (
+                                                                    <SelectItem key={key} value={key}>{font.name}</SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
                                         </AccordionContent>
                                     </AccordionItem>
                                     

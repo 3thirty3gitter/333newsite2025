@@ -14,8 +14,8 @@ export type Product = {
   variants: Variant[];
   inventory: InventoryItem[];
   status: 'active' | 'draft';
-  compareAtPrice?: number;
-  costPerItem?: number;
+  compareAtPrice?: number | null;
+  costPerItem?: number | null;
   isTaxable: boolean;
   trackQuantity: boolean;
   allowOutOfStockPurchase: boolean;
