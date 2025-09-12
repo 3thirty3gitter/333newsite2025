@@ -9,11 +9,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { Text, Upload, Brush, RotateCw, Undo, Trash2, ArrowUp, ArrowDown, ArrowLeft } from 'lucide-react';
+import { Text, Upload, Brush, RotateCw, Undo, Trash2, ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 type DesignElement = {
     id: string;
@@ -49,6 +50,7 @@ function MockupTool() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const productId = searchParams.get('productId');
+  const { toast } = useToast();
   
   const [product, setProduct] = useState<Product | null>(null);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
@@ -343,6 +345,29 @@ function MockupTool() {
       updateCurrentDesign({ imageElements: newImageElements });
   }
 
+  const handleNextStep = () => {
+    if (!product || !selectedSize) {
+        toast({
+            variant: 'destructive',
+            title: 'Missing Selection',
+            description: 'Please select a product and a size before proceeding.'
+        });
+        return;
+    }
+    
+    const designData = {
+        productId: product.id,
+        selectedSize,
+        selectedColor,
+        designs,
+        productName: product.name,
+        productImages: product.images,
+    };
+    
+    localStorage.setItem('customDesign', JSON.stringify(designData));
+    router.push('/design/preview');
+  };
+
   return (
     <div className="container mx-auto max-w-7xl px-4 py-8 md:py-12">
       <div className="flex items-center gap-4 mb-8">
@@ -464,6 +489,10 @@ function MockupTool() {
                 )}
             </CardContent>
           </Card>
+
+           <Button size="lg" className="w-full" onClick={handleNextStep}>
+             Preview & Finish <ArrowRight className="ml-2" />
+           </Button>
         </div>
 
         {/* Right Panel: Canvas */}
@@ -627,5 +656,3 @@ export default function DesignPage() {
         </Suspense>
     )
 }
-
-    
