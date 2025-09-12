@@ -98,6 +98,7 @@ export type MegaMenuColumn = {
 export type MenuItem = {
   label: string;
   href: string;
+  menuType?: 'none' | 'simple' | 'mega';
   children?: MenuItemChild[];
   megaMenu?: MegaMenuColumn[];
 };
@@ -130,3 +131,5 @@ export type ThemeSettings = {
   pages?: Page[];
   sections?: PageSection[]; // This will be deprecated in favor of pages.sections
 };
+
+    

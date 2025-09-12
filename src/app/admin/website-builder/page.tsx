@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
 import { getThemeSettings, updateThemeSettings } from "@/lib/settings";
-import { MenuItem, Page, PageSection, SectionType, ThemeSettings } from "@/lib/types";
+import { MenuItem, Page, PageSection, SectionType, ThemeSettings, MenuItemChild, MegaMenuColumn } from "@/lib/types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { GripVertical, Plus, Trash2, Upload, LayoutTemplate, Pencil, Home, File, Settings, Loader2, MoreVertical } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
@@ -28,10 +28,25 @@ import { AddPageDialog } from "@/components/admin/AddPageDialog";
 import { uploadImageAndGetURL } from "@/lib/data";
 import { fontMap } from "@/lib/theme";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Textarea } from "../ui/textarea";
+
+const menuItemChildSchema = z.object({
+    label: z.string().min(1, "Label is required"),
+    href: z.string().min(1, "URL is required"),
+    description: z.string().optional(),
+});
+
+const megaMenuColumnSchema = z.object({
+    title: z.string().min(1, "Column title is required"),
+    children: z.array(menuItemChildSchema),
+});
 
 const menuItemSchema = z.object({
     label: z.string().min(1, "Label is required"),
     href: z.string().min(1, "URL is required"),
+    menuType: z.enum(['none', 'simple', 'mega']).optional().default('none'),
+    children: z.array(menuItemChildSchema).optional(),
+    megaMenu: z.array(megaMenuColumnSchema).optional(),
 });
 
 const pageSectionSchema = z.object({
@@ -273,6 +288,104 @@ function PageSectionsEditor({ activePageIndex }: { activePageIndex: number }) {
   );
 }
 
+const SimpleDropdownEditor = ({ menuIndex }: { menuIndex: number }) => {
+    const { control } = useFormContext();
+    const { fields, append, remove } = useFieldArray({
+        control,
+        name: `menuItems.${menuIndex}.children`,
+    });
+
+    return (
+        <div className="space-y-3 p-3 border-l-2 ml-6 pl-4 mt-4">
+            {fields.map((field, childIndex) => (
+                <div key={field.id} className="p-3 border rounded-md space-y-3">
+                    <div className="flex items-center justify-between">
+                         <h4 className="font-medium text-sm">Item {childIndex + 1}</h4>
+                         <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => remove(childIndex)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                    </div>
+                   
+                    <FormField
+                        control={control}
+                        name={`menuItems.${menuIndex}.children.${childIndex}.label`}
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="text-xs">Label</FormLabel>
+                                <FormControl><Input {...field} placeholder="e.g., T-Shirts" /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={control}
+                        name={`menuItems.${menuIndex}.children.${childIndex}.href`}
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="text-xs">URL</FormLabel>
+                                <FormControl><Input {...field} placeholder="e.g., /products/t-shirts" /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                     <FormField
+                        control={control}
+                        name={`menuItems.${menuIndex}.children.${childIndex}.description`}
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="text-xs">Description</FormLabel>
+                                <FormControl><Textarea {...field} placeholder="A short description for the menu." /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                </div>
+            ))}
+            <Button type="button" variant="outline" size="sm" onClick={() => append({ label: '', href: '', description: '' })}>
+                <Plus className="mr-2 h-4 w-4" /> Add Dropdown Item
+            </Button>
+        </div>
+    )
+}
+
+const MegaMenuEditor = ({ menuIndex }: { menuIndex: number }) => {
+    const { control } = useFormContext();
+    const { fields: columnFields, append: appendColumn, remove: removeColumn } = useFieldArray({
+        control,
+        name: `menuItems.${menuIndex}.megaMenu`,
+    });
+
+    return (
+        <div className="space-y-4 p-3 border-l-2 ml-6 pl-4 mt-4">
+            {columnFields.map((column, columnIndex) => (
+                <div key={column.id} className="p-3 border rounded-md space-y-4">
+                    <div className="flex items-center justify-between">
+                         <h4 className="font-medium text-sm">Column {columnIndex + 1}</h4>
+                         <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeColumn(columnIndex)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                    </div>
+                     <FormField
+                        control={control}
+                        name={`menuItems.${menuIndex}.megaMenu.${columnIndex}.title`}
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="text-xs">Column Title</FormLabel>
+                                <FormControl><Input {...field} placeholder="e.g., Product Type" /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <SimpleDropdownEditor menuIndex={menuIndex}/>
+                </div>
+            ))}
+             <Button type="button" variant="outline" size="sm" onClick={() => appendColumn({ title: '', children: [] })}>
+                <Plus className="mr-2 h-4 w-4" /> Add Column
+            </Button>
+        </div>
+    )
+}
+
 export default function WebsiteBuilderPage() {
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(true);
@@ -324,16 +437,25 @@ export default function WebsiteBuilderPage() {
         control: form.control,
         name: "pages",
     });
+    
+    const menuItemsWatch = form.watch('menuItems');
 
     useEffect(() => {
         async function loadSettings() {
             setIsLoading(true);
             try {
                 const settings = await getThemeSettings();
+                
+                // Add menuType to existing data for backward compatibility
+                const menuItemsWithTypes = (settings.menuItems || []).map(item => ({
+                    ...item,
+                    menuType: item.megaMenu ? 'mega' : item.children ? 'simple' : 'none'
+                }));
+
                 form.reset({
                     logoUrl: settings.logoUrl || '',
                     logoWidth: settings.logoWidth || 140,
-                    menuItems: settings.menuItems || [{ label: 'Home', href: '/' }, { label: 'All Products', href: '/products' }],
+                    menuItems: menuItemsWithTypes,
                     headerType: settings.headerType || 'standard',
                     headlineFont: settings.headlineFont || 'poppins',
                     bodyFont: settings.bodyFont || 'pt-sans',
@@ -373,9 +495,25 @@ export default function WebsiteBuilderPage() {
         startTransition(async () => {
             try {
                 const currentSettings = await getThemeSettings();
+                
+                // Process menu items before saving
+                const finalMenuItems = values.menuItems.map(item => {
+                    if (item.menuType === 'none') {
+                        return { ...item, children: undefined, megaMenu: undefined };
+                    }
+                    if (item.menuType === 'simple') {
+                        return { ...item, megaMenu: undefined };
+                    }
+                    if (item.menuType === 'mega') {
+                        return { ...item, children: undefined };
+                    }
+                    return item;
+                });
+
                 const updatedSettings: ThemeSettings = {
                     ...currentSettings,
                     ...values,
+                    menuItems: finalMenuItems,
                 };
                 await updateThemeSettings(updatedSettings);
                 toast({ title: 'Success', description: 'Your changes have been saved.' });
@@ -598,7 +736,7 @@ export default function WebsiteBuilderPage() {
                                             <div>
                                                 <div className="flex items-center justify-between mb-2">
                                                     <Label>Navigation Menu</Label>
-                                                    <Button type="button" size="sm" variant="outline" onClick={() => appendMenu({ label: '', href: '' })}>
+                                                    <Button type="button" size="sm" variant="outline" onClick={() => appendMenu({ label: '', href: '', menuType: 'none' })}>
                                                         <Plus className="mr-2 h-4 w-4" /> Add Link
                                                     </Button>
                                                 </div>
@@ -637,6 +775,26 @@ export default function WebsiteBuilderPage() {
                                                                             </FormItem>
                                                                         )}
                                                                     />
+                                                                    <FormField
+                                                                        control={form.control}
+                                                                        name={`menuItems.${index}.menuType`}
+                                                                        render={({ field }) => (
+                                                                            <FormItem>
+                                                                                <FormLabel className="text-xs">Menu Type</FormLabel>
+                                                                                <Select onValueChange={field.onChange} value={field.value}>
+                                                                                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                                                                    <SelectContent>
+                                                                                        <SelectItem value="none">No Dropdown</SelectItem>
+                                                                                        <SelectItem value="simple">Simple Dropdown</SelectItem>
+                                                                                        <SelectItem value="mega">Mega Menu</SelectItem>
+                                                                                    </SelectContent>
+                                                                                </Select>
+                                                                                <FormMessage />
+                                                                            </FormItem>
+                                                                        )}
+                                                                    />
+                                                                    {menuItemsWatch[index]?.menuType === 'simple' && <SimpleDropdownEditor menuIndex={index} />}
+                                                                    {menuItemsWatch[index]?.menuType === 'mega' && <MegaMenuEditor menuIndex={index} />}
                                                                 </div>
                                                                 <Button type="button" variant="ghost" size="icon" className="h-8 w-8 mt-6" onClick={() => removeMenu(index)}>
                                                                     <Trash2 className="h-4 w-4 text-destructive" />
@@ -740,3 +898,5 @@ export default function WebsiteBuilderPage() {
     </>
   );
 }
+
+    
