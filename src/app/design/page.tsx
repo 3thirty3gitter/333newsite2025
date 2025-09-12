@@ -35,6 +35,15 @@ type ImageElement = DesignElement & {
     aspectRatio: number;
 };
 
+type DesignViewState = {
+    textElements: TextElement[];
+    imageElements: ImageElement[];
+}
+
+type AllDesignsState = {
+    [imageUrl: string]: DesignViewState;
+}
+
 function MockupTool() {
   const router = useRouter();
   const pathname = usePathname();
@@ -49,25 +58,7 @@ function MockupTool() {
   const [selectedSize, setSelectedSize] = useState<string>('');
   const [activeImageUrl, setActiveImageUrl] = useState<string>('');
 
-  const [textElement, setTextElement] = useState<TextElement>({
-    id: 'text-element',
-    type: 'text',
-    text: '',
-    position: { x: 50, y: 50 },
-    fontSize: 32,
-    rotation: 0,
-  });
-
-  const [imageElements, setImageElements] = useState<ImageElement[]>([]);
-  
-  const designElements: (TextElement | ImageElement)[] = useMemo(() => {
-    const elements: (TextElement | ImageElement)[] = [...imageElements];
-    if (textElement.text) {
-        elements.push(textElement);
-    }
-    return elements;
-  }, [imageElements, textElement]);
-
+  const [designs, setDesigns] = useState<AllDesignsState>({});
 
   const [draggingElementId, setDraggingElementId] = useState<string | null>(null);
   const [resizingElementId, setResizingElementId] = useState<string | null>(null);
@@ -76,6 +67,26 @@ function MockupTool() {
   const canvasRef = useRef<HTMLDivElement>(null);
   const dragStartRef = useRef({ x: 0, y: 0 });
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const currentDesign = useMemo(() => {
+    if (!activeImageUrl) return { textElements: [], imageElements: [] };
+    return designs[activeImageUrl] || { textElements: [], imageElements: [] };
+  }, [designs, activeImageUrl]);
+
+  const allDesignElements = useMemo(() => {
+      return [...currentDesign.imageElements, ...currentDesign.textElements];
+  }, [currentDesign]);
+
+  const updateCurrentDesign = (newDesign: Partial<DesignViewState>) => {
+    if (!activeImageUrl) return;
+    setDesigns(prev => ({
+      ...prev,
+      [activeImageUrl]: {
+        ...currentDesign,
+        ...newDesign,
+      }
+    }));
+  };
 
   useEffect(() => {
     async function fetchAllProducts() {
@@ -170,13 +181,11 @@ function MockupTool() {
     setRotatingElementId(elementId);
     dragStartRef.current = { x: e.clientX, y: e.clientY };
   }
-
+  
   const updateElement = (id: string, updates: Partial<TextElement | ImageElement>) => {
-    if (id === 'text-element') {
-        setTextElement(prev => ({ ...prev, ...updates as Partial<TextElement> }));
-    } else {
-        setImageElements(prev => prev.map(el => el.id === id ? { ...el, ...updates as Partial<ImageElement> } : el));
-    }
+    const newTextElements = currentDesign.textElements.map(el => el.id === id ? { ...el, ...updates as Partial<TextElement> } : el);
+    const newImageElements = currentDesign.imageElements.map(el => el.id === id ? { ...el, ...updates as Partial<ImageElement> } : el);
+    updateCurrentDesign({ textElements: newTextElements, imageElements: newImageElements });
   }
   
   useEffect(() => {
@@ -195,7 +204,7 @@ function MockupTool() {
       const activeId = draggingElementId || resizingElementId || rotatingElementId;
       if (!activeId) return;
 
-      const elementToUpdate = designElements.find(el => el.id === activeId);
+      const elementToUpdate = allDesignElements.find(el => el.id === activeId);
       if (!elementToUpdate) return;
 
       if (draggingElementId) {
@@ -203,7 +212,7 @@ function MockupTool() {
           const newY = elementToUpdate.position.y + dy;
           updateElement(draggingElementId, { position: { x: newX, y: newY } });
       } else if (resizingElementId) {
-         if (resizingElementId === 'text-element' && elementToUpdate.type === 'text') {
+         if (elementToUpdate.type === 'text') {
             const newSize = Math.max(12, elementToUpdate.fontSize + (dx + dy) * 0.1);
             updateElement(resizingElementId, { fontSize: newSize });
         } else if (elementToUpdate.type === 'image') {
@@ -236,7 +245,7 @@ function MockupTool() {
         window.removeEventListener('mousemove', handleMouseMove);
         window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [draggingElementId, resizingElementId, rotatingElementId, designElements]);
+  }, [draggingElementId, resizingElementId, rotatingElementId, allDesignElements]);
   
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -255,7 +264,7 @@ function MockupTool() {
                 aspectRatio,
                 rotation: 0
             };
-            setImageElements(prev => [...prev, newImage]);
+            updateCurrentDesign({ imageElements: [...currentDesign.imageElements, newImage] });
         };
         img.src = e.target?.result as string;
       };
@@ -264,33 +273,43 @@ function MockupTool() {
   };
   
   const handleDeleteElement = (id: string) => {
-    if (id === 'text-element') {
-        setTextElement(prev => ({ ...prev, text: '' }));
-    } else {
-        setImageElements(prev => prev.filter(el => el.id !== id));
-    }
+    updateCurrentDesign({
+        textElements: currentDesign.textElements.filter(el => el.id !== id),
+        imageElements: currentDesign.imageElements.filter(el => el.id !== id)
+    });
+  };
+
+  const handleAddText = (text: string) => {
+    if (!activeImageUrl) return;
+
+    const newTextElement: TextElement = {
+        id: `text-${Date.now()}`,
+        type: 'text',
+        text: text,
+        position: { x: 50, y: 50 },
+        fontSize: 32,
+        rotation: 0,
+    };
+    updateCurrentDesign({ textElements: [...currentDesign.textElements, newTextElement] });
   };
   
   const handleLayerOrderChange = (id: string, direction: 'up' | 'down') => {
-    if (id === 'text-element') return; // Cannot reorder text element for now
-    setImageElements(prev => {
-        const index = prev.findIndex(el => el.id === id);
-        if (index === -1) return prev;
+    const newImageElements = [...currentDesign.imageElements];
+    const index = newImageElements.findIndex(el => el.id === id);
+    if (index === -1) return;
 
-        const newIndex = direction === 'up' ? index + 1 : index - 1;
-        if (newIndex < 0 || newIndex >= prev.length) return prev;
+    const newIndex = direction === 'up' ? index + 1 : index - 1;
+    if (newIndex < 0 || newIndex >= newImageElements.length) return;
 
-        const newArray = [...prev];
-        const temp = newArray[index];
-        newArray[index] = newArray[newIndex];
-        newArray[newIndex] = temp;
-        
-        return newArray;
-    });
+    const temp = newImageElements[index];
+    newImageElements[index] = newImageElements[newIndex];
+    newImageElements[newIndex] = temp;
+    
+    updateCurrentDesign({ imageElements: newImageElements });
   }
 
   const handleResetImage = (id: string) => {
-      setImageElements(prev => prev.map(el => {
+      const newImageElements = currentDesign.imageElements.map(el => {
           if (el.id === id) {
               return {
                   ...el,
@@ -300,7 +319,8 @@ function MockupTool() {
               }
           }
           return el;
-      }));
+      });
+      updateCurrentDesign({ imageElements: newImageElements });
   }
 
 
@@ -362,8 +382,12 @@ function MockupTool() {
                  <Label>4. Customize</Label>
                  <Input 
                    placeholder="Your Text Here"
-                   value={textElement.text}
-                   onChange={(e) => setTextElement(prev => ({...prev, text: e.target.value}))}
+                   onKeyDown={(e) => {
+                     if (e.key === 'Enter' && e.currentTarget.value) {
+                       handleAddText(e.currentTarget.value);
+                       e.currentTarget.value = '';
+                     }
+                   }}
                  />
                </div>
               <input 
@@ -388,17 +412,17 @@ function MockupTool() {
                 <CardDescription>Manage your design elements</CardDescription>
             </CardHeader>
             <CardContent>
-                {designElements.length > 0 ? (
+                {allDesignElements.length > 0 ? (
                     <div className="space-y-2">
-                        {designElements.map((el, index) => (
+                        {allDesignElements.map((el, index) => (
                              <div key={el.id} className="flex items-center gap-2 p-2 border rounded-md">
-                                <span className="flex-1 truncate">{el.type === 'text' ? el.text : `Image ${imageElements.findIndex(img => img.id === el.id) + 1}`}</span>
+                                <span className="flex-1 truncate">{el.type === 'text' ? el.text : `Image ${currentDesign.imageElements.findIndex(img => img.id === el.id) + 1}`}</span>
                                 {el.type === 'image' && (
                                     <>
                                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleLayerOrderChange(el.id, 'down')} disabled={index === 0}>
                                             <ArrowDown className="h-4 w-4" />
                                         </Button>
-                                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleLayerOrderChange(el.id, 'up')} disabled={index === imageElements.length - 1}>
+                                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleLayerOrderChange(el.id, 'up')} disabled={index === currentDesign.imageElements.length - 1}>
                                             <ArrowUp className="h-4 w-4" />
                                         </Button>
                                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleResetImage(el.id)}>
@@ -442,7 +466,7 @@ function MockupTool() {
                       priority
                       key={activeImageUrl}
                     />
-                    {imageElements.map((imgEl) => (
+                    {currentDesign.imageElements.map((imgEl) => (
                         <div
                             key={imgEl.id}
                             id={imgEl.id}
@@ -453,7 +477,7 @@ function MockupTool() {
                                 width: `${imgEl.size.width}px`,
                                 height: `${imgEl.size.height}px`,
                                 transform: `rotate(${imgEl.rotation}deg)`,
-                                zIndex: imageElements.findIndex(el => el.id === imgEl.id) + 1, // Basic layering
+                                zIndex: currentDesign.imageElements.findIndex(el => el.id === imgEl.id) + 1, // Basic layering
                             }}
                             onMouseDown={(e) => handleMouseDown(e, imgEl.id)}
                         >
@@ -475,34 +499,35 @@ function MockupTool() {
                             />
                         </div>
                     ))}
-                    {textElement.text && (
+                    {currentDesign.textElements.map((txtEl) => (
                        <div
-                          id={textElement.id}
+                          key={txtEl.id}
+                          id={txtEl.id}
                           className="absolute p-4 border border-dashed border-transparent hover:border-primary cursor-grab select-none group"
                           style={{ 
-                            left: `${textElement.position.x}px`, 
-                            top: `${textElement.position.y}px`,
-                            fontSize: `${textElement.fontSize}px`,
+                            left: `${txtEl.position.x}px`, 
+                            top: `${txtEl.position.y}px`,
+                            fontSize: `${txtEl.fontSize}px`,
                             color: '#000000',
                             textShadow: '1px 1px 2px #ffffff',
-                            transform: `rotate(${textElement.rotation}deg)`,
-                            zIndex: imageElements.length + 2, // Text always on top
+                            transform: `rotate(${txtEl.rotation}deg)`,
+                            zIndex: currentDesign.imageElements.length + currentDesign.textElements.findIndex(el => el.id === txtEl.id) + 2,
                           }}
-                          onMouseDown={(e) => handleMouseDown(e, textElement.id)}
+                          onMouseDown={(e) => handleMouseDown(e, txtEl.id)}
                         >
-                          {textElement.text}
+                          {txtEl.text}
                            <div 
                             className="absolute -top-6 left-1/2 -translate-x-1/2 w-5 h-5 bg-primary rounded-full border-2 border-white cursor-alias opacity-0 group-hover:opacity-100 flex items-center justify-center"
-                            onMouseDown={(e) => handleRotateMouseDown(e, textElement.id)}
+                            onMouseDown={(e) => handleRotateMouseDown(e, txtEl.id)}
                           >
                             <RotateCw className="w-3 h-3 text-white" />
                           </div>
                           <div 
                             className="absolute -right-1 -bottom-1 w-4 h-4 bg-primary rounded-full border-2 border-white cursor-se-resize opacity-0 group-hover:opacity-100"
-                            onMouseDown={(e) => handleResizeMouseDown(e, textElement.id)}
+                            onMouseDown={(e) => handleResizeMouseDown(e, txtEl.id)}
                           />
                         </div>
-                    )}
+                    ))}
                    </>
                 ) : null}
               </div>
@@ -546,5 +571,3 @@ export default function DesignPage() {
         </Suspense>
     )
 }
-
-    
