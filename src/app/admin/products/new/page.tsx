@@ -12,7 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, PlusCircle, Trash2, X, GripVertical, Upload, Image as ImageIcon, Loader2, Sparkles } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Trash2, X, GripVertical, Upload, Image as ImageIcon, Loader2, Sparkles, MinusCircle } from 'lucide-react';
 import { addProduct, getCollections, uploadImageAndGetURL } from '@/lib/data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useEffect, useState, useMemo, useRef } from 'react';
@@ -75,7 +75,8 @@ export default function NewProductPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
-  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const dragItem = useRef<number | null>(null);
+  const dragOverItem = useRef<number | null>(null);
 
   useEffect(() => {
     async function fetchCollections() {
@@ -120,6 +121,8 @@ export default function NewProductPage() {
       costPerItem: undefined,
     },
   });
+  
+  const imagePreviews = form.watch('images') || [];
 
   const productName = form.watch('name');
   useEffect(() => {
@@ -199,42 +202,65 @@ export default function NewProductPage() {
         update(variantIndex, { ...form.getValues(`variants.${variantIndex}`), options: newOptions });
     }
   };
-
-  const processAndUploadImage = async (file: File, context: string) => {
+  
+  const processAndUploadImages = async (files: FileList) => {
     setIsUploading(true);
+    const currentProductName = form.getValues('name');
+    if (!currentProductName) {
+      toast({ variant: 'destructive', title: 'Product name required', description: 'Please provide a product name before uploading images.'});
+      setIsUploading(false);
+      return;
+    }
+
     try {
-        const dataUrl = await new Promise<string>((resolve) => {
+      const uploadPromises = Array.from(files).map(file => {
+        return new Promise<string>((resolve) => {
             const reader = new FileReader();
             reader.onload = (e) => resolve(e.target?.result as string);
             reader.readAsDataURL(file);
-        });
-        
-        const uploadedUrl = await uploadImageAndGetURL(dataUrl, 'products', context);
+        }).then(dataUrl => uploadImageAndGetURL(dataUrl, 'products', `${currentProductName}-${file.name}`));
+      });
 
-        const currentImages = form.getValues('images') || [];
-        const newImages = [...currentImages, uploadedUrl];
-
-        setImagePreviews(newImages);
-        form.setValue('images', newImages, { shouldDirty: true });
+      const uploadedUrls = await Promise.all(uploadPromises);
+      
+      const currentImages = form.getValues('images') || [];
+      const newImages = [...currentImages, ...uploadedUrls];
+      form.setValue('images', newImages, { shouldDirty: true });
 
     } catch (error) {
         console.error("Image upload failed:", error);
-        toast({ variant: "destructive", title: "Upload Failed", description: "Could not upload the image." });
+        toast({ variant: "destructive", title: "Upload Failed", description: "Could not upload one or more images." });
     } finally {
         setIsUploading(false);
     }
   };
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    const productName = form.getValues('name');
-    if (file && productName) {
-      processAndUploadImage(file, productName);
+    const files = event.target.files;
+    if (files && files.length > 0) {
+      processAndUploadImages(files);
       event.target.value = '';
-    } else if (!productName) {
-      toast({ variant: 'destructive', title: 'Product name required', description: 'Please provide a product name before uploading an image.'})
     }
   };
+  
+  const handleRemoveImage = (index: number) => {
+      const currentImages = form.getValues('images') || [];
+      const newImages = currentImages.filter((_, i) => i !== index);
+      form.setValue('images', newImages, { shouldDirty: true });
+  }
+
+  const handleImageDrop = () => {
+    if (dragItem.current === null || dragOverItem.current === null) return;
+    
+    const currentImages = [...imagePreviews];
+    const draggedItemContent = currentImages.splice(dragItem.current, 1)[0];
+    currentImages.splice(dragOverItem.current, 0, draggedItemContent);
+
+    dragItem.current = null;
+    dragOverItem.current = null;
+    form.setValue('images', currentImages, { shouldDirty: true });
+  };
+
 
   const handleGenerateDetails = async () => {
     const productName = form.getValues('name');
@@ -720,8 +746,9 @@ export default function NewProductPage() {
                     <Card>
                         <CardHeader>
                             <CardTitle>Product Images</CardTitle>
+                            <CardDescription>Drag and drop to reorder images. The first image is the primary one.</CardDescription>
                         </CardHeader>
-                        <CardContent>
+                         <CardContent>
                             <div className="space-y-4">
                                 <FormField
                                     control={form.control}
@@ -737,19 +764,17 @@ export default function NewProductPage() {
                                                         onChange={handleImageChange}
                                                         className="hidden"
                                                         accept="image/*"
-                                                        multiple={false}
+                                                        multiple
                                                     />
                                                     <div 
-                                                        className="aspect-square w-full rounded-md border-2 border-dashed border-muted-foreground/40 flex items-center justify-center text-center cursor-pointer"
+                                                        className="aspect-video w-full rounded-md border-2 border-dashed border-muted-foreground/40 flex items-center justify-center text-center cursor-pointer"
                                                         onClick={() => imageInputRef.current?.click()}
                                                     >
-                                                        {isUploading ? (
+                                                         {isUploading ? (
                                                             <div className="text-center text-muted-foreground">
                                                                 <Loader2 className="mx-auto h-12 w-12 animate-spin" />
                                                                 <p className="mt-2">Uploading...</p>
                                                             </div>
-                                                        ) : imagePreviews[0] ? (
-                                                            <Image src={imagePreviews[0]} alt="Product preview" width={400} height={400} className="object-cover rounded-md" />
                                                         ) : (
                                                             <div className="text-center text-muted-foreground">
                                                                 <Upload className="mx-auto h-12 w-12" />
@@ -765,19 +790,35 @@ export default function NewProductPage() {
                                     )}
                                 />
                                 
-                                <div className="grid grid-cols-4 gap-2">
-                                    {[...Array(4)].map((_, i) => (
-                                        <div key={i} className="relative aspect-square bg-muted rounded-md flex items-center justify-center">
-                                            {imagePreviews[i] ? (
-                                                <Image src={imagePreviews[i]} alt={`Product preview ${i + 1}`} fill className="object-cover rounded-md" />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center">
-                                                    <ImageIcon className="h-6 w-6 text-muted-foreground" />
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
+                                {imagePreviews.length > 0 && (
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {imagePreviews.map((imgSrc, i) => (
+                                            <div 
+                                                key={i} 
+                                                className="relative aspect-square cursor-grab"
+                                                draggable
+                                                onDragStart={() => dragItem.current = i}
+                                                onDragEnter={() => dragOverItem.current = i}
+                                                onDragEnd={handleImageDrop}
+                                                onDragOver={(e) => e.preventDefault()}
+                                            >
+                                                <Image src={imgSrc} alt={`Product preview ${i + 1}`} fill className="object-cover rounded-md" />
+                                                 {i === 0 && (
+                                                    <Badge variant="secondary" className="absolute top-1 left-1">Primary</Badge>
+                                                 )}
+                                                 <Button 
+                                                    type="button" 
+                                                    variant="destructive" 
+                                                    size="icon" 
+                                                    className="absolute top-1 right-1 h-6 w-6 opacity-80 hover:opacity-100"
+                                                    onClick={() => handleRemoveImage(i)}
+                                                >
+                                                    <MinusCircle className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         </CardContent>
                     </Card>
@@ -797,3 +838,5 @@ export default function NewProductPage() {
     </div>
   );
 }
+
+    
