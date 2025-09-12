@@ -57,7 +57,10 @@ type DesignData = {
     canvasHeight: number;
 };
 
-function DesignPreview({ design, image, scale }: { design: DesignViewState, image: string, scale: number }) {
+function DesignPreview({ design, image, canvasWidth, canvasHeight, scale }: { design: DesignViewState, image: string, canvasWidth: number, canvasHeight: number, scale: number }) {
+    if (!design) {
+        return null;
+    }
     return (
         <Card>
             <CardContent className="p-4">
@@ -66,19 +69,19 @@ function DesignPreview({ design, image, scale }: { design: DesignViewState, imag
                     <div
                         className="absolute top-0 left-0"
                         style={{
-                            width: design.canvasWidth,
-                            height: design.canvasHeight,
+                            width: canvasWidth,
+                            height: canvasHeight,
                             transform: `scale(${scale})`,
                             transformOrigin: 'top left',
                         }}
                     >
                         <div className="relative w-full h-full">
-                            {design.designs[image]?.imageElements.map(el => (
+                            {design.imageElements.map(el => (
                                 <div key={el.id} className="absolute" style={{ left: el.position.x, top: el.position.y, width: el.size.width, height: el.size.height, transform: `rotate(${el.rotation}deg)` }}>
                                     <Image src={el.src} alt="" layout="fill" className="object-contain" />
                                 </div>
                             ))}
-                            {design.designs[image]?.textElements.map(el => (
+                            {design.textElements.map(el => (
                                 <div key={el.id} className="absolute whitespace-nowrap" style={{ left: el.position.x, top: el.position.y, fontSize: el.fontSize, color: '#000000', textShadow: '1px 1px 2px #ffffff', transform: `rotate(${el.rotation}deg)` }}>
                                     {el.text}
                                 </div>
@@ -195,8 +198,10 @@ function PreviewPage() {
                             {designedViews.map(imgUrl => (
                                 <DesignPreview 
                                     key={imgUrl}
-                                    design={design} 
+                                    design={design.designs[imgUrl]} 
                                     image={imgUrl} 
+                                    canvasWidth={design.canvasWidth}
+                                    canvasHeight={design.canvasHeight}
                                     scale={scale} 
                                 />
                             ))}
