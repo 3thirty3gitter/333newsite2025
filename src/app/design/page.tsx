@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { Text, Upload, Brush, RotateCw, Undo, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
+import { Text, Upload, Brush, RotateCw, Undo, Trash2, ArrowUp, ArrowDown, ArrowLeft } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -345,7 +345,13 @@ function MockupTool() {
 
   return (
     <div className="container mx-auto max-w-7xl px-4 py-8 md:py-12">
-      <h1 className="text-3xl md:text-4xl font-headline font-bold mb-8">Product Mockup Tool</h1>
+      <div className="flex items-center gap-4 mb-8">
+        <Button variant="outline" size="icon" onClick={() => router.back()}>
+          <ArrowLeft />
+          <span className="sr-only">Back</span>
+        </Button>
+        <h1 className="text-3xl md:text-4xl font-headline font-bold">Product Mockup Tool</h1>
+      </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
         <div className="lg:col-span-1 space-y-8">
@@ -621,3 +627,5 @@ export default function DesignPage() {
         </Suspense>
     )
 }
+
+    
