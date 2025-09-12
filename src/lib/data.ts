@@ -107,9 +107,16 @@ export async function importProducts(products: Omit<Product, 'id'>[]): Promise<v
     await batch.commit();
 }
 
-export async function updateProduct(id: string, product: Partial<Omit<Product, 'id'>>): Promise<void> {
+export async function updateProduct(id: string, productData: Partial<Product>): Promise<void> {
   const docRef = doc(db, 'products', id);
-  await updateDoc(docRef, product);
+  const updateData = { ...productData };
+
+  // Ensure images array is not empty before updating
+  if (!updateData.images || updateData.images.length === 0) {
+      updateData.images = [`https://picsum.photos/600/600?random=${Math.floor(Math.random() * 1000)}`];
+  }
+  
+  await updateDoc(docRef, updateData);
 }
 
 export async function deleteProduct(id: string): Promise<void> {
