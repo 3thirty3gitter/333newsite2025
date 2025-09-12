@@ -1,4 +1,5 @@
 
+
 import { db, storage } from './firebase';
 import { collection, getDocs, addDoc, doc, getDoc, updateDoc, deleteDoc, query, where, writeBatch } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
@@ -7,17 +8,12 @@ import { generateFilename } from '@/ai/flows/generate-filename';
 
 function toProduct(doc: any): Product {
     const data = doc.data();
-    let images: string[] = [];
-    if (data.images && Array.isArray(data.images)) {
-        images = data.images;
-    } else if (data.image) {
-        images = [data.image];
-    }
-
     return {
         id: doc.id,
         ...data,
-        images: images,
+        images: data.images && Array.isArray(data.images) && data.images.length > 0 
+            ? data.images 
+            : ['https://placehold.co/600x600'],
     } as Product;
 }
 
