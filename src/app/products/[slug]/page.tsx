@@ -86,7 +86,7 @@ export default function ProductPage() {
   return (
     <div className="container mx-auto max-w-6xl px-4 py-8 md:py-12">
       <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
-        <ProductImageGallery images={product.images} />
+        <ProductImageGallery images={product.images || []} />
         <div className="flex flex-col">
           <div className="mb-2">
             <span className="text-sm font-medium text-primary bg-primary/10 py-1 px-3 rounded-full">
@@ -113,10 +113,6 @@ export default function ProductPage() {
                     <Pencil className="mr-2" />
                     Design Your Own
                 </Link>
-            </Button>
-            <Button size="lg" variant="outline" className="w-full" onClick={() => addToCart(product)}>
-              <ShoppingCart className="mr-2" />
-              Add to Cart
             </Button>
           </div>
         </div>
