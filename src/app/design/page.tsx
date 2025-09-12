@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { Suspense, useEffect, useState, useRef, useMemo } from 'react';
@@ -379,13 +380,8 @@ function MockupTool() {
                     fetchRequestInit: { mode: 'cors', cache: 'no-cache' },
                     // Make it higher quality
                     pixelRatio: 2,
-                    filter: (node) => {
-                        // Exclude the Google Fonts stylesheet from being processed
-                        if (node.nodeName === 'LINK' && (node as HTMLLinkElement).href.includes('fonts.googleapis.com')) {
-                            return false;
-                        }
-                        return true;
-                    },
+                    // This will prevent the library from trying to fetch and parse external font stylesheets
+                    skipFonts: true,
                 });
                 flattenedImages[imageUrl] = dataUrl;
             }
@@ -710,5 +706,3 @@ export default function DesignPage() {
         </Suspense>
     )
 }
-
-    
