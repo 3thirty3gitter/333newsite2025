@@ -9,12 +9,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { Text, Upload, Brush, RotateCw, Undo, Trash2, ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Text, Upload, Brush, RotateCw, Undo, Trash2, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import * as htmlToImage from 'html-to-image';
 
 type DesignElement = {
     id: string;
@@ -55,6 +56,7 @@ function MockupTool() {
   const [product, setProduct] = useState<Product | null>(null);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedColor, setSelectedColor] = useState<string>('');
   const [selectedSize, setSelectedSize] = useState<string>('');
@@ -345,7 +347,7 @@ function MockupTool() {
       updateCurrentDesign({ imageElements: newImageElements });
   }
 
-  const handleNextStep = () => {
+  const handleNextStep = async () => {
     if (!product || !selectedSize || !canvasRef.current) {
         toast({
             variant: 'destructive',
@@ -355,19 +357,58 @@ function MockupTool() {
         return;
     }
     
-    const designData = {
-        productId: product.id,
-        selectedSize,
-        selectedColor,
-        designs,
-        productName: product.name,
-        productImages: product.images,
-        canvasWidth: canvasRef.current.offsetWidth,
-        canvasHeight: canvasRef.current.offsetHeight,
-    };
-    
-    localStorage.setItem('customDesign', JSON.stringify(designData));
-    router.push('/design/preview');
+    setIsProcessing(true);
+
+    try {
+        const designedViews = Object.keys(designs).filter(imageUrl => 
+            designs[imageUrl].imageElements.length > 0 || designs[imageUrl].textElements.length > 0
+        );
+
+        const flattenedImages: { [imageUrl: string]: string } = {};
+
+        for (const imageUrl of designedViews) {
+            // Temporarily switch the view to render it for capture
+            setActiveImageUrl(imageUrl);
+
+            // Give React a moment to render the view
+            await new Promise(resolve => setTimeout(resolve, 50));
+            
+            if (canvasRef.current) {
+                const dataUrl = await htmlToImage.toPng(canvasRef.current, {
+                    // This will embed images from other origins
+                    fetchRequestInit: { mode: 'cors', cache: 'no-cache' },
+                    // Make it higher quality
+                    pixelRatio: 2,
+                });
+                flattenedImages[imageUrl] = dataUrl;
+            }
+        }
+        
+        const designData = {
+            productId: product.id,
+            selectedSize,
+            selectedColor,
+            productName: product.name,
+            flattenedImages, // Pass the captured images
+        };
+        
+        localStorage.setItem('customDesign', JSON.stringify(designData));
+        router.push('/design/preview');
+
+    } catch (e) {
+        console.error("Failed to generate preview images", e);
+        toast({
+            variant: 'destructive',
+            title: 'Preview Generation Failed',
+            description: 'Could not generate preview images. Please try again.'
+        });
+    } finally {
+        setIsProcessing(false);
+         // Restore the original active image view
+        if (product.images && product.images.length > 0) {
+           setActiveImageUrl(product.images[0]);
+        }
+    }
   };
 
   return (
@@ -492,8 +533,9 @@ function MockupTool() {
             </CardContent>
           </Card>
 
-           <Button size="lg" className="w-full" onClick={handleNextStep}>
-             Preview & Finish <ArrowRight className="ml-2" />
+           <Button size="lg" className="w-full" onClick={handleNextStep} disabled={isProcessing}>
+            {isProcessing && <Loader2 className="animate-spin mr-2" />}
+             {isProcessing ? 'Processing...' : 'Preview & Finish'} <ArrowRight className="ml-2" />
            </Button>
         </div>
 
@@ -503,6 +545,7 @@ function MockupTool() {
             <CardContent className="p-4 sm:p-6 md:p-8">
               <div 
                 ref={canvasRef}
+                id="design-canvas"
                 className="aspect-square w-full bg-muted/50 rounded-lg flex items-center justify-center relative overflow-hidden"
               >
                 {isLoading ? (
@@ -519,6 +562,7 @@ function MockupTool() {
                       sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                       priority
                       key={activeImageUrl}
+                      crossOrigin="anonymous"
                     />
                     {currentDesign.imageElements.map((imgEl, index) => (
                         <div
@@ -540,6 +584,7 @@ function MockupTool() {
                                 alt="User uploaded design" 
                                 layout="fill" 
                                 className="object-contain pointer-events-none" 
+                                crossOrigin="anonymous"
                             />
                             <div 
                                 className="absolute -top-6 left-1/2 -translate-x-1/2 w-5 h-5 bg-primary rounded-full border-2 border-white cursor-alias opacity-0 group-hover:opacity-100 flex items-center justify-center"

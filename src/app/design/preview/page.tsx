@@ -1,7 +1,7 @@
 
 'use client';
 
-import { Suspense, useEffect, useState, useRef } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
@@ -11,106 +11,17 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useCart } from '@/context/CartProvider';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
 import { ArrowLeft } from 'lucide-react';
 import { getProductById } from '@/lib/data';
 import type { Product } from '@/lib/types';
-
-
-type DesignElement = {
-    id: string;
-    type: 'text' | 'image';
-    rotation: number;
-    position: { x: number, y: number };
-}
-
-type TextElement = DesignElement & {
-    type: 'text';
-    text: string;
-    fontSize: number;
-};
-
-type ImageElement = DesignElement & {
-    type: 'image';
-    src: string;
-    size: { width: number, height: number };
-    aspectRatio: number;
-};
-
-type DesignViewState = {
-    textElements: TextElement[];
-    imageElements: ImageElement[];
-}
-
-type AllDesignsState = {
-    [imageUrl: string]: DesignViewState;
-}
 
 type DesignData = {
     productId: string;
     selectedSize: string;
     selectedColor: string;
-    designs: AllDesignsState;
     productName: string;
-    productImages: string[];
-    canvasWidth: number;
-    canvasHeight: number;
+    flattenedImages: { [originalUrl: string]: string };
 };
-
-function DesignPreview({ design, image, canvasWidth, canvasHeight }: { design: DesignViewState, image: string, canvasWidth: number, canvasHeight: number }) {
-    const [scale, setScale] = useState(1);
-    const containerRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        const calculateScale = () => {
-            if (containerRef.current && canvasWidth) {
-                const availableWidth = containerRef.current.offsetWidth;
-                setScale(availableWidth / canvasWidth);
-            }
-        };
-
-        calculateScale();
-        window.addEventListener('resize', calculateScale);
-        return () => window.removeEventListener('resize', calculateScale);
-    }, [canvasWidth]);
-
-
-    if (!design) {
-        return null;
-    }
-    return (
-        <Card>
-            <CardContent className="p-4" ref={containerRef}>
-                <div className="aspect-square w-full bg-muted/50 rounded-lg flex items-center justify-center relative overflow-hidden">
-                    <Image src={image} alt="Product view" fill className="object-contain" />
-                    <div
-                        className="absolute top-0 left-0"
-                        style={{
-                            width: canvasWidth,
-                            height: canvasHeight,
-                            transform: `scale(${scale})`,
-                            transformOrigin: 'top left',
-                        }}
-                    >
-                        <div className="relative w-full h-full">
-                            {design.imageElements.map(el => (
-                                <div key={el.id} className="absolute" style={{ left: el.position.x, top: el.position.y, width: el.size.width, height: el.size.height, transform: `rotate(${el.rotation}deg)` }}>
-                                    <Image src={el.src} alt="" layout="fill" className="object-contain" />
-                                </div>
-                            ))}
-                            {design.textElements.map(el => (
-                                <div key={el.id} className="absolute whitespace-nowrap" style={{ left: el.position.x, top: el.position.y, fontSize: el.fontSize, color: '#000000', textShadow: '1px 1px 2px #ffffff', transform: `rotate(${el.rotation}deg)` }}>
-                                    {el.text}
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            </CardContent>
-        </Card>
-    );
-}
-
 
 function PreviewPage() {
     const router = useRouter();
@@ -131,7 +42,7 @@ function PreviewPage() {
 
                 getProductById(parsedDesign.productId)
                     .then(p => {
-                        if(p) setProduct(p)
+                        if (p) setProduct(p)
                         else setError('Product information could not be loaded.');
                     })
                     .catch(() => setError('Failed to fetch product details.'))
@@ -178,8 +89,7 @@ function PreviewPage() {
         )
     }
 
-    const designedViews = product.images.filter(imgUrl => design.designs[imgUrl] && (design.designs[imgUrl].imageElements.length > 0 || design.designs[imgUrl].textElements.length > 0));
-
+    const designedImageUrls = Object.values(design.flattenedImages);
 
     return (
         <div className="container mx-auto max-w-5xl px-4 py-8 md:py-12">
@@ -193,16 +103,16 @@ function PreviewPage() {
 
             <div className="grid lg:grid-cols-2 gap-12">
                 <div className="space-y-8">
-                     {designedViews.length > 0 ? (
+                     {designedImageUrls.length > 0 ? (
                         <div className="space-y-8">
-                            {designedViews.map(imgUrl => (
-                                <DesignPreview 
-                                    key={imgUrl}
-                                    design={design.designs[imgUrl]} 
-                                    image={imgUrl} 
-                                    canvasWidth={design.canvasWidth}
-                                    canvasHeight={design.canvasHeight}
-                                />
+                            {designedImageUrls.map((imgUrl, index) => (
+                                <Card key={index}>
+                                    <CardContent className="p-4">
+                                        <div className="aspect-square w-full bg-muted/50 rounded-lg flex items-center justify-center relative overflow-hidden">
+                                             <Image src={imgUrl} alt={`Final Design Preview ${index + 1}`} fill className="object-contain" />
+                                        </div>
+                                    </CardContent>
+                                </Card>
                             ))}
                         </div>
                      ) : (
