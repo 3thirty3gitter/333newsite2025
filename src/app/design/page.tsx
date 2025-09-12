@@ -5,14 +5,34 @@ import { Suspense, useEffect, useState, useRef, useMemo } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { getProductById, getProducts } from '@/lib/data';
 import type { Product, Variant } from '@/lib/types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { Text, Upload, Brush, RotateCw, Undo } from 'lucide-react';
+import { Text, Upload, Brush, RotateCw, Undo, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+
+type DesignElement = {
+    id: string;
+    type: 'text' | 'image';
+    rotation: number;
+    position: { x: number, y: number };
+}
+
+type TextElement = DesignElement & {
+    type: 'text';
+    text: string;
+    fontSize: number;
+};
+
+type ImageElement = DesignElement & {
+    type: 'image';
+    src: string;
+    size: { width: number, height: number };
+    aspectRatio: number;
+};
 
 function MockupTool() {
   const router = useRouter();
@@ -28,32 +48,29 @@ function MockupTool() {
   const [selectedSize, setSelectedSize] = useState<string>('');
   const [activeImageUrl, setActiveImageUrl] = useState<string>('');
 
-  const initialImageState = {
-    src: null,
-    position: { x: 70, y: 70 },
-    size: { width: 150, height: 150 },
-    aspectRatio: 1,
-    rotation: 0,
-  };
-
-  const [textElement, setTextElement] = useState({
+  const [textElement, setTextElement] = useState<TextElement>({
+    id: 'text-element',
+    type: 'text',
     text: '',
     position: { x: 50, y: 50 },
     fontSize: 32,
     rotation: 0,
   });
 
-  const [imageElement, setImageElement] = useState<{
-    src: string | null;
-    position: { x: number, y: number };
-    size: { width: number, height: number };
-    aspectRatio: number;
-    rotation: number;
-  }>(initialImageState);
+  const [imageElements, setImageElements] = useState<ImageElement[]>([]);
+  
+  const designElements: (TextElement | ImageElement)[] = useMemo(() => {
+    const elements: (TextElement | ImageElement)[] = [...imageElements];
+    if (textElement.text) {
+        elements.push(textElement);
+    }
+    return elements;
+  }, [imageElements, textElement]);
 
-  const [draggingElement, setDraggingElement] = useState<'text' | 'image' | null>(null);
-  const [resizingElement, setResizingElement] = useState<'text' | 'image' | null>(null);
-  const [rotatingElement, setRotatingElement] = useState<'text' | 'image' | null>(null);
+
+  const [draggingElementId, setDraggingElementId] = useState<string | null>(null);
+  const [resizingElementId, setResizingElementId] = useState<string | null>(null);
+  const [rotatingElementId, setRotatingElementId] = useState<string | null>(null);
   
   const canvasRef = useRef<HTMLDivElement>(null);
   const dragStartRef = useRef({ x: 0, y: 0 });
@@ -133,31 +150,39 @@ function MockupTool() {
     router.push(`${pathname}?${params.toString()}`);
   }
 
-  const handleMouseDown = (e: React.MouseEvent, element: 'text' | 'image') => {
+  const handleMouseDown = (e: React.MouseEvent, elementId: string) => {
     e.preventDefault();
-    setDraggingElement(element);
+    setDraggingElementId(elementId);
     dragStartRef.current = { x: e.clientX, y: e.clientY };
   };
 
-  const handleResizeMouseDown = (e: React.MouseEvent, element: 'text' | 'image') => {
+  const handleResizeMouseDown = (e: React.MouseEvent, elementId: string) => {
     e.preventDefault();
     e.stopPropagation();
-    setResizingElement(element);
+    setResizingElementId(elementId);
     dragStartRef.current = { x: e.clientX, y: e.clientY };
   };
 
-  const handleRotateMouseDown = (e: React.MouseEvent, element: 'text' | 'image') => {
+  const handleRotateMouseDown = (e: React.MouseEvent, elementId: string) => {
     e.preventDefault();
     e.stopPropagation();
-    setRotatingElement(element);
+    setRotatingElementId(elementId);
     dragStartRef.current = { x: e.clientX, y: e.clientY };
+  }
+
+  const updateElement = (id: string, updates: Partial<TextElement | ImageElement>) => {
+    if (id === 'text-element') {
+        setTextElement(prev => ({ ...prev, ...updates as Partial<TextElement> }));
+    } else {
+        setImageElements(prev => prev.map(el => el.id === id ? { ...el, ...updates as Partial<ImageElement> } : el));
+    }
   }
   
   useEffect(() => {
     const handleMouseUp = () => {
-      setDraggingElement(null);
-      setResizingElement(null);
-      setRotatingElement(null);
+      setDraggingElementId(null);
+      setResizingElementId(null);
+      setRotatingElementId(null);
     };
 
     const handleMouseMove = (e: MouseEvent) => {
@@ -166,27 +191,27 @@ function MockupTool() {
       const dx = e.clientX - dragStartRef.current.x;
       const dy = e.clientY - dragStartRef.current.y;
 
-      if (draggingElement) {
-        if (draggingElement === 'text') {
-            const newX = textElement.position.x + dx;
-            const newY = textElement.position.y + dy;
-            setTextElement(prev => ({ ...prev, position: { x: newX, y: newY }}));
-        } else if (draggingElement === 'image' && imageElement.src) {
-            const newX = imageElement.position.x + dx;
-            const newY = imageElement.position.y + dy;
-            setImageElement(prev => ({ ...prev, position: { x: newX, y: newY }}));
+      const activeId = draggingElementId || resizingElementId || rotatingElementId;
+      if (!activeId) return;
+
+      const elementToUpdate = designElements.find(el => el.id === activeId);
+      if (!elementToUpdate) return;
+
+      if (draggingElementId) {
+          const newX = elementToUpdate.position.x + dx;
+          const newY = elementToUpdate.position.y + dy;
+          updateElement(draggingElementId, { position: { x: newX, y: newY } });
+      } else if (resizingElementId) {
+         if (resizingElementId === 'text-element' && elementToUpdate.type === 'text') {
+            const newSize = Math.max(12, elementToUpdate.fontSize + (dx + dy) * 0.1);
+            updateElement(resizingElementId, { fontSize: newSize });
+        } else if (elementToUpdate.type === 'image') {
+            const newWidth = Math.max(20, elementToUpdate.size.width + dx);
+            const newHeight = newWidth / elementToUpdate.aspectRatio;
+            updateElement(resizingElementId, { size: { width: newWidth, height: newHeight } });
         }
-      } else if (resizingElement) {
-         if (resizingElement === 'text') {
-            const newSize = Math.max(12, textElement.fontSize + (dx + dy) * 0.1);
-            setTextElement(prev => ({ ...prev, fontSize: newSize }));
-        } else if (resizingElement === 'image' && imageElement.src) {
-            const newWidth = Math.max(20, imageElement.size.width + dx);
-            const newHeight = newWidth / imageElement.aspectRatio;
-            setImageElement(prev => ({ ...prev, size: { width: newWidth, height: newHeight }}));
-        }
-      } else if (rotatingElement) {
-        const elementRef = document.getElementById(`${rotatingElement}-element`);
+      } else if (rotatingElementId) {
+        const elementRef = document.getElementById(rotatingElementId);
         if (!elementRef) return;
         
         const rect = elementRef.getBoundingClientRect();
@@ -195,17 +220,13 @@ function MockupTool() {
         const angle = Math.atan2(e.clientY - canvasRect.top - centerY, e.clientX - canvasRect.left - centerX);
         const degrees = angle * (180 / Math.PI) + 90; // +90 to offset initial handle position
 
-        if (rotatingElement === 'text') {
-            setTextElement(prev => ({...prev, rotation: degrees}));
-        } else if (rotatingElement === 'image') {
-            setImageElement(prev => ({...prev, rotation: degrees}));
-        }
+        updateElement(rotatingElementId, { rotation: degrees });
       }
       
       dragStartRef.current = { x: e.clientX, y: e.clientY };
     };
     
-    if (draggingElement || resizingElement || rotatingElement) {
+    if (draggingElementId || resizingElementId || rotatingElementId) {
         window.addEventListener('mousemove', handleMouseMove);
         window.addEventListener('mouseup', handleMouseUp);
     }
@@ -214,7 +235,7 @@ function MockupTool() {
         window.removeEventListener('mousemove', handleMouseMove);
         window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [draggingElement, resizingElement, rotatingElement, textElement, imageElement]);
+  }, [draggingElementId, resizingElementId, rotatingElementId, designElements]);
   
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -224,35 +245,70 @@ function MockupTool() {
         const img = new window.Image();
         img.onload = () => {
             const aspectRatio = img.width / img.height;
-            setImageElement(prev => ({
-                ...initialImageState,
+            const newImage: ImageElement = {
+                id: `image-${Date.now()}`,
+                type: 'image',
                 src: e.target?.result as string,
-                aspectRatio: aspectRatio,
-                size: { width: 150, height: 150 / aspectRatio }
-            }));
+                position: { x: 70, y: 70 },
+                size: { width: 150, height: 150 / aspectRatio },
+                aspectRatio,
+                rotation: 0
+            };
+            setImageElements(prev => [...prev, newImage]);
         };
         img.src = e.target?.result as string;
       };
       reader.readAsDataURL(file);
     }
   };
+  
+  const handleDeleteElement = (id: string) => {
+    if (id === 'text-element') {
+        setTextElement(prev => ({ ...prev, text: '' }));
+    } else {
+        setImageElements(prev => prev.filter(el => el.id !== id));
+    }
+  };
+  
+  const handleLayerOrderChange = (id: string, direction: 'up' | 'down') => {
+    if (id === 'text-element') return; // Cannot reorder text element for now
+    setImageElements(prev => {
+        const index = prev.findIndex(el => el.id === id);
+        if (index === -1) return prev;
 
-  const handleImageReset = () => {
-      setImageElement(prev => ({
-        ...initialImageState,
-        src: prev.src,
-        aspectRatio: prev.aspectRatio,
-        size: { width: 150, height: 150 / prev.aspectRatio }
+        const newIndex = direction === 'up' ? index + 1 : index - 1;
+        if (newIndex < 0 || newIndex >= prev.length) return prev;
+
+        const newArray = [...prev];
+        const temp = newArray[index];
+        newArray[index] = newArray[newIndex];
+        newArray[newIndex] = temp;
+        
+        return newArray;
+    });
+  }
+
+  const handleResetImage = (id: string) => {
+      setImageElements(prev => prev.map(el => {
+          if (el.id === id) {
+              return {
+                  ...el,
+                  position: { x: 70, y: 70 },
+                  size: { width: 150, height: 150 / el.aspectRatio },
+                  rotation: 0,
+              }
+          }
+          return el;
       }));
   }
+
 
   return (
     <div className="container mx-auto max-w-7xl px-4 py-8 md:py-12">
       <h1 className="text-3xl md:text-4xl font-headline font-bold mb-8">Product Mockup Tool</h1>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        {/* Left Panel: Controls */}
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 space-y-8">
           <Card>
             <CardHeader>
               <CardTitle>Design Controls</CardTitle>
@@ -319,14 +375,45 @@ function MockupTool() {
               <Button variant="outline" className="w-full justify-start" onClick={() => fileInputRef.current?.click()}>
                 <Upload className="mr-2" /> Upload Image
               </Button>
-               {imageElement.src && (
-                  <Button variant="outline" className="w-full justify-start" onClick={handleImageReset}>
-                    <Undo className="mr-2" /> Reset Image
-                  </Button>
-                )}
                <Button variant="outline" className="w-full justify-start" disabled>
                 <Brush className="mr-2" /> Choose Clipart
               </Button>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+                <CardTitle>Layers</CardTitle>
+                <CardDescription>Manage your design elements</CardDescription>
+            </CardHeader>
+            <CardContent>
+                {designElements.length > 0 ? (
+                    <div className="space-y-2">
+                        {designElements.map((el, index) => (
+                             <div key={el.id} className="flex items-center gap-2 p-2 border rounded-md">
+                                <span className="flex-1 truncate">{el.type === 'text' ? el.text : `Image ${imageElements.findIndex(img => img.id === el.id) + 1}`}</span>
+                                {el.type === 'image' && (
+                                    <>
+                                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleLayerOrderChange(el.id, 'down')} disabled={index === 0}>
+                                            <ArrowDown className="h-4 w-4" />
+                                        </Button>
+                                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleLayerOrderChange(el.id, 'up')} disabled={index === imageElements.length - 1}>
+                                            <ArrowUp className="h-4 w-4" />
+                                        </Button>
+                                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleResetImage(el.id)}>
+                                            <Undo className="h-4 w-4" />
+                                        </Button>
+                                    </>
+                                )}
+                                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDeleteElement(el.id)}>
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-sm text-muted-foreground text-center">Add text or an image to start designing.</p>
+                )}
             </CardContent>
           </Card>
         </div>
@@ -354,9 +441,42 @@ function MockupTool() {
                       priority
                       key={activeImageUrl}
                     />
+                    {imageElements.map((imgEl) => (
+                        <div
+                            key={imgEl.id}
+                            id={imgEl.id}
+                            className="absolute border border-dashed border-transparent hover:border-primary cursor-grab select-none group"
+                            style={{
+                                left: `${imgEl.position.x}px`,
+                                top: `${imgEl.position.y}px`,
+                                width: `${imgEl.size.width}px`,
+                                height: `${imgEl.size.height}px`,
+                                transform: `rotate(${imgEl.rotation}deg)`,
+                                zIndex: imageElements.findIndex(el => el.id === imgEl.id) + 1, // Basic layering
+                            }}
+                            onMouseDown={(e) => handleMouseDown(e, imgEl.id)}
+                        >
+                           <Image 
+                                src={imgEl.src} 
+                                alt="User uploaded design" 
+                                layout="fill" 
+                                className="object-contain pointer-events-none" 
+                            />
+                            <div 
+                                className="absolute -top-6 left-1/2 -translate-x-1/2 w-5 h-5 bg-primary rounded-full border-2 border-white cursor-alias opacity-0 group-hover:opacity-100 flex items-center justify-center"
+                                onMouseDown={(e) => handleRotateMouseDown(e, imgEl.id)}
+                            >
+                                <RotateCw className="w-3 h-3 text-white" />
+                            </div>
+                            <div 
+                              className="absolute -right-1 -bottom-1 w-4 h-4 bg-primary rounded-full border-2 border-white cursor-se-resize opacity-0 group-hover:opacity-100"
+                              onMouseDown={(e) => handleResizeMouseDown(e, imgEl.id)}
+                            />
+                        </div>
+                    ))}
                     {textElement.text && (
                        <div
-                          id="text-element"
+                          id={textElement.id}
                           className="absolute p-4 border border-dashed border-transparent hover:border-primary cursor-grab select-none group"
                           style={{ 
                             left: `${textElement.position.x}px`, 
@@ -365,51 +485,21 @@ function MockupTool() {
                             color: '#000000',
                             textShadow: '1px 1px 2px #ffffff',
                             transform: `rotate(${textElement.rotation}deg)`,
+                            zIndex: imageElements.length + 2, // Text always on top
                           }}
-                          onMouseDown={(e) => handleMouseDown(e, 'text')}
+                          onMouseDown={(e) => handleMouseDown(e, textElement.id)}
                         >
                           {textElement.text}
                            <div 
                             className="absolute -top-6 left-1/2 -translate-x-1/2 w-5 h-5 bg-primary rounded-full border-2 border-white cursor-alias opacity-0 group-hover:opacity-100 flex items-center justify-center"
-                            onMouseDown={(e) => handleRotateMouseDown(e, 'text')}
+                            onMouseDown={(e) => handleRotateMouseDown(e, textElement.id)}
                           >
                             <RotateCw className="w-3 h-3 text-white" />
                           </div>
                           <div 
                             className="absolute -right-1 -bottom-1 w-4 h-4 bg-primary rounded-full border-2 border-white cursor-se-resize opacity-0 group-hover:opacity-100"
-                            onMouseDown={(e) => handleResizeMouseDown(e, 'text')}
+                            onMouseDown={(e) => handleResizeMouseDown(e, textElement.id)}
                           />
-                        </div>
-                    )}
-                    {imageElement.src && (
-                        <div
-                            id="image-element"
-                            className="absolute border border-dashed border-transparent hover:border-primary cursor-grab select-none group"
-                            style={{
-                                left: `${imageElement.position.x}px`,
-                                top: `${imageElement.position.y}px`,
-                                width: `${imageElement.size.width}px`,
-                                height: `${imageElement.size.height}px`,
-                                transform: `rotate(${imageElement.rotation}deg)`,
-                            }}
-                            onMouseDown={(e) => handleMouseDown(e, 'image')}
-                        >
-                           <Image 
-                                src={imageElement.src} 
-                                alt="User uploaded design" 
-                                layout="fill" 
-                                className="object-contain pointer-events-none" 
-                            />
-                            <div 
-                                className="absolute -top-6 left-1/2 -translate-x-1/2 w-5 h-5 bg-primary rounded-full border-2 border-white cursor-alias opacity-0 group-hover:opacity-100 flex items-center justify-center"
-                                onMouseDown={(e) => handleRotateMouseDown(e, 'image')}
-                            >
-                                <RotateCw className="w-3 h-3 text-white" />
-                            </div>
-                            <div 
-                              className="absolute -right-1 -bottom-1 w-4 h-4 bg-primary rounded-full border-2 border-white cursor-se-resize opacity-0 group-hover:opacity-100"
-                              onMouseDown={(e) => handleResizeMouseDown(e, 'image')}
-                            />
                         </div>
                     )}
                    </>
