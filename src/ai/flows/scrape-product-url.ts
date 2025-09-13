@@ -5,8 +5,6 @@
  * @fileOverview A flow for scraping product data from a given URL.
  *
  * - scrapeProductUrl - A function that scrapes a URL and extracts product information.
- * - ScrapeProductUrlInput - The input type for the scrapeProductUrl function.
- * - ScrapeProductUrlOutput - The return type for the scrapeProductUrl function.
  */
 
 import { ai } from '@/ai/genkit';
@@ -83,6 +81,9 @@ const scrapeProductUrlFlow = ai.defineFlow(
   },
   async (input) => {
     const { output } = await scrapeProductUrlPrompt(input);
-    return output!;
+    if (!output) {
+      throw new Error('The AI model failed to extract any data from the provided URL. Please check the URL and try again.');
+    }
+    return output;
   }
 );
