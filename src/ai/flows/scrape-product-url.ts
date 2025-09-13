@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -11,14 +12,14 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
-export const ScrapeProductUrlInputSchema = z.object({
+const ScrapeProductUrlInputSchema = z.object({
   url: z.string().url().describe('The URL of the product page to scrape.'),
 });
 export type ScrapeProductUrlInput = z.infer<typeof ScrapeProductUrlInputSchema>;
 
 // This schema is based on the Product type, but with optional fields
 // as not all information may be available on the page.
-export const ScrapeProductUrlOutputSchema = z.object({
+const ScrapeProductUrlOutputSchema = z.object({
   name: z.string().optional().describe('The name of the product.'),
   description: z.string().optional().describe('A short, catchy marketing description for the product.'),
   longDescription: z.string().optional().describe('A detailed, informative description of the product, highlighting its features and benefits.'),
