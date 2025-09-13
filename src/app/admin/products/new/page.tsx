@@ -311,37 +311,38 @@ export default function NewProductPage() {
         // Reset form to clear previous data before populating
         form.reset();
 
-        // Populate form with scraped data
-        if (result.name) form.setValue('name', result.name, { shouldDirty: true });
-        if (result.description) form.setValue('description', result.description, { shouldDirty: true });
-        if (result.longDescription) form.setValue('longDescription', result.longDescription, { shouldDirty: true });
-        if (result.price) form.setValue('price', result.price, { shouldDirty: true });
-        if (result.images && result.images.length > 0) form.setValue('images', result.images, { shouldDirty: true });
+        // Populate form with scraped data, providing fallbacks for optional fields
+        form.setValue('name', result.name ?? '', { shouldDirty: true });
+        form.setValue('description', result.description ?? '', { shouldDirty: true });
+        form.setValue('longDescription', result.longDescription ?? '', { shouldDirty: true });
+        form.setValue('price', result.price ?? 0, { shouldDirty: true });
+        form.setValue('images', result.images ?? [], { shouldDirty: true });
+        
         if (result.category) {
-            // Check if scraped category exists in collections
             const categoryExists = collections.some(c => c.name.toLowerCase() === result.category!.toLowerCase());
             if (categoryExists) {
                 form.setValue('category', result.category, { shouldDirty: true });
             }
         }
-        if (result.vendor) form.setValue('vendor', result.vendor, { shouldDirty: true });
-        if (result.tags) form.setValue('tags', result.tags.join(', '), { shouldDirty: true });
-        if (result.variants) form.setValue('variants', result.variants, { shouldDirty: true });
-        if (result.inventory) form.setValue('inventory', result.inventory, { shouldDirty: true });
-        if (result.seoTitle) form.setValue('seoTitle', result.seoTitle, { shouldDirty: true });
-        if (result.seoDescription) form.setValue('seoDescription', result.seoDescription, { shouldDirty: true });
+        
+        form.setValue('vendor', result.vendor ?? '', { shouldDirty: true });
+        form.setValue('tags', (result.tags ?? []).join(', '), { shouldDirty: true });
+        form.setValue('variants', result.variants ?? [], { shouldDirty: true });
+        form.setValue('inventory', result.inventory ?? [], { shouldDirty: true });
+        form.setValue('seoTitle', result.seoTitle ?? '', { shouldDirty: true });
+        form.setValue('seoDescription', result.seoDescription ?? '', { shouldDirty: true });
 
         toast({
             title: 'Content Imported',
             description: 'Product data has been imported from the URL.',
         });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('Failed to scrape URL:', error);
         toast({
             variant: 'destructive',
             title: 'Scraping Failed',
-            description: 'Could not import data from the URL. Please check the console.',
+            description: error.message || 'Could not import data from the URL. Please check the console.',
             duration: 7000
         });
     } finally {
