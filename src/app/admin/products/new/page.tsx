@@ -308,41 +308,15 @@ export default function NewProductPage() {
     try {
         const result = await scrapeProductUrl({ url: scrapeUrl });
         
-        // Reset form to clear previous data before populating
-        form.reset({
-          name: '', handle: '', description: '', longDescription: '', price: 0, category: '',
-          vendor: '', tags: '', images: [], variants: [], inventory: [], status: 'active',
-          isTaxable: true, trackQuantity: true, allowOutOfStockPurchase: false,
-          seoTitle: '', seoDescription: '', compareAtPrice: undefined, costPerItem: undefined,
-        });
-        
         form.setValue('name', result.name ?? '', { shouldDirty: true });
         form.setValue('description', result.description ?? '', { shouldDirty: true });
         form.setValue('longDescription', result.longDescription ?? '', { shouldDirty: true });
-        form.setValue('price', result.price ?? 0, { shouldDirty: true });
         form.setValue('images', result.images ?? [], { shouldDirty: true });
-        
-        if (result.category) {
-            const categoryExists = collections.some(c => c.name.toLowerCase() === result.category!.toLowerCase());
-            if (categoryExists) {
-                form.setValue('category', result.category, { shouldDirty: true });
-            }
-        }
-        
-        form.setValue('vendor', result.vendor ?? '', { shouldDirty: true });
-        form.setValue('tags', (result.tags ?? []).join(', '), { shouldDirty: true });
 
-        // Safely update variants and inventory
         if (Array.isArray(result.variants)) {
           form.setValue('variants', result.variants as any[], { shouldDirty: true });
         }
-        if (Array.isArray(result.inventory)) {
-          form.setValue('inventory', result.inventory as any[], { shouldDirty: true });
-        }
         
-        form.setValue('seoTitle', result.seoTitle ?? '', { shouldDirty: true });
-        form.setValue('seoDescription', result.seoDescription ?? '', { shouldDirty: true });
-
         toast({
             title: 'Content Imported',
             description: 'Product data has been imported from the URL.',
@@ -929,7 +903,3 @@ export default function NewProductPage() {
     </div>
   );
 }
-
-    
-
-    
