@@ -113,11 +113,11 @@ export function Header({ settings }: { settings: ThemeSettings }) {
                                     </NavigationMenuContent>
                                     </>
                                 ) : (
-                                    <Link href={item.href} legacyBehavior passHref>
-                                        <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                                    <NavigationMenuLink asChild>
+                                        <Link href={item.href} className={navigationMenuTriggerStyle()}>
                                             {item.label}
-                                        </NavigationMenuLink>
-                                    </Link>
+                                        </Link>
+                                    </NavigationMenuLink>
                                 )}
                             </NavigationMenuItem>
                         ))}
