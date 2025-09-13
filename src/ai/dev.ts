@@ -7,3 +7,4 @@ import '@/ai/flows/generate-image.ts';
 import '@/ai/flows/generate-filename.ts';
 import '@/ai/flows/generate-hero-text.ts';
 import '@/ai/flows/generate-product-details.ts';
+import '@/ai/flows/scrape-product-url.ts';

@@ -12,7 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, PlusCircle, Trash2, X, GripVertical, Upload, Image as ImageIcon, Loader2, Sparkles, MinusCircle } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Trash2, X, GripVertical, Upload, Image as ImageIcon, Loader2, Sparkles, MinusCircle, Link as LinkIcon } from 'lucide-react';
 import { addProduct, getCollections, uploadImageAndGetURL } from '@/lib/data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useEffect, useState, useMemo, useRef } from 'react';
@@ -23,6 +23,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import Image from 'next/image';
 import { Switch } from '@/components/ui/switch';
 import { generateProductDetails } from '@/ai/flows/generate-product-details';
+import { scrapeProductUrl } from '@/ai/flows/scrape-product-url';
 
 const variantOptionSchema = z.object({
   value: z.string().min(1, 'Value cannot be empty.'),
@@ -74,6 +75,8 @@ export default function NewProductPage() {
   const [isLoadingCollections, setIsLoadingCollections] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isScraping, setIsScraping] = useState(false);
+  const [scrapeUrl, setScrapeUrl] = useState('');
   const imageInputRef = useRef<HTMLInputElement>(null);
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
@@ -295,6 +298,57 @@ export default function NewProductPage() {
       setIsGenerating(false);
     }
   };
+  
+  const handleScrapeUrl = async () => {
+    if (!scrapeUrl) {
+        toast({ variant: 'destructive', title: 'URL required', description: 'Please enter a URL to scrape.' });
+        return;
+    }
+    setIsScraping(true);
+    try {
+        const result = await scrapeProductUrl({ url: scrapeUrl });
+        
+        // Reset form to clear previous data before populating
+        form.reset();
+
+        // Populate form with scraped data
+        if (result.name) form.setValue('name', result.name, { shouldDirty: true });
+        if (result.description) form.setValue('description', result.description, { shouldDirty: true });
+        if (result.longDescription) form.setValue('longDescription', result.longDescription, { shouldDirty: true });
+        if (result.price) form.setValue('price', result.price, { shouldDirty: true });
+        if (result.images && result.images.length > 0) form.setValue('images', result.images, { shouldDirty: true });
+        if (result.category) {
+            // Check if scraped category exists in collections
+            const categoryExists = collections.some(c => c.name.toLowerCase() === result.category!.toLowerCase());
+            if (categoryExists) {
+                form.setValue('category', result.category, { shouldDirty: true });
+            }
+        }
+        if (result.vendor) form.setValue('vendor', result.vendor, { shouldDirty: true });
+        if (result.tags) form.setValue('tags', result.tags.join(', '), { shouldDirty: true });
+        if (result.variants) form.setValue('variants', result.variants, { shouldDirty: true });
+        if (result.inventory) form.setValue('inventory', result.inventory, { shouldDirty: true });
+        if (result.seoTitle) form.setValue('seoTitle', result.seoTitle, { shouldDirty: true });
+        if (result.seoDescription) form.setValue('seoDescription', result.seoDescription, { shouldDirty: true });
+
+        toast({
+            title: 'Content Imported',
+            description: 'Product data has been imported from the URL.',
+        });
+
+    } catch (error) {
+        console.error('Failed to scrape URL:', error);
+        toast({
+            variant: 'destructive',
+            title: 'Scraping Failed',
+            description: 'Could not import data from the URL. Please check the console.',
+            duration: 7000
+        });
+    } finally {
+        setIsScraping(false);
+    }
+  };
+
 
   async function onSubmit(values: FormValues) {
     try {
@@ -332,6 +386,31 @@ export default function NewProductPage() {
                 </Button>
                 <h1 className="text-3xl font-headline font-bold">Add New Product</h1>
             </div>
+
+            <Card className="mb-8">
+                <CardHeader>
+                    <CardTitle>Import from URL</CardTitle>
+                    <CardDescription>Paste a link to a supplier's product page to automatically fill in the details below.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex w-full items-center space-x-2">
+                        <div className="relative flex-grow">
+                            <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input 
+                                type="url"
+                                placeholder="https://supplier.com/product/example-item"
+                                className="pl-10"
+                                value={scrapeUrl}
+                                onChange={(e) => setScrapeUrl(e.target.value)}
+                            />
+                        </div>
+                        <Button type="button" onClick={handleScrapeUrl} disabled={isScraping}>
+                           {isScraping && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                           {isScraping ? 'Importing...' : 'Import'}
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
 
             <div className="grid md:grid-cols-3 gap-8">
                 <div className="md:col-span-2 space-y-8">
@@ -829,7 +908,7 @@ export default function NewProductPage() {
                 <Button type="button" variant="outline" onClick={() => router.back()}>
                 Cancel
                 </Button>
-                <Button type="submit" disabled={form.formState.isSubmitting || isUploading || isGenerating}>
+                <Button type="submit" disabled={form.formState.isSubmitting || isUploading || isGenerating || isScraping}>
                 {form.formState.isSubmitting ? 'Creating...' : 'Create Product'}
                 </Button>
             </div>
