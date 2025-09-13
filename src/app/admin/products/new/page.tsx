@@ -16,7 +16,7 @@ import { ArrowLeft, PlusCircle, Trash2, X, GripVertical, Upload, Image as ImageI
 import { addProduct, getCollections, uploadImageAndGetURL } from '@/lib/data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useEffect, useState, useMemo, useRef } from 'react';
-import type { Collection, VariantOption } from '@/lib/types';
+import type { Collection, Variant, VariantOption } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -309,9 +309,13 @@ export default function NewProductPage() {
         const result = await scrapeProductUrl({ url: scrapeUrl });
         
         // Reset form to clear previous data before populating
-        form.reset();
-
-        // Populate form with scraped data, providing fallbacks for optional fields
+        form.reset({
+          name: '', handle: '', description: '', longDescription: '', price: 0, category: '',
+          vendor: '', tags: '', images: [], variants: [], inventory: [], status: 'active',
+          isTaxable: true, trackQuantity: true, allowOutOfStockPurchase: false,
+          seoTitle: '', seoDescription: '', compareAtPrice: undefined, costPerItem: undefined,
+        });
+        
         form.setValue('name', result.name ?? '', { shouldDirty: true });
         form.setValue('description', result.description ?? '', { shouldDirty: true });
         form.setValue('longDescription', result.longDescription ?? '', { shouldDirty: true });
@@ -327,8 +331,15 @@ export default function NewProductPage() {
         
         form.setValue('vendor', result.vendor ?? '', { shouldDirty: true });
         form.setValue('tags', (result.tags ?? []).join(', '), { shouldDirty: true });
-        form.setValue('variants', result.variants ?? [], { shouldDirty: true });
-        form.setValue('inventory', result.inventory ?? [], { shouldDirty: true });
+
+        // Safely update variants and inventory
+        if (Array.isArray(result.variants)) {
+          form.setValue('variants', result.variants as any[], { shouldDirty: true });
+        }
+        if (Array.isArray(result.inventory)) {
+          form.setValue('inventory', result.inventory as any[], { shouldDirty: true });
+        }
+        
         form.setValue('seoTitle', result.seoTitle ?? '', { shouldDirty: true });
         form.setValue('seoDescription', result.seoDescription ?? '', { shouldDirty: true });
 
@@ -918,5 +929,7 @@ export default function NewProductPage() {
     </div>
   );
 }
+
+    
 
     
