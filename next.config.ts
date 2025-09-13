@@ -28,6 +28,12 @@ const nextConfig: NextConfig = {
         hostname: 'firebasestorage.googleapis.com',
         port: '',
         pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.3thirty3.ca',
+        port: '',
+        pathname: '/**',
       }
     ],
   },
