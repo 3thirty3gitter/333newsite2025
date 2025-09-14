@@ -301,40 +301,40 @@ export default function NewProductPage() {
   
   const handleScrapeUrl = async () => {
     if (!scrapeUrl) {
-        toast({ variant: 'destructive', title: 'URL required', description: 'Please enter a URL to scrape.' });
-        return;
+      toast({ variant: 'destructive', title: 'URL required', description: 'Please enter a URL to scrape.' });
+      return;
     }
     setIsScraping(true);
     try {
-        const result = await scrapeProductUrl({ url: scrapeUrl });
-        
-        form.setValue('name', result.name ?? '', { shouldDirty: true });
-        form.setValue('description', result.description ?? result.longDescription ?? '', { shouldDirty: true });
-        form.setValue('longDescription', result.longDescription ?? result.description ?? '', { shouldDirty: true });
-        
-        if (Array.isArray(result.images)) {
-          form.setValue('images', result.images, { shouldDirty: true });
-        }
+      const result = await scrapeProductUrl({ url: scrapeUrl });
 
-        if (Array.isArray(result.variants)) {
-          form.setValue('variants', result.variants as any[], { shouldDirty: true });
-        }
-        
-        toast({
-            title: 'Content Imported',
-            description: 'Product data has been imported from the URL.',
-        });
+      form.setValue('name', result.name ?? '', { shouldDirty: true });
+      form.setValue('description', result.description ?? result.longDescription ?? '', { shouldDirty: true });
+      form.setValue('longDescription', result.longDescription ?? result.description ?? '', { shouldDirty: true });
+
+      if (Array.isArray(result.variants) && result.variants.length > 0) {
+        form.setValue('variants', result.variants as any[], { shouldDirty: true });
+      }
+      
+      if (Array.isArray(result.images) && result.images.length > 0) {
+        form.setValue('images', result.images, { shouldDirty: true });
+      }
+
+      toast({
+        title: 'Content Imported',
+        description: 'Product data has been imported from the URL.',
+      });
 
     } catch (error: any) {
-        console.error('Failed to scrape URL:', error);
-        toast({
-            variant: 'destructive',
-            title: 'Scraping Failed',
-            description: error.message || 'Could not import data from the URL. Please check the console.',
-            duration: 7000
-        });
+      console.error('Failed to scrape URL:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Scraping Failed',
+        description: error.message || 'Could not import data from the URL. Please check the console.',
+        duration: 7000
+      });
     } finally {
-        setIsScraping(false);
+      setIsScraping(false);
     }
   };
 
