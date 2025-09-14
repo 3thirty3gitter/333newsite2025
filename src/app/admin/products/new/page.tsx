@@ -199,7 +199,7 @@ export default function NewProductPage() {
   };
 
   const handleRemoveOption = (variantIndex: number, optionIndex: number) => {
-    const currentOptions = form.getValues(`variants.${index}.options`);
+    const currentOptions = form.getValues(`variants.${variantIndex}.options`);
     if (currentOptions) {
         const newOptions = currentOptions.filter((_, i) => i !== optionIndex);
         update(variantIndex, { ...form.getValues(`variants.${variantIndex}`), options: newOptions });
@@ -308,22 +308,22 @@ export default function NewProductPage() {
     try {
       const result = await scrapeProductUrl({ url: scrapeUrl });
 
-      form.setValue('name', result.name ?? '', { shouldDirty: true });
-      form.setValue('description', result.description ?? result.longDescription ?? '', { shouldDirty: true });
-      form.setValue('longDescription', result.longDescription ?? result.description ?? '', { shouldDirty: true });
-
-      if (Array.isArray(result.variants)) {
-        form.setValue('variants', result.variants as any[], { shouldDirty: true });
+      if (result) {
+        form.setValue('name', result.name ?? '', { shouldDirty: true });
+        form.setValue('description', result.description ?? '', { shouldDirty: true });
+        form.setValue('longDescription', result.longDescription ?? '', { shouldDirty: true });
+        
+        // Defensively set variants and images
+        form.setValue('variants', Array.isArray(result.variants) ? result.variants : [], { shouldDirty: true });
+        form.setValue('images', Array.isArray(result.images) ? result.images : [], { shouldDirty: true });
+        
+        toast({
+          title: 'Content Imported',
+          description: 'Product data has been imported from the URL.',
+        });
+      } else {
+        throw new Error('Scraper returned no result.');
       }
-      
-      if (Array.isArray(result.images)) {
-        form.setValue('images', result.images, { shouldDirty: true });
-      }
-
-      toast({
-        title: 'Content Imported',
-        description: 'Product data has been imported from the URL.',
-      });
 
     } catch (error: any) {
       console.error('Failed to scrape URL:', error);
@@ -870,7 +870,7 @@ export default function NewProductPage() {
                                                 onDragEnd={handleImageDrop}
                                                 onDragOver={(e) => e.preventDefault()}
                                             >
-                                                <Image src={imgSrc} alt={`Product preview ${i + 1}`} fill className="object-cover rounded-md" />
+                                                <img src={imgSrc} alt={`Product preview ${i + 1}`} className="absolute h-full w-full object-cover rounded-md" />
                                                  {i === 0 && (
                                                     <Badge variant="secondary" className="absolute top-1 left-1">Primary</Badge>
                                                  )}
