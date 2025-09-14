@@ -42,13 +42,13 @@ const scrapeProductUrlPrompt = ai.definePrompt({
 
   Scrape this URL: {{{url}}}
 
-  You must extract ONLY the following information:
+  You must extract the following information. Be exhaustive and thorough in your search.
   - Product name.
   - A short marketing description and a longer, more detailed description.
-  - A list of ALL product image URLs. Find the highest resolution images available.
+  - A list of ALL product image URLs. There is no limit. You must extract every single product image URL you can find on the page. Find the highest resolution images available.
   - ALL product variants (e.g., Size, Color) and their available options. If a variant option (like a color) has its own image, extract that URL.
   
-  Pay close attention to the requested JSON schema and format the output exactly as specified. If a piece of information is not available on the page, omit the field from the response. Be exhaustive in your search for images and variants.`,
+  Pay close attention to the requested JSON schema and format the output exactly as specified. If a piece of information is not available on the page, omit the field from the response.`,
 });
 
 const scrapeProductUrlFlow = ai.defineFlow(
