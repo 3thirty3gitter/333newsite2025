@@ -34,6 +34,12 @@ const nextConfig: NextConfig = {
         hostname: 'www.3thirty3.ca',
         port: '',
         pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'cdn.shopify.com',
+        port: '',
+        pathname: '/**',
       }
     ],
   },

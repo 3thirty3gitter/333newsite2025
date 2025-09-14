@@ -199,7 +199,7 @@ export default function NewProductPage() {
   };
 
   const handleRemoveOption = (variantIndex: number, optionIndex: number) => {
-    const currentOptions = form.getValues(`variants.${variantIndex}.options`);
+    const currentOptions = form.getValues(`variants.${index}.options`);
     if (currentOptions) {
         const newOptions = currentOptions.filter((_, i) => i !== optionIndex);
         update(variantIndex, { ...form.getValues(`variants.${variantIndex}`), options: newOptions });
@@ -312,11 +312,11 @@ export default function NewProductPage() {
       form.setValue('description', result.description ?? result.longDescription ?? '', { shouldDirty: true });
       form.setValue('longDescription', result.longDescription ?? result.description ?? '', { shouldDirty: true });
 
-      if (Array.isArray(result.variants) && result.variants.length > 0) {
+      if (Array.isArray(result.variants)) {
         form.setValue('variants', result.variants as any[], { shouldDirty: true });
       }
       
-      if (Array.isArray(result.images) && result.images.length > 0) {
+      if (Array.isArray(result.images)) {
         form.setValue('images', result.images, { shouldDirty: true });
       }
 
