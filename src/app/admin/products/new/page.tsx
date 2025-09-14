@@ -309,9 +309,12 @@ export default function NewProductPage() {
         const result = await scrapeProductUrl({ url: scrapeUrl });
         
         form.setValue('name', result.name ?? '', { shouldDirty: true });
-        form.setValue('description', result.description ?? '', { shouldDirty: true });
-        form.setValue('longDescription', result.longDescription ?? '', { shouldDirty: true });
-        form.setValue('images', result.images ?? [], { shouldDirty: true });
+        form.setValue('description', result.description ?? result.longDescription ?? '', { shouldDirty: true });
+        form.setValue('longDescription', result.longDescription ?? result.description ?? '', { shouldDirty: true });
+        
+        if (Array.isArray(result.images)) {
+          form.setValue('images', result.images, { shouldDirty: true });
+        }
 
         if (Array.isArray(result.variants)) {
           form.setValue('variants', result.variants as any[], { shouldDirty: true });
