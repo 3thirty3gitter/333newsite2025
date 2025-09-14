@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -67,6 +68,15 @@ const formSchema = z.object({
 });
 
 type FormValues = z.infer<typeof formSchema>;
+
+function decodeHtmlEntities(text: string): string {
+    if (typeof window === 'undefined') {
+        return text;
+    }
+    const textarea = document.createElement('textarea');
+    textarea.innerHTML = text;
+    return textarea.value;
+}
 
 export default function NewProductPage() {
   const router = useRouter();
@@ -314,8 +324,9 @@ export default function NewProductPage() {
         form.setValue('longDescription', result.longDescription ?? '', { shouldDirty: true });
         
         // Defensively set variants and images
+        const decodedImages = (result.images || []).map(url => decodeHtmlEntities(url));
         form.setValue('variants', Array.isArray(result.variants) ? result.variants : [], { shouldDirty: true });
-        form.setValue('images', Array.isArray(result.images) ? result.images : [], { shouldDirty: true });
+        form.setValue('images', Array.isArray(decodedImages) ? decodedImages : [], { shouldDirty: true });
         
         toast({
           title: 'Content Imported',
@@ -906,3 +917,5 @@ export default function NewProductPage() {
     </div>
   );
 }
+
+    
