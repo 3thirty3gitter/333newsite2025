@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -85,7 +84,7 @@ export default function NewProductPage() {
   const [isLoadingCollections, setIsLoadingCollections] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isScraping, setIsScraping] = useState(false);
+  const [isScraping, setIsScraping] = useState('');
   const [scrapeUrl, setScrapeUrl] = useState('');
   const imageInputRef = useRef<HTMLInputElement>(null);
   const dragItem = useRef<number | null>(null);
@@ -917,5 +916,3 @@ export default function NewProductPage() {
     </div>
   );
 }
-
-    
