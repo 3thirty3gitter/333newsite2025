@@ -931,7 +931,7 @@ export default function EditProductPage() {
                         />
                     </div>
                     <AlertDialogFooter>
-                    <AlertDialogCancel onClick={() => setDeleteConfirmation('')}>Cancel</AlertDialogCancel>
+                    <AlertDialogCancel onClick={() => setDeleteConfirmation('')}>Cancel</Cancel>
                     <AlertDialogAction
                         onClick={handleDelete}
                         disabled={isDeleting || deleteConfirmation !== 'delete'}

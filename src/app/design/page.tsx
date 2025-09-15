@@ -293,6 +293,7 @@ function MockupTool() {
         img.src = e.target?.result as string;
       };
       reader.readAsDataURL(file);
+      event.target.value = '';
     }
   };
   
