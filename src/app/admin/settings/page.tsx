@@ -4,7 +4,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Rocket, Mail, ShoppingCart, Truck, CheckCircle, KeyRound, CreditCard, Building } from "lucide-react";
+import { Rocket, Mail, ShoppingCart, Truck, CheckCircle, KeyRound, CreditCard, Building, User } from "lucide-react";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -51,6 +51,7 @@ export default function AdminSettingsPage() {
   const [easyPostKey, setEasyPostKey] = useState('');
   const [squareAccessToken, setSquareAccessToken] = useState('');
   const [squareLocationId, setSquareLocationId] = useState('');
+  const [squareClientId, setSquareClientId] = useState('');
   const { toast } = useToast();
 
   const handleSaveEasyPostKey = async () => {
@@ -75,6 +76,7 @@ export default function AdminSettingsPage() {
     // In a real app, this would be a server action to securely save the keys.
     console.log("Saving Square Access Token:", squareAccessToken);
     console.log("Saving Square Location ID:", squareLocationId);
+    console.log("Saving Square Client ID:", squareClientId);
 
     await new Promise(resolve => setTimeout(resolve, 500));
 
@@ -167,6 +169,19 @@ export default function AdminSettingsPage() {
                                 <CollapsibleContent>
                                     <div className="p-6 bg-muted/50 rounded-lg">
                                         <div className="space-y-6">
+                                            <div className="space-y-4">
+                                                <Label htmlFor="square-client-id">Square Client ID</Label>
+                                                <div className="flex items-center gap-2">
+                                                    <User className="h-5 w-5 text-muted-foreground" />
+                                                    <Input
+                                                        id="square-client-id"
+                                                        type="text"
+                                                        placeholder="sq0idp-..."
+                                                        value={squareClientId}
+                                                        onChange={(e) => setSquareClientId(e.target.value)}
+                                                    />
+                                                </div>
+                                            </div>
                                             <div className="space-y-4">
                                                 <Label htmlFor="square-access-token">Square Access Token</Label>
                                                 <div className="flex items-center gap-2">
