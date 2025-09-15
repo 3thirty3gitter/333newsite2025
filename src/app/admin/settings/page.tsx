@@ -4,7 +4,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Rocket, Mail, ShoppingCart, Truck, CheckCircle, KeyRound } from "lucide-react";
+import { Rocket, Mail, ShoppingCart, Truck, CheckCircle, KeyRound, CreditCard } from "lucide-react";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,7 +36,13 @@ const initialIntegrations = [
         name: "EasyPost",
         description: "Streamline your shipping and fulfillment process.",
         icon: <Truck className="h-6 w-6" />,
-        connected: false, // This will be updated based on server status
+        connected: false,
+    },
+    {
+        name: "Square",
+        description: "Connect your Square account to process payments.",
+        icon: <CreditCard className="h-6 w-6" />,
+        connected: false,
     }
 ]
 
