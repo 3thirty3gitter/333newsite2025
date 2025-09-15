@@ -155,7 +155,6 @@ export function ProductClientPage({ product }: { product: Product }) {
             <p className="text-muted-foreground leading-relaxed">{product.longDescription}</p>
             
             <div className="mt-auto pt-6 space-y-4">
-                <Button size="lg" className="w-full" onClick={handleAddToCart}>Add to Cart</Button>
                 <Button size="lg" variant="outline" className="w-full" asChild>
                   <Link href={`/design?productId=${product.id}`}>
                       <Pencil className="mr-2" />
