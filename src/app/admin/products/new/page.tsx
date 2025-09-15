@@ -23,6 +23,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Switch } from '@/components/ui/switch';
 import { generateProductDetails } from '@/ai/flows/generate-product-details';
 import { scrapeProductUrl } from '@/ai/flows/scrape-product-url';
+import { fetchAndUploadImage } from '@/ai/flows/fetch-and-upload-image';
 
 const variantOptionSchema = z.object({
   value: z.string().min(1, 'Value cannot be empty.'),
@@ -342,15 +343,33 @@ export default function NewProductPage() {
         form.setValue('name', result.name ?? '', { shouldDirty: true });
         form.setValue('description', result.description ?? '', { shouldDirty: true });
         form.setValue('longDescription', result.longDescription ?? '', { shouldDirty: true });
-        
-        const decodedImages = (result.images || []).map(url => decodeHtmlEntities(url));
         form.setValue('variants', Array.isArray(result.variants) ? result.variants : [], { shouldDirty: true });
-        form.setValue('images', Array.isArray(decodedImages) ? decodedImages : [], { shouldDirty: true });
         
         toast({
           title: 'Content Imported',
-          description: 'Product data has been imported from the URL.',
+          description: 'Product data has been imported. Now fetching images.',
         });
+
+        if (result.images && result.images.length > 0) {
+            const decodedImageUrls = (result.images || []).map(url => decodeHtmlEntities(url));
+
+            const imagePromises = decodedImageUrls.map(url => fetchAndUploadImage({ url }));
+            const settledImages = await Promise.allSettled(imagePromises);
+
+            const successfulUrls = settledImages
+                .filter(res => res.status === 'fulfilled')
+                .map(res => (res as PromiseFulfilledResult<{newUrl: string}>).value.newUrl);
+            
+            const failedCount = settledImages.length - successfulUrls.length;
+
+            form.setValue('images', successfulUrls, { shouldDirty: true });
+            
+            if (failedCount > 0) {
+              toast({ variant: 'destructive', title: 'Image Import Incomplete', description: `${failedCount} out of ${settledImages.length} images failed to import.`});
+            } else {
+              toast({ title: 'Images Imported', description: `${successfulUrls.length} images were successfully imported.`});
+            }
+        }
       } else {
         throw new Error('Scraper returned no result.');
       }
