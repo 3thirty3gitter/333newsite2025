@@ -9,9 +9,53 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import type { Product } from '@/lib/types';
+import type { Product as AppProduct } from '@/lib/types';
+
+const VariantOptionSchema = z.object({
+  value: z.string().describe('e.g., "Small", "Red"'),
+  image: z.string().url().optional().describe('An image URL associated with this specific variant option, if available.'),
+});
+
+const VariantSchema = z.object({
+    type: z.string().describe('e.g., "Size", "Color"'),
+    options: z.array(VariantOptionSchema),
+});
+
+const InventoryItemSchema = z.object({
+    id: z.string().describe('Combination of variant values, e.g., "Small-Red"'),
+    price: z.number(),
+    stock: z.number(),
+    sku: z.string().optional(),
+    barcode: z.string().optional(),
+    grams: z.number().optional(),
+});
+
+const ProductSchema = z.object({
+  name: z.string(),
+  handle: z.string(),
+  description: z.string(),
+  longDescription: z.string(),
+  price: z.number(),
+  images: z.array(z.string().url()),
+  category: z.string(),
+  vendor: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  variants: z.array(VariantSchema),
+  inventory: z.array(InventoryItemSchema),
+  status: z.enum(['active', 'draft']),
+  compareAtPrice: z.number().nullable().optional(),
+  costPerItem: z.number().nullable().optional(),
+  isTaxable: z.boolean(),
+  trackQuantity: z.boolean(),
+  allowOutOfStockPurchase: z.boolean(),
+  seoTitle: z.string().optional(),
+  seoDescription: z.string().optional(),
+});
+
+export type Product = z.infer<typeof ProductSchema>;
 
 const PRODUCT_TYPE_DEFINITION = `
+// Note: This is a simplified version for the AI. The full schema is more complex.
 export type Product = {
   id: string; // You should NOT generate this. It's assigned by the database.
   name: string;
@@ -23,8 +67,21 @@ export type Product = {
   category: string;
   vendor?: string;
   tags?: string[];
-  variants: Variant[];
-  inventory: InventoryItem[];
+  variants: {
+    type: string; // e.g., "Size", "Color"
+    options: {
+        value: string; // e.g., "Small", "Red"
+        image?: string; 
+    }[];
+  }[];
+  inventory: {
+    id: string; // Combination of variant values, e.g., "Small-Red"
+    price: number;
+    stock: number;
+    sku?: string;
+    barcode?: string;
+    grams?: number;
+  }[];
   status: 'active' | 'draft';
   compareAtPrice?: number | null;
   costPerItem?: number | null;
@@ -34,25 +91,6 @@ export type Product = {
   seoTitle?: string;
   seoDescription?: string;
 };
-
-export type Variant = {
-    type: string; // e.g., "Size", "Color"
-    options: VariantOption[];
-}
-
-export type VariantOption = {
-    value: string; // e.g., "Small", "Red"
-    image?: string; 
-}
-
-export type InventoryItem = {
-    id: string; // Combination of variant values, e.g., "Small-Red"
-    price: number;
-    stock: number;
-    sku?: string;
-    barcode?: string;
-    grams?: number;
-}
 `;
 
 
@@ -63,7 +101,7 @@ export type IntelligentProductImportInput = z.infer<typeof IntelligentProductImp
 
 // The output will be a list of products that can be directly used in our app
 const IntelligentProductImportOutputSchema = z.object({
-  products: z.array(z.custom<Omit<Product, 'id'>>()),
+  products: z.array(ProductSchema),
 });
 export type IntelligentProductImportOutput = z.infer<typeof IntelligentProductImportOutputSchema>;
 

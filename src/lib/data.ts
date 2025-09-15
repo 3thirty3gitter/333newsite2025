@@ -94,13 +94,13 @@ export async function addProduct(product: Omit<Product, 'id'>): Promise<string> 
   return docRef.id;
 }
 
-export async function importProducts(products: Omit<Product, 'id'>[]): Promise<void> {
+export async function importProducts(products: Product[]): Promise<void> {
     const batch = writeBatch(db);
     const productsCol = collection(db, 'products');
     
     products.forEach(product => {
         const docRef = doc(productsCol);
-        const newProduct = { ...product };
+        const newProduct: any = { ...product };
         if (!newProduct.images || newProduct.images.length === 0) {
           newProduct.images = [`https://picsum.photos/600/600?random=${Math.floor(Math.random() * 1000)}`];
         }
