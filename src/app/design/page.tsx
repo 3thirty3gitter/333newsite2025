@@ -653,10 +653,10 @@ function MockupTool() {
                                             src={image}
                                             alt={`Product view ${index + 1}`}
                                             fill
-                                            className="object-cover"
+                                            className="object-cover z-0"
                                             sizes="10vw"
                                         />
-                                        <div className="absolute inset-0 overflow-hidden" style={{ transform: `scale(${thumbnailScale})`, transformOrigin: 'top left' }}>
+                                        <div className="absolute inset-0 overflow-hidden z-10" style={{ transform: `scale(${thumbnailScale})`, transformOrigin: 'top left' }}>
                                             <div className='relative' style={{ width: canvasRef.current?.offsetWidth, height: canvasRef.current?.offsetHeight}}>
                                                 {designForThumbnail.imageElements.map(el => (
                                                     <div key={el.id} className="absolute" style={{
