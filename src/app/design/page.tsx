@@ -4,6 +4,7 @@
 
 import { Suspense, useEffect, useState, useRef, useMemo } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
+import ReactDOM from 'react-dom';
 import { getProductById, getProducts } from '@/lib/data';
 import type { Product, Variant } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -46,6 +47,48 @@ type DesignViewState = {
 type AllDesignsState = {
     [imageUrl: string]: DesignViewState;
 }
+
+// A component to render a single design view for capture, without any interactive elements
+const CaptureComponent = ({ baseImageUrl, design, width, height }: { baseImageUrl: string, design: DesignViewState, width: number, height: number }) => (
+    <div style={{ position: 'relative', width, height }}>
+        <Image
+            src={baseImageUrl}
+            alt="Product Base"
+            layout="fill"
+            objectFit="contain"
+            crossOrigin="anonymous"
+        />
+        {design.imageElements.map((imgEl, index) => (
+            <div key={imgEl.id} style={{
+                position: 'absolute',
+                left: `${imgEl.position.x}px`,
+                top: `${imgEl.position.y}px`,
+                width: `${imgEl.size.width}px`,
+                height: `${imgEl.size.height}px`,
+                transform: `rotate(${imgEl.rotation}deg)`,
+                zIndex: index + 1,
+            }}>
+                <Image src={imgEl.src} alt="" layout="fill" objectFit="contain" crossOrigin="anonymous" />
+            </div>
+        ))}
+        {design.textElements.map((txtEl, index) => (
+            <div key={txtEl.id} style={{
+                position: 'absolute',
+                left: `${txtEl.position.x}px`,
+                top: `${txtEl.position.y}px`,
+                fontSize: `${txtEl.fontSize}px`,
+                color: '#000000',
+                textShadow: '1px 1px 2px #ffffff',
+                transform: `rotate(${txtEl.rotation}deg)`,
+                zIndex: design.imageElements.length + index + 1,
+                whiteSpace: 'nowrap',
+            }}>
+                {txtEl.text}
+            </div>
+        ))}
+    </div>
+);
+
 
 function MockupTool() {
   const router = useRouter();
@@ -360,32 +403,44 @@ function MockupTool() {
     }
     
     setIsProcessing(true);
-
+    const captureContainer = document.createElement('div');
+    captureContainer.style.position = 'fixed';
+    captureContainer.style.left = '-9999px';
+    document.body.appendChild(captureContainer);
+    
     try {
-        const designedViews = Object.keys(designs).filter(imageUrl => 
-            designs[imageUrl].imageElements.length > 0 || designs[imageUrl].textElements.length > 0
-        );
-
         const flattenedImages: { [imageUrl: string]: string } = {};
+        const canvasRect = canvasRef.current.getBoundingClientRect();
 
-        for (const imageUrl of designedViews) {
-            // Temporarily switch the view to render it for capture
-            setActiveImageUrl(imageUrl);
+        const allViews = product.images || [];
 
-            // Give React a moment to render the view
-            await new Promise(resolve => setTimeout(resolve, 50));
+        for (const imageUrl of allViews) {
+            const designForView = designs[imageUrl] || { textElements: [], imageElements: [] };
+
+            const node = document.createElement('div');
+            captureContainer.appendChild(node);
             
-            if (canvasRef.current) {
-                const dataUrl = await htmlToImage.toPng(canvasRef.current, {
-                    // This will embed images from other origins
-                    fetchRequestInit: { mode: 'cors', cache: 'no-cache' },
-                    // Make it higher quality
-                    pixelRatio: 2,
-                    // This will prevent the library from trying to fetch and parse external font stylesheets
-                    skipFonts: true,
-                });
-                flattenedImages[imageUrl] = dataUrl;
-            }
+            await new Promise<void>(resolve => {
+                ReactDOM.render(
+                    <CaptureComponent 
+                        baseImageUrl={imageUrl} 
+                        design={designForView} 
+                        width={canvasRect.width}
+                        height={canvasRect.height}
+                    />, 
+                    node,
+                    () => resolve()
+                );
+            });
+
+            const dataUrl = await htmlToImage.toPng(node, {
+                fetchRequestInit: { mode: 'cors', cache: 'no-cache' },
+                pixelRatio: 2,
+                skipFonts: true,
+                width: canvasRect.width,
+                height: canvasRect.height,
+            });
+            flattenedImages[imageUrl] = dataUrl;
         }
         
         const designData = {
@@ -393,7 +448,7 @@ function MockupTool() {
             selectedSize,
             selectedColor,
             productName: product.name,
-            flattenedImages, // Pass the captured images
+            flattenedImages,
         };
         
         localStorage.setItem('customDesign', JSON.stringify(designData));
@@ -408,10 +463,7 @@ function MockupTool() {
         });
     } finally {
         setIsProcessing(false);
-         // Restore the original active image view
-        if (product.images && product.images.length > 0) {
-           setActiveImageUrl(product.images[0]);
-        }
+        document.body.removeChild(captureContainer);
     }
   };
 
@@ -641,7 +693,6 @@ function MockupTool() {
                     <div className="grid grid-cols-5 gap-4">
                         {product.images.map((image, index) => {
                             const designForThumbnail = designs[image] || { textElements: [], imageElements: [] };
-                            const allThumbnailElements = [...designForThumbnail.imageElements, ...designForThumbnail.textElements];
                             return (
                                 <div key={index} className="relative">
                                     <button
@@ -658,39 +709,30 @@ function MockupTool() {
                                             className="object-cover"
                                             sizes="10vw"
                                         />
-                                        <div className="absolute inset-0">
-                                            {allThumbnailElements.map((el, elIndex) => {
-                                                if (el.type === 'image') {
-                                                    return (
-                                                         <div key={el.id} className="absolute" style={{
-                                                            left: el.position.x * thumbnailScale,
-                                                            top: el.position.y * thumbnailScale,
-                                                            width: el.size.width * thumbnailScale,
-                                                            height: el.size.height * thumbnailScale,
-                                                            transform: `rotate(${el.rotation}deg)`,
-                                                            zIndex: elIndex + 1,
-                                                        }}>
-                                                            <Image src={el.src} alt="" layout="fill" className="object-contain pointer-events-none" />
-                                                        </div>
-                                                    )
-                                                }
-                                                if (el.type === 'text') {
-                                                    return (
-                                                        <div key={el.id} className="absolute whitespace-nowrap" style={{
-                                                            left: el.position.x * thumbnailScale,
-                                                            top: el.position.y * thumbnailScale,
-                                                            fontSize: el.fontSize * thumbnailScale,
-                                                            color: '#000000',
-                                                            textShadow: `0.5px 0.5px 1px #ffffff`,
-                                                            transform: `rotate(${el.rotation}deg)`,
-                                                            zIndex: elIndex + 1,
-                                                        }}>
-                                                            {el.text}
-                                                        </div>
-                                                    )
-                                                }
-                                                return null;
-                                            })}
+                                        <div className="absolute inset-0 z-10">
+                                            {designForThumbnail.imageElements.map((el) => (
+                                                 <div key={el.id} className="absolute" style={{
+                                                    left: el.position.x * thumbnailScale,
+                                                    top: el.position.y * thumbnailScale,
+                                                    width: el.size.width * thumbnailScale,
+                                                    height: el.size.height * thumbnailScale,
+                                                    transform: `rotate(${el.rotation}deg)`,
+                                                }}>
+                                                    <Image src={el.src} alt="" layout="fill" className="object-contain pointer-events-none" />
+                                                </div>
+                                            ))}
+                                            {designForThumbnail.textElements.map((el) => (
+                                                <div key={el.id} className="absolute whitespace-nowrap" style={{
+                                                    left: el.position.x * thumbnailScale,
+                                                    top: el.position.y * thumbnailScale,
+                                                    fontSize: el.fontSize * thumbnailScale,
+                                                    color: '#000000',
+                                                    textShadow: `0.5px 0.5px 1px #ffffff`,
+                                                    transform: `rotate(${el.rotation}deg)`,
+                                                }}>
+                                                    {el.text}
+                                                </div>
+                                            ))}
                                         </div>
                                     </button>
                                 </div>
@@ -713,3 +755,4 @@ export default function DesignPage() {
         </Suspense>
     )
 }
+
