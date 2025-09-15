@@ -9,3 +9,4 @@ import '@/ai/flows/generate-hero-text.ts';
 import '@/ai/flows/generate-product-details.ts';
 import '@/ai/flows/scrape-product-url.ts';
 import '@/ai/flows/fetch-and-upload-image.ts';
+import '@/ai/flows/intelligent-product-import.ts';
