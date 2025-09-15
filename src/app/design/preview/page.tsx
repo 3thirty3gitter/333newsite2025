@@ -60,11 +60,18 @@ function PreviewPage() {
     
 
     const handleAddToCart = () => {
-        if (product) {
-            // Here you would create a composite image of the design + product
-            // and add special properties to the cart item.
-            // For now, we'll just add the base product.
-            addToCart(product);
+        if (product && design) {
+            // For a custom product, you might have different logic for price
+            // or generate a unique composite image.
+            // For now, we use the base product's info and first design image.
+            const representativeImage = Object.values(design.flattenedImages)[0] || product.images[0];
+
+            addToCart({
+                product: product,
+                price: product.price, // Or a custom price
+                image: representativeImage,
+                variantLabel: `Custom - ${design.selectedSize}${design.selectedColor ? ` / ${design.selectedColor}` : ''}`
+            });
             toast({
                 title: "Custom Product Added!",
                 description: `${product.name} (${design?.selectedSize} / ${design?.selectedColor}) has been added to your cart.`
