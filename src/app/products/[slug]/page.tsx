@@ -6,9 +6,8 @@ import Image from 'next/image';
 import { notFound, useParams } from 'next/navigation';
 import { getProductBySlug, getProductById } from '@/lib/data';
 import { Button } from '@/components/ui/button';
-import { useCart } from '@/context/CartProvider';
 import { useHistory } from '@/context/HistoryProvider';
-import { ShoppingCart, Star, Pencil, FileText } from 'lucide-react';
+import { Star, Pencil, FileText } from 'lucide-react';
 import { ProductRecommendations } from '@/components/products/ProductRecommendations';
 import { Separator } from '@/components/ui/separator';
 import type { Product, Variant, VariantOption } from '@/lib/types';
@@ -55,7 +54,6 @@ function VariantSelector({ variant, selectedOptions, onOptionSelect }: { variant
 export default function ProductPage() {
   const params = useParams();
   const slug = params.slug as string;
-  const { addToCart } = useCart();
   const { toast } = useToast();
   const { addToHistory } = useHistory();
   const [product, setProduct] = useState<Product | null>(null);
@@ -130,28 +128,6 @@ export default function ProductPage() {
     
     return product.images[0];
   }, [product, selectedOptions]);
-
-  const handleAddToCart = () => {
-    if (!product) return;
-
-    if(product.variants.length > 0 && !selectedVariantCombination) {
-        toast({
-            variant: "destructive",
-            title: "Please select options",
-            description: "You must select all product options before adding to cart.",
-        });
-        return;
-    }
-
-    addToCart({
-        product,
-        variantId: selectedVariantCombination || undefined,
-        variantLabel: Object.values(selectedOptions).join(' / '),
-        price: displayPrice,
-        image: displayImage,
-    });
-  }
-
 
   if (loading) {
     return (
@@ -228,10 +204,6 @@ export default function ProductPage() {
             <p className="text-muted-foreground leading-relaxed">{product.longDescription}</p>
             
             <div className="mt-auto pt-6 space-y-4">
-                <Button size="lg" className="w-full" onClick={handleAddToCart}>
-                    <ShoppingCart className="mr-2" />
-                    Add to Cart
-                </Button>
                 <Button size="lg" variant="outline" className="w-full" asChild>
                   <Link href={`/design?productId=${product.id}`}>
                       <Pencil className="mr-2" />
