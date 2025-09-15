@@ -97,4 +97,3 @@ export function ProductRecommendations({ currentProductId }: ProductRecommendati
     </div>
   );
 }
-

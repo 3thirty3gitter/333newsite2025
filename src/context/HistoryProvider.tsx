@@ -1,6 +1,7 @@
+
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 
 interface HistoryContextType {
   viewingHistory: string[];
@@ -35,13 +36,13 @@ export const HistoryProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [viewingHistory, isLoaded]);
 
-  const addToHistory = (productId: string) => {
+  const addToHistory = useCallback((productId: string) => {
     setViewingHistory((prevHistory) => {
       const updatedHistory = [productId, ...prevHistory.filter(id => id !== productId)];
       // Keep history to a reasonable size
       return updatedHistory.slice(0, 20);
     });
-  };
+  }, []);
 
   return (
     <HistoryContext.Provider value={{ viewingHistory, addToHistory }}>
