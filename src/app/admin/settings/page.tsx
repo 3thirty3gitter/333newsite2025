@@ -4,7 +4,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Rocket, Mail, ShoppingCart, Truck, CheckCircle, KeyRound, CreditCard } from "lucide-react";
+import { Rocket, Mail, ShoppingCart, Truck, CheckCircle, KeyRound, CreditCard, Building } from "lucide-react";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,6 +49,8 @@ const initialIntegrations = [
 export default function AdminSettingsPage() {
   const [integrations, setIntegrations] = useState(initialIntegrations);
   const [easyPostKey, setEasyPostKey] = useState('');
+  const [squareAccessToken, setSquareAccessToken] = useState('');
+  const [squareLocationId, setSquareLocationId] = useState('');
   const { toast } = useToast();
 
   const handleSaveEasyPostKey = async () => {
@@ -66,6 +68,23 @@ export default function AdminSettingsPage() {
     toast({
         title: "EasyPost Connected",
         description: "Your API key has been saved securely."
+    });
+  }
+
+  const handleSaveSquareKeys = async () => {
+    // In a real app, this would be a server action to securely save the keys.
+    console.log("Saving Square Access Token:", squareAccessToken);
+    console.log("Saving Square Location ID:", squareLocationId);
+
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    setIntegrations(prev => prev.map(int => 
+      int.name === "Square" ? { ...int, connected: true } : int
+    ));
+    
+    toast({
+        title: "Square Connected",
+        description: "Your credentials have been saved securely."
     });
   }
 
@@ -103,7 +122,7 @@ export default function AdminSettingsPage() {
                                     <p className="font-medium">{integration.name}</p>
                                     <p className="text-sm text-muted-foreground">{integration.description}</p>
                                 </div>
-                                {integration.name === "EasyPost" ? (
+                                {(integration.name === "EasyPost" || integration.name === "Square") ? (
                                     <CollapsibleTrigger asChild>
                                         <Button variant={integration.connected ? 'secondary' : 'outline'}>
                                             {integration.connected ? 'Manage' : 'Connect'}
@@ -136,6 +155,49 @@ export default function AdminSettingsPage() {
                                                     <Button variant="ghost">Cancel</Button>
                                                 </CollapsibleTrigger>
                                                 <Button onClick={handleSaveEasyPostKey}>
+                                                    Save & Connect
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </CollapsibleContent>
+                            )}
+
+                            {integration.name === 'Square' && (
+                                <CollapsibleContent>
+                                    <div className="p-6 bg-muted/50 rounded-lg">
+                                        <div className="space-y-6">
+                                            <div className="space-y-4">
+                                                <Label htmlFor="square-access-token">Square Access Token</Label>
+                                                <div className="flex items-center gap-2">
+                                                    <KeyRound className="h-5 w-5 text-muted-foreground" />
+                                                    <Input
+                                                        id="square-access-token"
+                                                        type="password"
+                                                        placeholder="EAAA… "
+                                                        value={squareAccessToken}
+                                                        onChange={(e) => setSquareAccessToken(e.target.value)}
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="space-y-4">
+                                                <Label htmlFor="square-location-id">Square Location ID</Label>
+                                                <div className="flex items-center gap-2">
+                                                    <Building className="h-5 w-5 text-muted-foreground" />
+                                                    <Input
+                                                        id="square-location-id"
+                                                        type="text"
+                                                        placeholder="L… "
+                                                        value={squareLocationId}
+                                                        onChange={(e) => setSquareLocationId(e.target.value)}
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="flex justify-end gap-2">
+                                                <CollapsibleTrigger asChild>
+                                                    <Button variant="ghost">Cancel</Button>
+                                                </CollapsibleTrigger>
+                                                <Button onClick={handleSaveSquareKeys}>
                                                     Save & Connect
                                                 </Button>
                                             </div>
