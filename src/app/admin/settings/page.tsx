@@ -4,7 +4,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Rocket, Mail, ShoppingCart } from "lucide-react";
+import { Rocket, Mail, ShoppingCart, Truck } from "lucide-react";
 
 const integrations = [
     {
@@ -23,6 +23,12 @@ const integrations = [
         name: "Shopify",
         description: "Import products and sync orders with your Shopify store.",
         icon: <ShoppingCart className="h-6 w-6" />,
+        connected: false,
+    },
+    {
+        name: "EasyPost",
+        description: "Streamline your shipping and fulfillment process.",
+        icon: <Truck className="h-6 w-6" />,
         connected: false,
     }
 ]
