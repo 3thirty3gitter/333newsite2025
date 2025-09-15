@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
 import type { CartItem, Product } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
@@ -29,7 +29,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const { toast } = useToast();
 
-  const addToCart = ({ product, variantId, variantLabel, price, image }: AddToCartParams) => {
+  const addToCart = useCallback(({ product, variantId, variantLabel, price, image }: AddToCartParams) => {
     const cartItemId = `${product.id}${variantId ? `-${variantId}` : ''}`;
     
     setCartItems((prevItems) => {
@@ -53,13 +53,13 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       title: 'Added to cart',
       description: `${product.name} ${variantLabel ? `(${variantLabel})` : ''} has been added.`,
     });
-  };
+  }, [toast]);
 
-  const removeFromCart = (cartItemId: string) => {
+  const removeFromCart = useCallback((cartItemId: string) => {
     setCartItems((prevItems) => prevItems.filter((item) => item.id !== cartItemId));
-  };
+  }, []);
 
-  const updateQuantity = (cartItemId: string, quantity: number) => {
+  const updateQuantity = useCallback((cartItemId: string, quantity: number) => {
     if (quantity <= 0) {
       removeFromCart(cartItemId);
       return;
@@ -67,11 +67,11 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     setCartItems((prevItems) =>
       prevItems.map((item) => (item.id === cartItemId ? { ...item, quantity } : item))
     );
-  };
+  }, [removeFromCart]);
 
-  const clearCart = () => {
+  const clearCart = useCallback(() => {
     setCartItems([]);
-  };
+  }, []);
 
   const cartCount = cartItems.reduce((count, item) => count + item.quantity, 0);
   const cartTotal = cartItems.reduce((total, item) => total + item.price * item.quantity, 0);

@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { FormItem } from '@/components/ui/form';
 import { Button } from '../ui/button';
+import { useCart } from '@/context/CartProvider';
 
 function VariantSelector({ variant, selectedOptions, onOptionSelect }: { variant: Variant, selectedOptions: Record<string, string>, onOptionSelect: (type: string, value: string) => void }) {
     return (
@@ -46,6 +47,7 @@ function VariantSelector({ variant, selectedOptions, onOptionSelect }: { variant
 
 export function ProductClientPage({ product }: { product: Product }) {
   const { addToHistory } = useHistory();
+  const { addToCart } = useCart();
   const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false);
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
 
@@ -95,6 +97,20 @@ export function ProductClientPage({ product }: { product: Product }) {
     
     return product.images[0];
   }, [product, selectedOptions]);
+  
+  const handleAddToCart = () => {
+    if (!product) return;
+
+    const variantLabel = Object.values(selectedOptions).join(' / ');
+    
+    addToCart({
+      product: product,
+      price: displayPrice,
+      image: displayImage || product.images[0],
+      variantId: selectedVariantCombination || undefined,
+      variantLabel: variantLabel,
+    })
+  }
 
   return (
     <>
@@ -139,6 +155,7 @@ export function ProductClientPage({ product }: { product: Product }) {
             <p className="text-muted-foreground leading-relaxed">{product.longDescription}</p>
             
             <div className="mt-auto pt-6 space-y-4">
+                <Button size="lg" className="w-full" onClick={handleAddToCart}>Add to Cart</Button>
                 <Button size="lg" variant="outline" className="w-full" asChild>
                   <Link href={`/design?productId=${product.id}`}>
                       <Pencil className="mr-2" />
