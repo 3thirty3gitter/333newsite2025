@@ -640,6 +640,7 @@ function MockupTool() {
                     <div className="grid grid-cols-5 gap-4">
                         {product.images.map((image, index) => {
                             const designForThumbnail = designs[image] || { textElements: [], imageElements: [] };
+                            const allThumbnailElements = [...designForThumbnail.imageElements, ...designForThumbnail.textElements];
                             return (
                                 <div key={index} className="relative">
                                     <button
@@ -656,34 +657,39 @@ function MockupTool() {
                                             className="object-cover"
                                             sizes="10vw"
                                         />
-                                        <div className="absolute inset-0 overflow-hidden" style={{ transform: `scale(${thumbnailScale})`, transformOrigin: 'top left' }}>
-                                            <div className='relative' style={{ width: canvasRef.current?.offsetWidth, height: canvasRef.current?.offsetHeight}}>
-                                                {designForThumbnail.imageElements.map(el => (
-                                                    <div key={el.id} className="absolute" style={{
-                                                        left: el.position.x,
-                                                        top: el.position.y,
-                                                        width: el.size.width,
-                                                        height: el.size.height,
-                                                        transform: `rotate(${el.rotation}deg)`,
-                                                        zIndex: designForThumbnail.imageElements.findIndex(e => e.id === el.id) + 1
-                                                    }}>
-                                                        <Image src={el.src} alt="" layout="fill" className="object-contain pointer-events-none" />
-                                                    </div>
-                                                ))}
-                                                {designForThumbnail.textElements.map(el => (
-                                                    <div key={el.id} className="absolute whitespace-nowrap" style={{
-                                                        left: el.position.x,
-                                                        top: el.position.y,
-                                                        fontSize: el.fontSize,
-                                                        color: '#000000',
-                                                        textShadow: '0.5px 0.5px 1px #ffffff',
-                                                        transform: `rotate(${el.rotation}deg)`,
-                                                        zIndex: designForThumbnail.imageElements.length + designForThumbnail.textElements.findIndex(e => e.id === el.id) + 1,
-                                                    }}>
-                                                        {el.text}
-                                                    </div>
-                                                ))}
-                                            </div>
+                                        <div className="absolute inset-0">
+                                            {allThumbnailElements.map((el, elIndex) => {
+                                                if (el.type === 'image') {
+                                                    return (
+                                                         <div key={el.id} className="absolute" style={{
+                                                            left: el.position.x * thumbnailScale,
+                                                            top: el.position.y * thumbnailScale,
+                                                            width: el.size.width * thumbnailScale,
+                                                            height: el.size.height * thumbnailScale,
+                                                            transform: `rotate(${el.rotation}deg)`,
+                                                            zIndex: elIndex + 1,
+                                                        }}>
+                                                            <Image src={el.src} alt="" layout="fill" className="object-contain pointer-events-none" />
+                                                        </div>
+                                                    )
+                                                }
+                                                if (el.type === 'text') {
+                                                    return (
+                                                        <div key={el.id} className="absolute whitespace-nowrap" style={{
+                                                            left: el.position.x * thumbnailScale,
+                                                            top: el.position.y * thumbnailScale,
+                                                            fontSize: el.fontSize * thumbnailScale,
+                                                            color: '#000000',
+                                                            textShadow: `0.5px 0.5px 1px #ffffff`,
+                                                            transform: `rotate(${el.rotation}deg)`,
+                                                            zIndex: elIndex + 1,
+                                                        }}>
+                                                            {el.text}
+                                                        </div>
+                                                    )
+                                                }
+                                                return null;
+                                            })}
                                         </div>
                                     </button>
                                 </div>
