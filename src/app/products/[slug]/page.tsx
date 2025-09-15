@@ -20,6 +20,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { FormItem } from '@/components/ui/form';
 
 function VariantSelector({ variant, selectedOptions, onOptionSelect }: { variant: Variant, selectedOptions: Record<string, string>, onOptionSelect: (type: string, value: string) => void }) {
     const isColor = variant.type.toLowerCase().includes('color');
