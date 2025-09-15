@@ -149,10 +149,15 @@ const intelligentProductImportFlow = ai.defineFlow(
     outputSchema: IntelligentProductImportOutputSchema,
   },
   async (input) => {
-    const { output } = await intelligentProductImportPrompt(input);
-    if (!output) {
-      throw new Error("The AI model failed to process the CSV data. It might be in an unsupported format or empty.");
+    try {
+        const { output } = await intelligentProductImportPrompt(input);
+        if (!output) {
+        throw new Error("The AI model failed to process the CSV data. It might be in an unsupported format or empty.");
+        }
+        return output;
+    } catch (error: any) {
+        console.error("Error in intelligentProductImportFlow:", error);
+        throw new Error(`The AI model could not process the file. Please ensure the CSV is formatted correctly. Server error: ${error.message}`);
     }
-    return output;
   }
 );
