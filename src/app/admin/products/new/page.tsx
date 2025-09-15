@@ -20,7 +20,6 @@ import type { Collection, Variant, VariantOption } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import Image from 'next/image';
 import { Switch } from '@/components/ui/switch';
 import { generateProductDetails } from '@/ai/flows/generate-product-details';
 import { scrapeProductUrl } from '@/ai/flows/scrape-product-url';
@@ -344,7 +343,6 @@ export default function NewProductPage() {
         form.setValue('description', result.description ?? '', { shouldDirty: true });
         form.setValue('longDescription', result.longDescription ?? '', { shouldDirty: true });
         
-        // Defensively set variants and images
         const decodedImages = (result.images || []).map(url => decodeHtmlEntities(url));
         form.setValue('variants', Array.isArray(result.variants) ? result.variants : [], { shouldDirty: true });
         form.setValue('images', Array.isArray(decodedImages) ? decodedImages : [], { shouldDirty: true });
@@ -466,7 +464,7 @@ export default function NewProductPage() {
                                     </Button>
                                 </div>
                                 <FormControl>
-                                <Input placeholder="A brief, catchy description." {...field} />
+                                <Input placeholder="A brief, catchy description." {...field} value={field.value ?? ''} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -481,7 +479,7 @@ export default function NewProductPage() {
                                     <FormLabel>Full Description</FormLabel>
                                 </div>
                                 <FormControl>
-                                <Textarea placeholder="Describe the product in detail." {...field} />
+                                <Textarea placeholder="Describe the product in detail." {...field} value={field.value ?? ''} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -530,7 +528,7 @@ export default function NewProductPage() {
                                         <FormItem>
                                             <FormLabel>Compare-at price</FormLabel>
                                             <FormControl>
-                                                <Input type="number" step="0.01" placeholder="e.g., 159.99" {...field} />
+                                                <Input type="number" step="0.01" placeholder="e.g., 159.99" {...field} value={field.value ?? ''} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -561,7 +559,7 @@ export default function NewProductPage() {
                                     <FormItem>
                                         <FormLabel>Cost per item</FormLabel>
                                         <FormControl>
-                                            <Input type="number" step="0.01" placeholder="e.g., 50.00" {...field} />
+                                            <Input type="number" step="0.01" placeholder="e.g., 50.00" {...field} value={field.value ?? ''} />
                                         </FormControl>
                                         <FormDescription>Customers won’t see this.</FormDescription>
                                         <FormMessage />
@@ -693,7 +691,7 @@ export default function NewProductPage() {
                                                             control={form.control}
                                                             name={`inventory.${comboIndex}.sku`}
                                                             render={({ field }) => (
-                                                                <FormItem><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                                                                <FormItem><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
                                                             )}
                                                         />
                                                     </TableCell>
@@ -702,7 +700,7 @@ export default function NewProductPage() {
                                                             control={form.control}
                                                             name={`inventory.${comboIndex}.grams`}
                                                             render={({ field }) => (
-                                                                <FormItem><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                                                                <FormItem><FormControl><Input type="number" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
                                                             )}
                                                         />
                                                     </TableCell>
@@ -733,7 +731,7 @@ export default function NewProductPage() {
                                         </Button>
                                     </div>
                                     <FormControl>
-                                    <Input placeholder="e.g., The Best Astro-Grip Sneakers" {...field} />
+                                    <Input placeholder="e.g., The Best Astro-Grip Sneakers" {...field} value={field.value ?? ''} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -746,7 +744,7 @@ export default function NewProductPage() {
                                 <FormItem>
                                     <FormLabel>SEO Description</FormLabel>
                                     <FormControl>
-                                    <Textarea placeholder="A great description for search engines." {...field} />
+                                    <Textarea placeholder="A great description for search engines." {...field} value={field.value ?? ''} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -820,7 +818,7 @@ export default function NewProductPage() {
                                 <FormItem>
                                     <FormLabel>Vendor</FormLabel>
                                     <FormControl>
-                                    <Input placeholder="e.g., Nike, Adidas" {...field} />
+                                    <Input placeholder="e.g., Nike, Adidas" {...field} value={field.value ?? ''} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -833,7 +831,7 @@ export default function NewProductPage() {
                                 <FormItem>
                                     <FormLabel>Tags</FormLabel>
                                     <FormControl>
-                                    <Input placeholder="e.g., shoes, running, summer" {...field} />
+                                    <Input placeholder="e.g., shoes, running, summer" {...field} value={field.value ?? ''} />
                                     </FormControl>
                                     <FormDescription>Separate tags with a comma.</FormDescription>
                                     <FormMessage />
@@ -952,5 +950,3 @@ export default function NewProductPage() {
     </div>
   );
 }
-
-    
