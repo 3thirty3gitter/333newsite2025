@@ -84,8 +84,9 @@ export default function NewProductPage() {
   const [isLoadingCollections, setIsLoadingCollections] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isScraping, setIsScraping] = useState('');
+  const [isScraping, setIsScraping] = useState(false);
   const [scrapeUrl, setScrapeUrl] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
   const imageInputRef = useRef<HTMLInputElement>(null);
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
@@ -271,6 +272,27 @@ export default function NewProductPage() {
     dragItem.current = null;
     dragOverItem.current = null;
     form.setValue('images', currentImages, { shouldDirty: true });
+  };
+  
+  const handleAddImageUrl = () => {
+    if (imageUrl) {
+        try {
+            const url = new URL(imageUrl);
+            const currentImages = form.getValues('images') || [];
+            form.setValue('images', [...currentImages, url.href], { shouldDirty: true });
+            setImageUrl('');
+            toast({
+                title: 'Image Added',
+                description: 'The image has been added from the URL.',
+            });
+        } catch (error) {
+            toast({
+                variant: 'destructive',
+                title: 'Invalid URL',
+                description: 'Please enter a valid image URL.',
+            });
+        }
+    }
   };
 
 
@@ -867,6 +889,20 @@ export default function NewProductPage() {
                                         </FormItem>
                                     )}
                                 />
+                                 <div className="space-y-2">
+                                    <FormLabel>Or add by URL</FormLabel>
+                                    <div className="flex items-center space-x-2">
+                                        <Input
+                                            type="url"
+                                            placeholder="https://example.com/image.jpg"
+                                            value={imageUrl}
+                                            onChange={(e) => setImageUrl(e.target.value)}
+                                        />
+                                        <Button type="button" variant="outline" onClick={handleAddImageUrl}>
+                                            Add
+                                        </Button>
+                                    </div>
+                                </div>
                                 
                                 {imagePreviews.length > 0 && (
                                     <div className="grid grid-cols-3 gap-2">
@@ -916,3 +952,5 @@ export default function NewProductPage() {
     </div>
   );
 }
+
+    
