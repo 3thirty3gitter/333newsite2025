@@ -114,31 +114,32 @@ const intelligentProductImportPrompt = ai.definePrompt({
   input: { schema: IntelligentProductImportInputSchema },
   output: { schema: IntelligentProductImportOutputSchema },
   prompt: `
-    You are an expert data migration agent for the e-commerce company "3Thirty3".
-    Your only task is to analyze an arbitrary CSV file and map its data to the specific JSON structure required for 3Thirty3's products.
+    You are a highly specialized backend AI agent for the e-commerce company "3Thirty3". Your only role is to reliably transform any CSV file into a fully valid array of 3Thirty3 Product objects.
 
-    This is the strict target JSON structure for each product. You must adhere to this structure exactly.
-    Do NOT generate a top-level "id" field for the product; the database will assign it.
-    
+    This is the strict target JSON structure for each product. You must adhere to this structure exactly. Do NOT generate a top-level "id" for the product; the database will assign it.
+
     TARGET 3THIRTY3 PRODUCT SCHEMA:
     ${PRODUCT_TYPE_DEFINITION}
-    
-    You must intelligently map the columns from the source CSV to the fields in the target schema.
-    - Analyze the headers and a few rows to understand the data.
-    - If a column required by the schema is not in the source CSV, use a reasonable default (e.g., status: 'draft', isTaxable: true, empty strings/arrays for optional fields).
-    - Handle complex data transformations:
-      - If you see columns like "Image 1", "Image 2", etc., you must combine them into the 'images' array.
-      - If you see columns like "Option1 Name", "Option1 Value", or specific types like "Size", "Color", you must correctly create the 'variants' and 'inventory' arrays. 
-      - The 'inventory.id' field is critical. It MUST be a hyphenated combination of the variant option values for that inventory item (e.g., 'Small-Red', 'Large-Blue').
-      - A single row in the CSV might represent a single product variant. You need to group rows that belong to the same product. The "handle" or "product name" column is the best indicator for grouping multiple rows into a single product object.
-    - Be robust. If a row is clearly invalid or missing essential data like a name or price, skip it entirely. Do not include it in your output.
+
+    Your Requirements:
+    1.  Carefully analyze the CSV headers and data to determine which columns map to which schema fields.
+        -   Group multiple rows into a single product object when they share a common "handle" or "product name".
+        -   Combine all detected image columns (e.g., "Image 1", "Image 2", "Image Src") into a single "images" array.
+        -   Correctly construct the "variants" and "inventory" arrays from option columns like "Size", "Color", "Option1 Name", "Option1 Value", etc. The 'inventory.id' MUST be a hyphenated combination of the variant option values (e.g., 'Small-Red').
+    2.  If required fields are missing from the CSV, you MUST use these defaults:
+        -   status: "draft"
+        -   isTaxable: true
+        -   For other missing optional fields, use empty strings, nulls, or empty arrays as appropriate for the schema.
+    3.  For any row that cannot be reliably and completely mapped to a valid Product object, **you must skip it**. Return only products that fully fit the schema.
+    4.  Do not hallucinate or guess values. If a value isn't in the CSV, use a default or omit it if optional.
+    5.  Your final output must be an exact JSON object: { "products": [ ...validProductObjects ] }.
 
     Here is the CSV data you need to process:
-    
+
     CSV DATA:
     {{{csvData}}}
-    
-    Now, perform the mapping and return the data as a JSON object with a single key "products", which is an array of product objects conforming to the 3Thirty3 schema.
+
+    Now, perform the mapping and return the data as a JSON object with a single key "products".
   `,
 });
 
