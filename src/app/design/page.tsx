@@ -4,7 +4,7 @@
 
 import { Suspense, useEffect, useState, useRef, useMemo } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
-import ReactDOM from 'react-dom';
+import { createRoot } from 'react-dom/client';
 import { getProductById, getProducts } from '@/lib/data';
 import type { Product, Variant } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -54,7 +54,7 @@ const CaptureComponent = ({ baseImageUrl, design, width, height }: { baseImageUr
         <Image
             src={baseImageUrl}
             alt="Product Base"
-            layout="fill"
+            fill
             objectFit="contain"
             crossOrigin="anonymous"
         />
@@ -421,16 +421,17 @@ function MockupTool() {
             captureContainer.appendChild(node);
             
             await new Promise<void>(resolve => {
-                ReactDOM.render(
+                const root = createRoot(node);
+                root.render(
                     <CaptureComponent 
                         baseImageUrl={imageUrl} 
                         design={designForView} 
                         width={canvasRect.width}
                         height={canvasRect.height}
-                    />, 
-                    node,
-                    () => resolve()
+                    />
                 );
+                // A short delay to ensure render is complete before capture
+                setTimeout(resolve, 100);
             });
 
             const dataUrl = await htmlToImage.toPng(node, {
@@ -702,13 +703,15 @@ function MockupTool() {
                                         activeImageUrl === image ? "border-primary shadow-md" : "border-transparent hover:border-primary/50"
                                         )}
                                     >
-                                        <Image
-                                            src={image}
-                                            alt={`Product view ${index + 1}`}
-                                            fill
-                                            className="object-cover"
-                                            sizes="10vw"
-                                        />
+                                        <div className="absolute inset-0">
+                                            <Image
+                                                src={image}
+                                                alt={`Product view ${index + 1}`}
+                                                fill
+                                                className="object-cover"
+                                                sizes="10vw"
+                                            />
+                                        </div>
                                         <div className="absolute inset-0 z-10">
                                             {designForThumbnail.imageElements.map((el) => (
                                                  <div key={el.id} className="absolute" style={{
@@ -755,4 +758,3 @@ export default function DesignPage() {
         </Suspense>
     )
 }
-
