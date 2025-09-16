@@ -907,39 +907,39 @@ export default function EditProductPage() {
           
             <div className="flex justify-between items-center gap-4 mt-8">
                 <AlertDialog>
-                <AlertDialogTrigger asChild>
-                    <Button type="button" variant="destructive">
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete Product
-                    </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        This action cannot be undone. This will permanently delete this product.
-                        To confirm, please type <strong>delete</strong> below.
-                    </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <div className="my-2">
-                        <Input 
-                            type="text"
-                            placeholder="delete"
-                            value={deleteConfirmation}
-                            onChange={(e) => setDeleteConfirmation(e.target.value)}
-                            className="border-destructive focus-visible:ring-destructive"
-                        />
-                    </div>
-                    <AlertDialogFooter>
-                    <AlertDialogCancel onClick={() => setDeleteConfirmation('')}>Cancel</Cancel>
-                    <AlertDialogAction
-                        onClick={handleDelete}
-                        disabled={isDeleting || deleteConfirmation !== 'delete'}
-                    >
-                        {isDeleting ? 'Deleting...' : 'Continue'}
-                    </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
+                    <AlertDialogTrigger asChild>
+                        <Button type="button" variant="destructive">
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete Product
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete this product.
+                            To confirm, please type <strong>delete</strong> below.
+                        </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <div className="my-2">
+                            <Input 
+                                type="text"
+                                placeholder="delete"
+                                value={deleteConfirmation}
+                                onChange={(e) => setDeleteConfirmation(e.target.value)}
+                                className="border-destructive focus-visible:ring-destructive"
+                            />
+                        </div>
+                        <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setDeleteConfirmation('')}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleDelete}
+                            disabled={isDeleting || deleteConfirmation !== 'delete'}
+                        >
+                            {isDeleting ? 'Deleting...' : 'Continue'}
+                        </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
                 </AlertDialog>
                 <div className="flex gap-4">
                 <Button type="button" variant="outline" onClick={() => router.back()}>
@@ -955,3 +955,5 @@ export default function EditProductPage() {
     </div>
   );
 }
+
+    
