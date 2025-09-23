@@ -22,28 +22,23 @@ import * as htmlToImage from 'html-to-image';
 
 // A component to render a single design view for capture, without any interactive elements
 const CaptureComponent = ({ baseImageUrl, design, width, height, onReady }: { baseImageUrl: string, design: DesignViewState, width: number, height: number, onReady: () => void }) => {
-    const [loaded, setLoaded] = useState(false);
     const imagesToLoad = useMemo(() => design.imageElements.length, [design.imageElements]);
     const loadedImagesCount = useRef(0);
 
-    useEffect(() => {
-        setLoaded(false);
-        loadedImagesCount.current = 0;
-    }, [baseImageUrl]);
-    
     const handleBaseImageLoad = () => {
+        // If there are no design images, we're ready as soon as the base image loads.
         if (imagesToLoad === 0) {
-           setTimeout(onReady, 50);
+           setTimeout(onReady, 50); // Small timeout to ensure DOM is fully painted
         }
-    }
+    };
 
     const handleOverlayImageLoad = () => {
         loadedImagesCount.current += 1;
         if (loadedImagesCount.current >= imagesToLoad) {
-            setLoaded(true);
-            setTimeout(onReady, 50);
+            setTimeout(onReady, 50); // Small timeout to ensure DOM is fully painted
         }
     };
+
 
     return (
         <div style={{ position: 'relative', width, height }}>
@@ -418,15 +413,15 @@ function MockupTool() {
         const flattenedImages: { [imageUrl: string]: string } = {};
         const canvasRect = canvasRef.current.getBoundingClientRect();
         const allViews = product.images || [];
-
-        const node = document.createElement('div');
-        captureContainer.appendChild(node);
-        const root = createRoot(node);
         
         for (const imageUrl of allViews) {
             const designForView = designs[imageUrl] || { textElements: [], imageElements: [] };
             
+            const node = document.createElement('div');
+            captureContainer.appendChild(node);
+            
             const dataUrl = await new Promise<string>((resolve, reject) => {
+                const root = createRoot(node);
                  root.render(
                     <CaptureComponent 
                         baseImageUrl={imageUrl} 
@@ -438,13 +433,17 @@ function MockupTool() {
                                 const url = await htmlToImage.toPng(node, {
                                     fetchRequestInit: { mode: 'cors', cache: 'no-cache' },
                                     pixelRatio: 2,
-                                    skipFonts: true,
                                     width: canvasRect.width,
                                     height: canvasRect.height,
                                 });
                                 resolve(url);
                             } catch (e) {
                                 reject(e);
+                            } finally {
+                                root.unmount();
+                                if (node.parentNode) {
+                                    node.parentNode.removeChild(node);
+                                }
                             }
                         }}
                     />
@@ -713,7 +712,7 @@ function MockupTool() {
                                         activeImageUrl === image ? "border-primary shadow-md" : "border-transparent hover:border-primary/50"
                                         )}
                                     >
-                                        <div className="absolute inset-0">
+                                        <div className="absolute inset-0 z-0">
                                             <Image
                                                 src={image}
                                                 alt={`Product view ${index + 1}`}
@@ -723,8 +722,13 @@ function MockupTool() {
                                                 crossOrigin="anonymous"
                                             />
                                         </div>
-                                         <div className="absolute inset-0 z-10" style={{ transform: `scale(${thumbnailScale})`, transformOrigin: 'top left' }}>
-                                            <div className="relative" style={{ width: canvasRef.current?.offsetWidth, height: canvasRef.current?.offsetHeight }}>
+                                         <div className="absolute inset-0 z-10 overflow-hidden">
+                                            <div className="relative" style={{ 
+                                                width: canvasRef.current?.offsetWidth, 
+                                                height: canvasRef.current?.offsetHeight,
+                                                transform: `scale(${thumbnailScale})`, 
+                                                transformOrigin: 'top left' 
+                                            }}>
                                                 {designForThumbnail.imageElements.map((el) => (
                                                     <div key={el.id} className="absolute" style={{
                                                         left: el.position.x,
