@@ -414,14 +414,14 @@ function MockupTool() {
 
         const allViews = product.images || [];
 
+        const node = document.createElement('div');
+        captureContainer.appendChild(node);
+        const root = createRoot(node);
+
         for (const imageUrl of allViews) {
             const designForView = designs[imageUrl] || { textElements: [], imageElements: [] };
-
-            const node = document.createElement('div');
-            captureContainer.appendChild(node);
             
             await new Promise<void>(resolve => {
-                const root = createRoot(node);
                 root.render(
                     <CaptureComponent 
                         baseImageUrl={imageUrl} 
@@ -430,7 +430,6 @@ function MockupTool() {
                         height={canvasRect.height}
                     />
                 );
-                // A short delay to ensure render is complete before capture
                 setTimeout(resolve, 100);
             });
 
@@ -703,15 +702,13 @@ function MockupTool() {
                                         activeImageUrl === image ? "border-primary shadow-md" : "border-transparent hover:border-primary/50"
                                         )}
                                     >
-                                        <div className="absolute inset-0">
-                                            <Image
-                                                src={image}
-                                                alt={`Product view ${index + 1}`}
-                                                fill
-                                                className="object-cover"
-                                                sizes="10vw"
-                                            />
-                                        </div>
+                                        <Image
+                                            src={image}
+                                            alt={`Product view ${index + 1}`}
+                                            fill
+                                            className="object-cover"
+                                            sizes="10vw"
+                                        />
                                         <div className="absolute inset-0 z-10">
                                             {designForThumbnail.imageElements.map((el) => (
                                                  <div key={el.id} className="absolute" style={{
