@@ -49,45 +49,65 @@ type AllDesignsState = {
 }
 
 // A component to render a single design view for capture, without any interactive elements
-const CaptureComponent = ({ baseImageUrl, design, width, height }: { baseImageUrl: string, design: DesignViewState, width: number, height: number }) => (
-    <div style={{ position: 'relative', width, height }}>
-        <Image
-            src={baseImageUrl}
-            alt="Product Base"
-            fill
-            objectFit="contain"
-            crossOrigin="anonymous"
-        />
-        {design.imageElements.map((imgEl, index) => (
-            <div key={imgEl.id} style={{
-                position: 'absolute',
-                left: `${imgEl.position.x}px`,
-                top: `${imgEl.position.y}px`,
-                width: `${imgEl.size.width}px`,
-                height: `${imgEl.size.height}px`,
-                transform: `rotate(${imgEl.rotation}deg)`,
-                zIndex: index + 1,
-            }}>
-                <Image src={imgEl.src} alt="" layout="fill" objectFit="contain" crossOrigin="anonymous" />
-            </div>
-        ))}
-        {design.textElements.map((txtEl, index) => (
-            <div key={txtEl.id} style={{
-                position: 'absolute',
-                left: `${txtEl.position.x}px`,
-                top: `${txtEl.position.y}px`,
-                fontSize: `${txtEl.fontSize}px`,
-                color: '#000000',
-                textShadow: '1px 1px 2px #ffffff',
-                transform: `rotate(${txtEl.rotation}deg)`,
-                zIndex: design.imageElements.length + index + 1,
-                whiteSpace: 'nowrap',
-            }}>
-                {txtEl.text}
-            </div>
-        ))}
-    </div>
-);
+const CaptureComponent = ({ baseImageUrl, design, width, height, onReady }: { baseImageUrl: string, design: DesignViewState, width: number, height: number, onReady: () => void }) => {
+    const [loaded, setLoaded] = useState(false);
+    
+    useEffect(() => {
+        setLoaded(false);
+    }, [baseImageUrl]);
+
+    const handleImageLoad = () => {
+        setLoaded(true);
+        // Use a short timeout to ensure the browser has painted the new image
+        setTimeout(onReady, 50);
+    }
+
+    return (
+        <div style={{ position: 'relative', width, height }}>
+            <Image
+                src={baseImageUrl}
+                alt="Product Base"
+                fill
+                objectFit="contain"
+                crossOrigin="anonymous"
+                onLoad={handleImageLoad}
+                key={baseImageUrl} // Force re-mount on src change
+            />
+            {loaded && (
+                <>
+                    {design.imageElements.map((imgEl, index) => (
+                        <div key={imgEl.id} style={{
+                            position: 'absolute',
+                            left: `${imgEl.position.x}px`,
+                            top: `${imgEl.position.y}px`,
+                            width: `${imgEl.size.width}px`,
+                            height: `${imgEl.size.height}px`,
+                            transform: `rotate(${imgEl.rotation}deg)`,
+                            zIndex: index + 1,
+                        }}>
+                            <Image src={imgEl.src} alt="" layout="fill" objectFit="contain" crossOrigin="anonymous" />
+                        </div>
+                    ))}
+                    {design.textElements.map((txtEl, index) => (
+                        <div key={txtEl.id} style={{
+                            position: 'absolute',
+                            left: `${txtEl.position.x}px`,
+                            top: `${txtEl.position.y}px`,
+                            fontSize: `${txtEl.fontSize}px`,
+                            color: '#000000',
+                            textShadow: '1px 1px 2px #ffffff',
+                            transform: `rotate(${txtEl.rotation}deg)`,
+                            zIndex: design.imageElements.length + index + 1,
+                            whiteSpace: 'nowrap',
+                        }}>
+                            {txtEl.text}
+                        </div>
+                    ))}
+                </>
+            )}
+        </div>
+    );
+};
 
 
 function MockupTool() {
@@ -411,35 +431,40 @@ function MockupTool() {
     try {
         const flattenedImages: { [imageUrl: string]: string } = {};
         const canvasRect = canvasRef.current.getBoundingClientRect();
-
         const allViews = product.images || [];
 
         const node = document.createElement('div');
         captureContainer.appendChild(node);
         const root = createRoot(node);
-
+        
         for (const imageUrl of allViews) {
             const designForView = designs[imageUrl] || { textElements: [], imageElements: [] };
             
-            await new Promise<void>(resolve => {
-                root.render(
+            const dataUrl = await new Promise<string>((resolve, reject) => {
+                 root.render(
                     <CaptureComponent 
                         baseImageUrl={imageUrl} 
                         design={designForView} 
                         width={canvasRect.width}
                         height={canvasRect.height}
+                        onReady={async () => {
+                            try {
+                                const url = await htmlToImage.toPng(node, {
+                                    fetchRequestInit: { mode: 'cors', cache: 'no-cache' },
+                                    pixelRatio: 2,
+                                    skipFonts: true,
+                                    width: canvasRect.width,
+                                    height: canvasRect.height,
+                                });
+                                resolve(url);
+                            } catch (e) {
+                                reject(e);
+                            }
+                        }}
                     />
                 );
-                setTimeout(resolve, 100);
             });
 
-            const dataUrl = await htmlToImage.toPng(node, {
-                fetchRequestInit: { mode: 'cors', cache: 'no-cache' },
-                pixelRatio: 2,
-                skipFonts: true,
-                width: canvasRect.width,
-                height: canvasRect.height,
-            });
             flattenedImages[imageUrl] = dataUrl;
         }
         
@@ -702,13 +727,15 @@ function MockupTool() {
                                         activeImageUrl === image ? "border-primary shadow-md" : "border-transparent hover:border-primary/50"
                                         )}
                                     >
-                                        <Image
-                                            src={image}
-                                            alt={`Product view ${index + 1}`}
-                                            fill
-                                            className="object-cover"
-                                            sizes="10vw"
-                                        />
+                                        <div className="absolute inset-0">
+                                            <Image
+                                                src={image}
+                                                alt={`Product view ${index + 1}`}
+                                                fill
+                                                className="object-cover"
+                                                sizes="10vw"
+                                            />
+                                        </div>
                                         <div className="absolute inset-0 z-10">
                                             {designForThumbnail.imageElements.map((el) => (
                                                  <div key={el.id} className="absolute" style={{
