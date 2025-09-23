@@ -18,26 +18,34 @@ import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import * as htmlToImage from 'html-to-image';
+import { fontMap } from '@/lib/theme';
+import { getThemeSettings } from '@/lib/settings';
 
 
 // A component to render a single design view for capture, without any interactive elements
 const CaptureComponent = ({ baseImageUrl, design, width, height, onReady }: { baseImageUrl: string, design: DesignViewState, width: number, height: number, onReady: () => void }) => {
     const imagesToLoad = useMemo(() => design.imageElements.length, [design.imageElements]);
     const loadedImagesCount = useRef(0);
+    const [isBaseImageLoaded, setIsBaseImageLoaded] = useState(false);
 
     const handleBaseImageLoad = () => {
-        // If there are no design images, we're ready as soon as the base image loads.
-        if (imagesToLoad === 0) {
-           setTimeout(onReady, 50); // Small timeout to ensure DOM is fully painted
-        }
+        setIsBaseImageLoaded(true);
     };
 
     const handleOverlayImageLoad = () => {
         loadedImagesCount.current += 1;
         if (loadedImagesCount.current >= imagesToLoad) {
-            setTimeout(onReady, 50); // Small timeout to ensure DOM is fully painted
+            onReady();
         }
     };
+    
+    useEffect(() => {
+        if (isBaseImageLoaded) {
+            if (imagesToLoad === 0) {
+                 setTimeout(onReady, 50);
+            }
+        }
+    }, [isBaseImageLoaded, imagesToLoad, onReady]);
 
 
     return (
@@ -51,7 +59,7 @@ const CaptureComponent = ({ baseImageUrl, design, width, height, onReady }: { ba
                 onLoad={handleBaseImageLoad}
                 key={baseImageUrl} // Force re-mount on src change
             />
-            {design.imageElements.map((imgEl, index) => (
+            {isBaseImageLoaded && design.imageElements.map((imgEl, index) => (
                 <div key={imgEl.id} style={{
                     position: 'absolute',
                     left: `${imgEl.position.x}px`,
@@ -71,13 +79,14 @@ const CaptureComponent = ({ baseImageUrl, design, width, height, onReady }: { ba
                     />
                 </div>
             ))}
-            {design.textElements.map((txtEl, index) => (
+             {isBaseImageLoaded && design.textElements.map((txtEl, index) => (
                 <div key={txtEl.id} style={{
                     position: 'absolute',
                     left: `${txtEl.position.x}px`,
                     top: `${txtEl.position.y}px`,
                     fontSize: `${txtEl.fontSize}px`,
                     color: '#000000',
+                    fontFamily: 'var(--font-body)',
                     textShadow: '1px 1px 2px #ffffff',
                     transform: `rotate(${txtEl.rotation}deg)`,
                     zIndex: design.imageElements.length + index + 1,
@@ -100,6 +109,7 @@ function MockupTool() {
   
   const [product, setProduct] = useState<Product | null>(null);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [themeFonts, setThemeFonts] = useState({ headlineFont: fontMap['poppins'], bodyFont: fontMap['pt-sans']});
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -119,6 +129,17 @@ function MockupTool() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [thumbnailScale, setThumbnailScale] = useState(0.2);
+  
+  useEffect(() => {
+    async function fetchThemeFonts() {
+        const settings = await getThemeSettings();
+        setThemeFonts({
+            headlineFont: fontMap[settings.headlineFont] || fontMap['poppins'],
+            bodyFont: fontMap[settings.bodyFont] || fontMap['pt-sans'],
+        });
+    }
+    fetchThemeFonts();
+  }, []);
 
   useEffect(() => {
     const calculateScale = () => {
@@ -404,52 +425,62 @@ function MockupTool() {
     }
     
     setIsProcessing(true);
-    const captureContainer = document.createElement('div');
-    captureContainer.style.position = 'fixed';
-    captureContainer.style.left = '-9999px';
-    document.body.appendChild(captureContainer);
     
     try {
         const flattenedImages: { [imageUrl: string]: string } = {};
         const canvasRect = canvasRef.current.getBoundingClientRect();
         const allViews = product.images || [];
-        
+
+        const fontUrl = `https://fonts.googleapis.com/css2?family=${themeFonts.bodyFont.family.replace(/ /g, '+')}:wght@400;700&family=${themeFonts.headlineFont.family.replace(/ /g, '+')}:wght@400;700&display=swap`;
+        const fontCss = await fetch(fontUrl).then(res => res.text());
+
         for (const imageUrl of allViews) {
             const designForView = designs[imageUrl] || { textElements: [], imageElements: [] };
             
             const node = document.createElement('div');
-            captureContainer.appendChild(node);
-            
+            node.style.position = 'fixed';
+            node.style.left = '-9999px'; // Position off-screen
+            document.body.appendChild(node);
+            const root = createRoot(node);
+
             const dataUrl = await new Promise<string>((resolve, reject) => {
-                const root = createRoot(node);
+                const onReady = async () => {
+                    try {
+                        const url = await htmlToImage.toPng(node, {
+                            fetchRequestInit: { mode: 'cors', cache: 'no-cache' },
+                            pixelRatio: 2,
+                            width: canvasRect.width,
+                            height: canvasRect.height,
+                            fontEmbedCss: fontCss,
+                            filter: (element) => {
+                                // Exclude the original font link from the capture
+                                if (element.tagName === 'LINK' && (element as HTMLLinkElement).href.includes('fonts.googleapis.com')) {
+                                    return false;
+                                }
+                                return true;
+                            }
+                        });
+                        resolve(url);
+                    } catch (e) {
+                        reject(e);
+                    } finally {
+                        root.unmount();
+                        if (node.parentNode) {
+                            node.parentNode.removeChild(node);
+                        }
+                    }
+                };
+
                  root.render(
                     <CaptureComponent 
                         baseImageUrl={imageUrl} 
                         design={designForView} 
                         width={canvasRect.width}
                         height={canvasRect.height}
-                        onReady={async () => {
-                            try {
-                                const url = await htmlToImage.toPng(node, {
-                                    fetchRequestInit: { mode: 'cors', cache: 'no-cache' },
-                                    pixelRatio: 2,
-                                    width: canvasRect.width,
-                                    height: canvasRect.height,
-                                });
-                                resolve(url);
-                            } catch (e) {
-                                reject(e);
-                            } finally {
-                                root.unmount();
-                                if (node.parentNode) {
-                                    node.parentNode.removeChild(node);
-                                }
-                            }
-                        }}
+                        onReady={onReady}
                     />
                 );
             });
-
             flattenedImages[imageUrl] = dataUrl;
         }
         
@@ -469,11 +500,10 @@ function MockupTool() {
         toast({
             variant: 'destructive',
             title: 'Preview Generation Failed',
-            description: 'Could not generate preview images. Please try again.'
+            description: 'Could not generate preview images. Please try again.',
         });
     } finally {
         setIsProcessing(false);
-        document.body.removeChild(captureContainer);
     }
   };
 
@@ -613,6 +643,9 @@ function MockupTool() {
                 ref={canvasRef}
                 id="design-canvas"
                 className="aspect-square w-full bg-muted/50 rounded-lg flex items-center justify-center relative overflow-hidden"
+                style={{ 
+                    fontFamily: 'var(--font-body)', 
+                }}
               >
                 {isLoading ? (
                   <Skeleton className="w-full h-full" />
@@ -668,7 +701,7 @@ function MockupTool() {
                        <div
                           key={txtEl.id}
                           id={txtEl.id}
-                          className="absolute p-4 border border-dashed border-transparent hover:border-primary cursor-grab select-none group"
+                          className="absolute p-4 border border-dashed border-transparent hover:border-primary cursor-grab select-none group whitespace-nowrap"
                           style={{ 
                             left: `${txtEl.position.x}px`, 
                             top: `${txtEl.position.y}px`,
@@ -723,36 +756,29 @@ function MockupTool() {
                                             />
                                         </div>
                                          <div className="absolute inset-0 z-10 overflow-hidden">
-                                            <div className="relative" style={{ 
-                                                width: canvasRef.current?.offsetWidth, 
-                                                height: canvasRef.current?.offsetHeight,
-                                                transform: `scale(${thumbnailScale})`, 
-                                                transformOrigin: 'top left' 
-                                            }}>
-                                                {designForThumbnail.imageElements.map((el) => (
-                                                    <div key={el.id} className="absolute" style={{
-                                                        left: el.position.x,
-                                                        top: el.position.y,
-                                                        width: el.size.width,
-                                                        height: el.size.height,
-                                                        transform: `rotate(${el.rotation}deg)`,
-                                                    }}>
-                                                        <Image src={el.src} alt="" layout="fill" className="object-contain pointer-events-none" crossOrigin="anonymous" />
-                                                    </div>
-                                                ))}
-                                                {designForThumbnail.textElements.map((el) => (
-                                                    <div key={el.id} className="absolute whitespace-nowrap" style={{
-                                                        left: el.position.x,
-                                                        top: el.position.y,
-                                                        fontSize: el.fontSize,
-                                                        color: '#000000',
-                                                        textShadow: `0.5px 0.5px 1px #ffffff`,
-                                                        transform: `rotate(${el.rotation}deg)`,
-                                                    }}>
-                                                        {el.text}
-                                                    </div>
-                                                ))}
-                                            </div>
+                                            {designForThumbnail.imageElements.map((el) => (
+                                                <div key={el.id} className="absolute" style={{
+                                                    left: el.position.x * thumbnailScale,
+                                                    top: el.position.y * thumbnailScale,
+                                                    width: el.size.width * thumbnailScale,
+                                                    height: el.size.height * thumbnailScale,
+                                                    transform: `rotate(${el.rotation}deg)`,
+                                                }}>
+                                                    <Image src={el.src} alt="" layout="fill" className="object-contain pointer-events-none" crossOrigin="anonymous" />
+                                                </div>
+                                            ))}
+                                            {designForThumbnail.textElements.map((el) => (
+                                                <div key={el.id} className="absolute whitespace-nowrap" style={{
+                                                    left: el.position.x * thumbnailScale,
+                                                    top: el.position.y * thumbnailScale,
+                                                    fontSize: el.fontSize * thumbnailScale,
+                                                    color: '#000000',
+                                                    textShadow: `0.5px 0.5px 1px #ffffff`,
+                                                    transform: `rotate(${el.rotation}deg)`,
+                                                }}>
+                                                    {el.text}
+                                                </div>
+                                            ))}
                                         </div>
                                     </button>
                                 </div>
