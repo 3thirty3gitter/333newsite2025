@@ -132,4 +132,32 @@ export type ThemeSettings = {
   sections?: PageSection[]; // This will be deprecated in favor of pages.sections
 };
 
+export type DesignElement = {
+    id: string;
+    type: 'text' | 'image';
+    rotation: number;
+    position: { x: number, y: number };
+}
+
+export type TextElement = DesignElement & {
+    type: 'text';
+    text: string;
+    fontSize: number;
+};
+
+export type ImageElement = DesignElement & {
+    type: 'image';
+    src: string;
+    size: { width: number, height: number };
+    aspectRatio: number;
+};
+
+export type DesignViewState = {
+    textElements: TextElement[];
+    imageElements: ImageElement[];
+}
+
+export type AllDesignsState = {
+    [imageUrl: string]: DesignViewState;
+}
     

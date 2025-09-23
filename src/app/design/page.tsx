@@ -6,7 +6,7 @@ import { Suspense, useEffect, useState, useRef, useMemo } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { createRoot } from 'react-dom/client';
 import { getProductById, getProducts } from '@/lib/data';
-import type { Product, Variant } from '@/lib/types';
+import type { Product, Variant, DesignViewState, AllDesignsState, TextElement, ImageElement } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
@@ -19,48 +19,31 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import * as htmlToImage from 'html-to-image';
 
-type DesignElement = {
-    id: string;
-    type: 'text' | 'image';
-    rotation: number;
-    position: { x: number, y: number };
-}
-
-type TextElement = DesignElement & {
-    type: 'text';
-    text: string;
-    fontSize: number;
-};
-
-type ImageElement = DesignElement & {
-    type: 'image';
-    src: string;
-    size: { width: number, height: number };
-    aspectRatio: number;
-};
-
-type DesignViewState = {
-    textElements: TextElement[];
-    imageElements: ImageElement[];
-}
-
-type AllDesignsState = {
-    [imageUrl: string]: DesignViewState;
-}
 
 // A component to render a single design view for capture, without any interactive elements
 const CaptureComponent = ({ baseImageUrl, design, width, height, onReady }: { baseImageUrl: string, design: DesignViewState, width: number, height: number, onReady: () => void }) => {
     const [loaded, setLoaded] = useState(false);
-    
+    const imagesToLoad = useMemo(() => design.imageElements.length, [design.imageElements]);
+    const loadedImagesCount = useRef(0);
+
     useEffect(() => {
         setLoaded(false);
+        loadedImagesCount.current = 0;
     }, [baseImageUrl]);
-
-    const handleImageLoad = () => {
-        setLoaded(true);
-        // Use a short timeout to ensure the browser has painted the new image
-        setTimeout(onReady, 50);
+    
+    const handleBaseImageLoad = () => {
+        if (imagesToLoad === 0) {
+           setTimeout(onReady, 50);
+        }
     }
+
+    const handleOverlayImageLoad = () => {
+        loadedImagesCount.current += 1;
+        if (loadedImagesCount.current >= imagesToLoad) {
+            setLoaded(true);
+            setTimeout(onReady, 50);
+        }
+    };
 
     return (
         <div style={{ position: 'relative', width, height }}>
@@ -70,41 +53,44 @@ const CaptureComponent = ({ baseImageUrl, design, width, height, onReady }: { ba
                 fill
                 objectFit="contain"
                 crossOrigin="anonymous"
-                onLoad={handleImageLoad}
+                onLoad={handleBaseImageLoad}
                 key={baseImageUrl} // Force re-mount on src change
             />
-            {loaded && (
-                <>
-                    {design.imageElements.map((imgEl, index) => (
-                        <div key={imgEl.id} style={{
-                            position: 'absolute',
-                            left: `${imgEl.position.x}px`,
-                            top: `${imgEl.position.y}px`,
-                            width: `${imgEl.size.width}px`,
-                            height: `${imgEl.size.height}px`,
-                            transform: `rotate(${imgEl.rotation}deg)`,
-                            zIndex: index + 1,
-                        }}>
-                            <Image src={imgEl.src} alt="" layout="fill" objectFit="contain" crossOrigin="anonymous" />
-                        </div>
-                    ))}
-                    {design.textElements.map((txtEl, index) => (
-                        <div key={txtEl.id} style={{
-                            position: 'absolute',
-                            left: `${txtEl.position.x}px`,
-                            top: `${txtEl.position.y}px`,
-                            fontSize: `${txtEl.fontSize}px`,
-                            color: '#000000',
-                            textShadow: '1px 1px 2px #ffffff',
-                            transform: `rotate(${txtEl.rotation}deg)`,
-                            zIndex: design.imageElements.length + index + 1,
-                            whiteSpace: 'nowrap',
-                        }}>
-                            {txtEl.text}
-                        </div>
-                    ))}
-                </>
-            )}
+            {design.imageElements.map((imgEl, index) => (
+                <div key={imgEl.id} style={{
+                    position: 'absolute',
+                    left: `${imgEl.position.x}px`,
+                    top: `${imgEl.position.y}px`,
+                    width: `${imgEl.size.width}px`,
+                    height: `${imgEl.size.height}px`,
+                    transform: `rotate(${imgEl.rotation}deg)`,
+                    zIndex: index + 1,
+                }}>
+                    <Image 
+                        src={imgEl.src} 
+                        alt="" 
+                        layout="fill" 
+                        objectFit="contain" 
+                        crossOrigin="anonymous" 
+                        onLoad={handleOverlayImageLoad}
+                    />
+                </div>
+            ))}
+            {design.textElements.map((txtEl, index) => (
+                <div key={txtEl.id} style={{
+                    position: 'absolute',
+                    left: `${txtEl.position.x}px`,
+                    top: `${txtEl.position.y}px`,
+                    fontSize: `${txtEl.fontSize}px`,
+                    color: '#000000',
+                    textShadow: '1px 1px 2px #ffffff',
+                    transform: `rotate(${txtEl.rotation}deg)`,
+                    zIndex: design.imageElements.length + index + 1,
+                    whiteSpace: 'nowrap',
+                }}>
+                    {txtEl.text}
+                </div>
+            ))}
         </div>
     );
 };
@@ -300,11 +286,11 @@ function MockupTool() {
           updateElement(draggingElementId, { position: { x: newX, y: newY } });
       } else if (resizingElementId) {
          if (elementToUpdate.type === 'text') {
-            const newSize = Math.max(12, elementToUpdate.fontSize + (dx + dy) * 0.1);
+            const newSize = Math.max(12, (elementToUpdate as TextElement).fontSize + (dx + dy) * 0.1);
             updateElement(resizingElementId, { fontSize: newSize });
         } else if (elementToUpdate.type === 'image') {
-            const newWidth = Math.max(20, elementToUpdate.size.width + dx);
-            const newHeight = newWidth / elementToUpdate.aspectRatio;
+            const newWidth = Math.max(20, (elementToUpdate as ImageElement).size.width + dx);
+            const newHeight = newWidth / (elementToUpdate as ImageElement).aspectRatio;
             updateElement(resizingElementId, { size: { width: newWidth, height: newHeight } });
         }
       } else if (rotatingElementId) {
@@ -403,13 +389,13 @@ function MockupTool() {
               return {
                   ...el,
                   position: { x: 70, y: 70 },
-                  size: { width: 150, height: 150 / el.aspectRatio },
+                  size: { width: 150, height: 150 / (el as ImageElement).aspectRatio },
                   rotation: 0,
               }
           }
           return el;
       });
-      updateCurrentDesign({ imageElements: newImageElements });
+      updateCurrentDesign({ imageElements: newImageElements as ImageElement[] });
   }
 
   const handleNextStep = async () => {
@@ -590,7 +576,7 @@ function MockupTool() {
                     <div className="space-y-2">
                         {[...allDesignElements].reverse().map((el, index) => (
                              <div key={el.id} className="flex items-center gap-2 p-2 border rounded-md">
-                                <span className="flex-1 truncate">{el.type === 'text' ? el.text : `Image ${currentDesign.imageElements.findIndex(img => img.id === el.id) + 1}`}</span>
+                                <span className="flex-1 truncate">{el.type === 'text' ? (el as TextElement).text : `Image ${currentDesign.imageElements.findIndex(img => img.id === el.id) + 1}`}</span>
                                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleLayerOrderChange(el.id, 'down')} disabled={index === allDesignElements.length - 1}>
                                     <ArrowDown className="h-4 w-4" />
                                 </Button>
@@ -734,32 +720,35 @@ function MockupTool() {
                                                 fill
                                                 className="object-cover"
                                                 sizes="10vw"
+                                                crossOrigin="anonymous"
                                             />
                                         </div>
-                                        <div className="absolute inset-0 z-10">
-                                            {designForThumbnail.imageElements.map((el) => (
-                                                 <div key={el.id} className="absolute" style={{
-                                                    left: el.position.x * thumbnailScale,
-                                                    top: el.position.y * thumbnailScale,
-                                                    width: el.size.width * thumbnailScale,
-                                                    height: el.size.height * thumbnailScale,
-                                                    transform: `rotate(${el.rotation}deg)`,
-                                                }}>
-                                                    <Image src={el.src} alt="" layout="fill" className="object-contain pointer-events-none" />
-                                                </div>
-                                            ))}
-                                            {designForThumbnail.textElements.map((el) => (
-                                                <div key={el.id} className="absolute whitespace-nowrap" style={{
-                                                    left: el.position.x * thumbnailScale,
-                                                    top: el.position.y * thumbnailScale,
-                                                    fontSize: el.fontSize * thumbnailScale,
-                                                    color: '#000000',
-                                                    textShadow: `0.5px 0.5px 1px #ffffff`,
-                                                    transform: `rotate(${el.rotation}deg)`,
-                                                }}>
-                                                    {el.text}
-                                                </div>
-                                            ))}
+                                         <div className="absolute inset-0 z-10" style={{ transform: `scale(${thumbnailScale})`, transformOrigin: 'top left' }}>
+                                            <div className="relative" style={{ width: canvasRef.current?.offsetWidth, height: canvasRef.current?.offsetHeight }}>
+                                                {designForThumbnail.imageElements.map((el) => (
+                                                    <div key={el.id} className="absolute" style={{
+                                                        left: el.position.x,
+                                                        top: el.position.y,
+                                                        width: el.size.width,
+                                                        height: el.size.height,
+                                                        transform: `rotate(${el.rotation}deg)`,
+                                                    }}>
+                                                        <Image src={el.src} alt="" layout="fill" className="object-contain pointer-events-none" crossOrigin="anonymous" />
+                                                    </div>
+                                                ))}
+                                                {designForThumbnail.textElements.map((el) => (
+                                                    <div key={el.id} className="absolute whitespace-nowrap" style={{
+                                                        left: el.position.x,
+                                                        top: el.position.y,
+                                                        fontSize: el.fontSize,
+                                                        color: '#000000',
+                                                        textShadow: `0.5px 0.5px 1px #ffffff`,
+                                                        transform: `rotate(${el.rotation}deg)`,
+                                                    }}>
+                                                        {el.text}
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
                                     </button>
                                 </div>
