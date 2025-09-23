@@ -16,12 +16,13 @@ interface ProductCardProps {
 export function ProductCard({ product }: ProductCardProps) {
   const { addToCart } = useCart();
   const productUrl = `/products/${product.handle || product.id}`;
+  const imageUrl = product.images?.[0] || `https://picsum.photos/600/600?random=${product.id}`;
 
   const handleAddToCart = () => {
     addToCart({
       product,
       price: product.price,
-      image: product.images[0]
+      image: imageUrl
     });
   }
 
@@ -31,7 +32,7 @@ export function ProductCard({ product }: ProductCardProps) {
         <Link href={productUrl} className="block group">
           <div className="aspect-square relative overflow-hidden">
             <Image
-              src={product.images[0]}
+              src={imageUrl}
               alt={product.name}
               fill
               className="object-cover transition-transform duration-300 group-hover:scale-105"

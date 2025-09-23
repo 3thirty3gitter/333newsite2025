@@ -20,7 +20,7 @@ import type { Collection, Product, VariantOption } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import Image from 'next/image';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Switch } from '@/components/ui/switch';
@@ -830,6 +830,11 @@ export default function EditProductPage() {
                         </CardHeader>
                          <CardContent>
                             <div className="space-y-4">
+                                {imagePreviews.length > 0 && (
+                                     <div className="aspect-video w-full rounded-md border-2 border-dashed border-muted-foreground/40 flex items-center justify-center text-center relative">
+                                        <Image src={imagePreviews[0]} alt="Primary product preview" fill className="object-contain p-2" />
+                                     </div>
+                                )}
                                 <FormField
                                     control={form.control}
                                     name="images"

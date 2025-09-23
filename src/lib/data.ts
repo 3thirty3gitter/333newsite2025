@@ -115,7 +115,7 @@ export async function updateProduct(id: string, productData: Partial<Product>): 
   const updateData = { ...productData };
 
   // Ensure images array is not empty before updating.
-  if (Array.isArray(updateData.images) && updateData.images.length === 0) {
+  if (updateData.images && Array.isArray(updateData.images) && updateData.images.length === 0) {
       updateData.images = [`https://picsum.photos/600/600?random=${Math.floor(Math.random() * 1000)}`];
   }
   
