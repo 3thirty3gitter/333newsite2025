@@ -42,7 +42,7 @@ const CaptureComponent = ({ baseImageUrl, design, width, height, onReady }: { ba
     useEffect(() => {
         if (isBaseImageLoaded) {
             if (imagesToLoad === 0) {
-                 setTimeout(onReady, 50);
+                 setTimeout(onReady, 50); // Small delay to ensure render
             }
         }
     }, [isBaseImageLoaded, imagesToLoad, onReady]);
@@ -441,6 +441,7 @@ function MockupTool() {
             node.style.position = 'fixed';
             node.style.left = '-9999px'; // Position off-screen
             document.body.appendChild(node);
+            
             const root = createRoot(node);
 
             const dataUrl = await new Promise<string>((resolve, reject) => {
@@ -471,7 +472,7 @@ function MockupTool() {
                     }
                 };
 
-                 root.render(
+                root.render(
                     <CaptureComponent 
                         baseImageUrl={imageUrl} 
                         design={designForView} 
