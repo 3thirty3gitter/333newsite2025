@@ -42,7 +42,7 @@ const CaptureComponent = ({ baseImageUrl, design, width, height, onReady }: { ba
     useEffect(() => {
         if (isBaseImageLoaded) {
             if (imagesToLoad === 0) {
-                 setTimeout(onReady, 50); // Small delay to ensure render
+                 setTimeout(onReady, 100); // Small delay to ensure render
             }
         }
     }, [isBaseImageLoaded, imagesToLoad, onReady]);
@@ -440,14 +440,14 @@ function MockupTool() {
         for (const imageUrl of allViews) {
             const designForView = designs[imageUrl] || { textElements: [], imageElements: [] };
             
-            const node = document.createElement('div');
-            node.style.position = 'fixed';
-            node.style.left = '-9999px'; // Position off-screen
-            document.body.appendChild(node);
-            
-            const root = createRoot(node);
-
             const dataUrl = await new Promise<string>((resolve, reject) => {
+                const node = document.createElement('div');
+                node.style.position = 'fixed';
+                node.style.left = '-9999px'; // Position off-screen
+                document.body.appendChild(node);
+                
+                const root = createRoot(node);
+                
                 const onReady = async () => {
                     try {
                         const url = await htmlToImage.toPng(node, {
@@ -805,5 +805,3 @@ export default function DesignPage() {
         </Suspense>
     )
 }
-
-    
