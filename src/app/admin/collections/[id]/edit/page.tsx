@@ -302,7 +302,7 @@ export default function EditCollectionPage() {
                                                         accept="image/*"
                                                     />
                                                     <div 
-                                                        className="aspect-video w-full rounded-md border-2 border-dashed border-muted-foreground/40 flex items-center justify-center text-center cursor-pointer"
+                                                        className="aspect-video w-full rounded-md border-2 border-dashed border-muted-foreground/40 flex items-center justify-center text-center cursor-pointer relative overflow-hidden"
                                                         onClick={() => imageInputRef.current?.click()}
                                                     >
                                                         {isUploading ? (
@@ -311,7 +311,7 @@ export default function EditCollectionPage() {
                                                                 <p className="mt-2">Uploading...</p>
                                                             </div>
                                                         ) : imagePreview ? (
-                                                            <NextImage src={imagePreview} alt="Collection preview" width={400} height={300} className="object-cover rounded-md" />
+                                                            <NextImage src={imagePreview} alt="Collection preview" fill style={{objectFit:"cover"}} className="rounded-md" />
                                                         ) : (
                                                             <div className="text-center text-muted-foreground">
                                                                 <Upload className="mx-auto h-12 w-12" />

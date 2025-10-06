@@ -24,6 +24,7 @@ import { Switch } from '@/components/ui/switch';
 import { generateProductDetails } from '@/ai/flows/generate-product-details';
 import { scrapeProductUrl } from '@/ai/flows/scrape-product-url';
 import { fetchAndUploadImage } from '@/ai/flows/fetch-and-upload-image';
+import Image from 'next/image';
 
 const variantOptionSchema = z.object({
   value: z.string().min(1, 'Value cannot be empty.'),
@@ -357,8 +358,7 @@ export default function NewProductPage() {
         if (result.images && result.images.length > 0) {
             const decodedImageUrls = (result.images || []).map(url => decodeHtmlEntities(url));
 
-            const imagePromises = decodedImageUrls.map(url => fetchAndUploadImage({ url }));
-            const settledImages = await Promise.allSettled(imagePromises);
+            const settledImages = await Promise.allSettled(decodedImageUrls.map(url => fetchAndUploadImage({ url })));
 
             const successfulUrls = settledImages
                 .filter((res): res is PromiseFulfilledResult<{ newUrl: string }> => res.status === 'fulfilled')
@@ -937,7 +937,7 @@ export default function NewProductPage() {
                                                 onDragEnd={handleImageDrop}
                                                 onDragOver={(e) => e.preventDefault()}
                                             >
-                                                <img src={imgSrc} alt={`Product preview ${i + 1}`} className="absolute h-full w-full object-cover rounded-md" />
+                                                <Image src={imgSrc} alt={`Product preview ${i + 1}`} fill style={{objectFit:"cover"}} className="rounded-md" />
                                                  {i === 0 && (
                                                     <Badge variant="secondary" className="absolute top-1 left-1">Primary</Badge>
                                                  )}
@@ -973,5 +973,3 @@ export default function NewProductPage() {
     </div>
   );
 }
-
-    

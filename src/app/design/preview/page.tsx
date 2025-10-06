@@ -116,7 +116,7 @@ function PreviewPage() {
                                 <Card key={index}>
                                     <CardContent className="p-4">
                                         <div className="aspect-square w-full bg-muted/50 rounded-lg flex items-center justify-center relative overflow-hidden">
-                                             <Image src={imgUrl} alt={`Final Design Preview ${index + 1}`} fill className="object-contain" />
+                                             <Image src={imgUrl} alt={`Final Design Preview ${index + 1}`} fill style={{objectFit:"contain"}} />
                                         </div>
                                     </CardContent>
                                 </Card>

@@ -30,7 +30,8 @@ export const HeroSection = ({ section }: { section: PageSection }) => {
                 src={imageUrl}
                 alt="Hero background"
                 fill
-                className="object-cover opacity-20"
+                style={{objectFit:"cover"}}
+                className="opacity-20"
                 priority
                 data-ai-hint="abstract background"
                 />
@@ -69,5 +70,3 @@ export const HeroSection = ({ section }: { section: PageSection }) => {
         </section>
     );
 }
-
-    

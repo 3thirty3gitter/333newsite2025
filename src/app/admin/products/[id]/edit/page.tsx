@@ -835,8 +835,8 @@ export default function EditProductPage() {
                          <CardContent>
                             <div className="space-y-4">
                                 {imagePreviews.length > 0 && (
-                                     <div className="aspect-video w-full rounded-md border-2 border-dashed border-muted-foreground/40 flex items-center justify-center relative">
-                                        <Image src={imagePreviews[0]} alt="Primary product preview" fill className="object-contain p-2" />
+                                     <div className="aspect-video w-full rounded-md border-2 border-dashed border-muted-foreground/40 flex items-center justify-center relative overflow-hidden">
+                                        <Image src={imagePreviews[0]} alt="Primary product preview" fill style={{objectFit:"contain"}} className="p-2" />
                                      </div>
                                 )}
                                 <FormField
@@ -891,7 +891,7 @@ export default function EditProductPage() {
                                                 onDragEnd={handleImageDrop}
                                                 onDragOver={(e) => e.preventDefault()}
                                             >
-                                                <Image src={imgSrc} alt={`Product preview ${i + 1}`} fill className="object-cover rounded-md" />
+                                                <Image src={imgSrc} alt={`Product preview ${i + 1}`} fill style={{objectFit:"cover"}} className="rounded-md" />
                                                  {i === 0 && (
                                                     <Badge variant="secondary" className="absolute top-1 left-1">Primary</Badge>
                                                  )}
@@ -964,7 +964,3 @@ export default function EditProductPage() {
     </div>
   );
 }
-
-    
-
-    

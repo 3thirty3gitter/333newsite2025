@@ -25,7 +25,7 @@ export function ProductImageGallery({ images, mainImage }: ProductImageGalleryPr
           src={selectedImage}
           alt="Selected product image"
           fill
-          className="object-cover"
+          style={{objectFit:"cover"}}
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           data-ai-hint="product image"
           priority
@@ -45,7 +45,7 @@ export function ProductImageGallery({ images, mainImage }: ProductImageGalleryPr
               src={image}
               alt={`Product thumbnail ${index + 1}`}
               fill
-              className="object-cover"
+              style={{objectFit:"cover"}}
               sizes="10vw"
             />
           </button>

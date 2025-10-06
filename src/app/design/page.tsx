@@ -54,7 +54,7 @@ const CaptureComponent = ({ baseImageUrl, design, width, height, onReady }: { ba
                 src={baseImageUrl}
                 alt="Product Base"
                 fill
-                objectFit="contain"
+                style={{objectFit:"contain"}}
                 crossOrigin="anonymous"
                 onLoad={handleBaseImageLoad}
                 key={baseImageUrl} // Force re-mount on src change
@@ -72,8 +72,8 @@ const CaptureComponent = ({ baseImageUrl, design, width, height, onReady }: { ba
                     <Image 
                         src={imgEl.src} 
                         alt="" 
-                        layout="fill" 
-                        objectFit="contain" 
+                        fill
+                        style={{objectFit:"contain"}}
                         crossOrigin="anonymous" 
                         onLoad={handleOverlayImageLoad}
                     />
@@ -435,8 +435,7 @@ function MockupTool() {
         const allViews = product.images || [];
 
         const fontUrl = `https://fonts.googleapis.com/css2?family=${themeFonts.bodyFont.family.replace(/ /g, '+')}:wght@400;700&family=${themeFonts.headlineFont.family.replace(/ /g, '+')}:wght@400;700&display=swap`;
-        const fontCss = await fetch(fontUrl).then(res => res.text());
-
+        
         for (const imageUrl of allViews) {
             const designForView = designs[imageUrl] || { textElements: [], imageElements: [] };
             
@@ -450,6 +449,7 @@ function MockupTool() {
                 
                 const onReady = async () => {
                     try {
+                        const fontCss = await fetch(fontUrl).then(res => res.text());
                         const url = await htmlToImage.toPng(node, {
                             fetchRequestInit: { mode: 'cors', cache: 'no-cache' },
                             pixelRatio: 2,
@@ -661,7 +661,7 @@ function MockupTool() {
                       src={activeImageUrl}
                       alt={product.name}
                       fill
-                      className="object-contain"
+                      style={{objectFit:"contain"}}
                       sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                       priority
                       key={activeImageUrl}
@@ -685,8 +685,9 @@ function MockupTool() {
                            <Image 
                                 src={imgEl.src} 
                                 alt="User uploaded design" 
-                                layout="fill" 
-                                className="object-contain pointer-events-none" 
+                                fill
+                                style={{objectFit:"contain"}}
+                                className="pointer-events-none" 
                                 crossOrigin="anonymous"
                             />
                             <div 
@@ -754,7 +755,7 @@ function MockupTool() {
                                                 src={image}
                                                 alt={`Product view ${index + 1}`}
                                                 fill
-                                                className="object-cover"
+                                                style={{objectFit:"cover"}}
                                                 sizes="10vw"
                                                 crossOrigin="anonymous"
                                             />
@@ -768,7 +769,7 @@ function MockupTool() {
                                                     height: el.size.height * thumbnailScale,
                                                     transform: `rotate(${el.rotation}deg)`,
                                                 }}>
-                                                    <Image src={el.src} alt="" layout="fill" className="object-contain pointer-events-none" crossOrigin="anonymous" />
+                                                    <Image src={el.src} alt="" fill style={{objectFit:"contain"}} className="pointer-events-none" crossOrigin="anonymous" />
                                                 </div>
                                             ))}
                                             {designForThumbnail.textElements.map((el) => (

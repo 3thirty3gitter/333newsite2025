@@ -19,7 +19,7 @@ export const ImageWithTextSection = ({ section }: { section: PageSection }) => {
                             src={imageUrl}
                             alt={title || 'Image with text background'}
                             fill
-                            className="object-cover"
+                            style={{objectFit:"cover"}}
                             sizes="(max-width: 1024px) 100vw, 50vw"
                             data-ai-hint="lifestyle product"
                         />
