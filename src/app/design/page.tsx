@@ -24,30 +24,6 @@ import { getThemeSettings } from '@/lib/settings';
 
 // A component to render a single design view for capture, without any interactive elements
 const CaptureComponent = ({ baseImageUrl, design, width, height, onReady }: { baseImageUrl: string, design: DesignViewState, width: number, height: number, onReady: () => void }) => {
-    const imagesToLoad = useMemo(() => design.imageElements.length, [design.imageElements]);
-    const loadedImagesCount = useRef(0);
-    const [isBaseImageLoaded, setIsBaseImageLoaded] = useState(false);
-
-    const handleBaseImageLoad = () => {
-        setIsBaseImageLoaded(true);
-    };
-
-    const handleOverlayImageLoad = () => {
-        loadedImagesCount.current += 1;
-        if (loadedImagesCount.current >= imagesToLoad) {
-            onReady();
-        }
-    };
-    
-    useEffect(() => {
-        if (isBaseImageLoaded) {
-            if (imagesToLoad === 0) {
-                 setTimeout(onReady, 100); // Small delay to ensure render
-            }
-        }
-    }, [isBaseImageLoaded, imagesToLoad, onReady]);
-
-
     return (
         <div style={{ position: 'relative', width, height }}>
             <Image
@@ -56,10 +32,10 @@ const CaptureComponent = ({ baseImageUrl, design, width, height, onReady }: { ba
                 fill
                 style={{objectFit:"contain"}}
                 crossOrigin="anonymous"
-                onLoad={handleBaseImageLoad}
+                onLoad={onReady}
                 key={baseImageUrl} // Force re-mount on src change
             />
-            {isBaseImageLoaded && design.imageElements.map((imgEl, index) => (
+            {design.imageElements.map((imgEl, index) => (
                 <div key={imgEl.id} style={{
                     position: 'absolute',
                     left: `${imgEl.position.x}px`,
@@ -74,12 +50,11 @@ const CaptureComponent = ({ baseImageUrl, design, width, height, onReady }: { ba
                         alt="" 
                         fill
                         style={{objectFit:"contain"}}
-                        crossOrigin="anonymous" 
-                        onLoad={handleOverlayImageLoad}
+                        crossOrigin="anonymous"
                     />
                 </div>
             ))}
-             {isBaseImageLoaded && design.textElements.map((txtEl, index) => (
+             {design.textElements.map((txtEl, index) => (
                 <div key={txtEl.id} style={{
                     position: 'absolute',
                     left: `${txtEl.position.x}px`,
@@ -437,19 +412,18 @@ function MockupTool() {
         const fontUrl = `https://fonts.googleapis.com/css2?family=${themeFonts.bodyFont.family.replace(/ /g, '+')}:wght@400;700&family=${themeFonts.headlineFont.family.replace(/ /g, '+')}:wght@400;700&display=swap`;
         
         for (const imageUrl of allViews) {
-            const designForView = designs[imageUrl] || { textElements: [], imageElements: [] };
-            
             const dataUrl = await new Promise<string>((resolve, reject) => {
+                const designForView = designs[imageUrl] || { textElements: [], imageElements: [] };
                 const node = document.createElement('div');
                 node.style.position = 'fixed';
-                node.style.left = '-9999px'; // Position off-screen
+                node.style.left = '-9999px';
                 document.body.appendChild(node);
                 
                 const root = createRoot(node);
-                
+
                 const onReady = async () => {
                     try {
-                        const fontCss = await fetch(fontUrl).then(res => res.text());
+                        const fontCss = await fetch(fontUrl).then(res => res.text()).catch(() => '');
                         const url = await htmlToImage.toPng(node, {
                             fetchRequestInit: { mode: 'cors', cache: 'no-cache' },
                             pixelRatio: 2,
@@ -457,7 +431,6 @@ function MockupTool() {
                             height: canvasRect.height,
                             fontEmbedCss: fontCss,
                             filter: (element) => {
-                                // Exclude the original font link from the capture
                                 if (element.tagName === 'LINK' && (element as HTMLLinkElement).href.includes('fonts.googleapis.com')) {
                                     return false;
                                 }
@@ -474,7 +447,7 @@ function MockupTool() {
                         }
                     }
                 };
-
+                
                 root.render(
                     <CaptureComponent 
                         baseImageUrl={imageUrl} 
@@ -590,8 +563,9 @@ function MockupTool() {
                 accept="image/*" 
                 onChange={handleImageUpload} 
               />
-              <Button variant="outline" className="w-full justify-start" onClick={() => fileInputRef.current?.click()}>
-                <Upload className="mr-2" /> Upload Image
+              <Button variant="outline" className="w-full justify-start" onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
+                {isUploading ? <Loader2 className="mr-2 animate-spin" /> : <Upload className="mr-2" />}
+                {isUploading ? 'Uploading...' : 'Upload Image'}
               </Button>
                <Button variant="outline" className="w-full justify-start" disabled>
                 <Brush className="mr-2" /> Choose Clipart
@@ -727,7 +701,7 @@ function MockupTool() {
                           </div>
                           <div 
                             className="absolute -right-1 -bottom-1 w-4 h-4 bg-primary rounded-full border-2 border-white cursor-se-resize opacity-0 group-hover:opacity-100"
-                            onMouseDown={(e) => handleResizeMouseDown(e, txtEl.id)}
+                            onMouseDown={(e) => handleResizeMouseDown(e, imgEl.id)}
                           />
                         </div>
                     ))}
@@ -806,3 +780,5 @@ export default function DesignPage() {
         </Suspense>
     )
 }
+
+    
