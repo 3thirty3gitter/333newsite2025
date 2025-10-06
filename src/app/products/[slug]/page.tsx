@@ -10,7 +10,7 @@ type ProductPageProps = {
 };
 
 export default async function ProductPage({ params }: ProductPageProps) {
-    const { slug } = params;
+    const { slug } = await params;
     
     let product = await getProductBySlug(slug);
     
