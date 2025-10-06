@@ -21,19 +21,46 @@ import * as htmlToImage from 'html-to-image';
 import { fontMap } from '@/lib/theme';
 import { getThemeSettings } from '@/lib/settings';
 
-
 // A component to render a single design view for capture, without any interactive elements
-const CaptureComponent = ({ baseImageUrl, design, width, height, onReady }: { baseImageUrl: string, design: DesignViewState, width: number, height: number, onReady: () => void }) => {
+const CaptureComponent = ({ baseImageUrl, design, width, height, onReady, themeFonts }: { baseImageUrl: string, design: DesignViewState, width: number, height: number, onReady: (node: HTMLElement) => void, themeFonts: any }) => {
+    const nodeRef = useRef<HTMLDivElement>(null);
+    const [isBaseImageLoaded, setIsBaseImageLoaded] = useState(false);
+    const designImageCount = design.imageElements.length;
+    const loadedDesignImages = useRef(0);
+
+    const handleBaseImageLoad = () => {
+        setIsBaseImageLoaded(true);
+    };
+
+    const handleDesignImageLoad = () => {
+        loadedDesignImages.current += 1;
+        if (isBaseImageLoaded && loadedDesignImages.current >= designImageCount) {
+             if (nodeRef.current) {
+                onReady(nodeRef.current);
+            }
+        }
+    };
+    
+    useEffect(() => {
+        // If base image is loaded and there are no design images, we are ready.
+        if (isBaseImageLoaded && designImageCount === 0) {
+            if (nodeRef.current) {
+                onReady(nodeRef.current);
+            }
+        }
+    }, [isBaseImageLoaded, designImageCount, onReady]);
+
+
     return (
-        <div style={{ position: 'relative', width, height }}>
+        <div ref={nodeRef} style={{ position: 'relative', width, height, fontFamily: themeFonts.bodyFont.css }}>
             <Image
                 src={baseImageUrl}
                 alt="Product Base"
                 fill
                 style={{objectFit:"contain"}}
                 crossOrigin="anonymous"
-                onLoad={onReady}
-                key={baseImageUrl} // Force re-mount on src change
+                onLoad={handleBaseImageLoad}
+                key={baseImageUrl} 
             />
             {design.imageElements.map((imgEl, index) => (
                 <div key={imgEl.id} style={{
@@ -51,6 +78,7 @@ const CaptureComponent = ({ baseImageUrl, design, width, height, onReady }: { ba
                         fill
                         style={{objectFit:"contain"}}
                         crossOrigin="anonymous"
+                        onLoad={handleDesignImageLoad}
                     />
                 </div>
             ))}
@@ -410,55 +438,53 @@ function MockupTool() {
         const allViews = product.images || [];
 
         const fontUrl = `https://fonts.googleapis.com/css2?family=${themeFonts.bodyFont.family.replace(/ /g, '+')}:wght@400;700&family=${themeFonts.headlineFont.family.replace(/ /g, '+')}:wght@400;700&display=swap`;
+        const fontCss = await fetch(fontUrl).then(res => res.text()).catch(() => '');
         
         for (const imageUrl of allViews) {
-            const dataUrl = await new Promise<string>((resolve, reject) => {
+            const capturePromise = new Promise<string>((resolve, reject) => {
                 const designForView = designs[imageUrl] || { textElements: [], imageElements: [] };
-                const node = document.createElement('div');
-                node.style.position = 'fixed';
-                node.style.left = '-9999px';
-                document.body.appendChild(node);
                 
-                const root = createRoot(node);
-
-                const onReady = async () => {
+                const onCaptureReady = async (node: HTMLElement) => {
                     try {
-                        const fontCss = await fetch(fontUrl).then(res => res.text()).catch(() => '');
-                        const url = await htmlToImage.toPng(node, {
+                        const dataUrl = await htmlToImage.toPng(node, {
                             fetchRequestInit: { mode: 'cors', cache: 'no-cache' },
                             pixelRatio: 2,
                             width: canvasRect.width,
                             height: canvasRect.height,
                             fontEmbedCss: fontCss,
                             filter: (element) => {
-                                if (element.tagName === 'LINK' && (element as HTMLLinkElement).href.includes('fonts.googleapis.com')) {
-                                    return false;
-                                }
-                                return true;
+                                return !(element.tagName === 'LINK' && (element as HTMLLinkElement).href.includes('fonts.googleapis.com'));
                             }
                         });
-                        resolve(url);
+                        resolve(dataUrl);
                     } catch (e) {
                         reject(e);
-                    } finally {
-                        root.unmount();
-                        if (node.parentNode) {
-                            node.parentNode.removeChild(node);
-                        }
                     }
                 };
-                
+
+                const tempNode = document.createElement('div');
+                tempNode.style.position = 'fixed';
+                tempNode.style.left = '-9999px';
+                document.body.appendChild(tempNode);
+                const root = createRoot(tempNode);
+
                 root.render(
                     <CaptureComponent 
                         baseImageUrl={imageUrl} 
                         design={designForView} 
                         width={canvasRect.width}
                         height={canvasRect.height}
-                        onReady={onReady}
+                        onReady={(node) => {
+                            onCaptureReady(node).finally(() => {
+                                root.unmount();
+                                document.body.removeChild(tempNode);
+                            });
+                        }}
+                        themeFonts={themeFonts}
                     />
                 );
             });
-            flattenedImages[imageUrl] = dataUrl;
+            flattenedImages[imageUrl] = await capturePromise;
         }
         
         const designData = {
@@ -780,5 +806,3 @@ export default function DesignPage() {
         </Suspense>
     )
 }
-
-    
