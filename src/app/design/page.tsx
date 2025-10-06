@@ -21,6 +21,7 @@ import * as htmlToImage from 'html-to-image';
 import { fontMap } from '@/lib/theme';
 import { getThemeSettings, type ThemeSettings } from '@/lib/settings';
 
+// A component to render a single design view for capture. It manages its own loading and capture process.
 const CaptureComponent = ({ 
     baseImageUrl, 
     design, 
@@ -28,7 +29,7 @@ const CaptureComponent = ({
     height, 
     themeFonts,
     fontEmbedCss,
-    onCaptureComplete 
+    onCaptureComplete,
 }: { 
     baseImageUrl: string, 
     design: DesignViewState, 
@@ -44,29 +45,34 @@ const CaptureComponent = ({
         const capture = async () => {
             if (!nodeRef.current) return;
 
+            // 1. Ensure all images (base and design) are fully loaded and decoded
             const imageSources = [baseImageUrl, ...design.imageElements.map(el => el.src)];
-            
             try {
                 await Promise.all(imageSources.map(src => {
                     return new Promise<void>((resolve, reject) => {
                         const img = new window.Image();
                         img.crossOrigin = 'anonymous';
                         img.src = src;
-                        img.decode().then(() => resolve()).catch(reject);
+                        img.decode().then(() => resolve()).catch(() => {
+                           // Don't reject, just resolve. Some images might fail but we try to capture anyway.
+                           console.warn(`Could not load image for capture: ${src}`);
+                           resolve();
+                        });
                     });
                 }));
 
+                // 2. Capture the DOM node to a PNG
                 const dataUrl = await htmlToImage.toPng(nodeRef.current, {
                     fetchRequestInit: { mode: 'cors', cache: 'no-cache' },
                     pixelRatio: 2,
                     width: width,
                     height: height,
-                    fontEmbedCss: fontEmbedCss,
+                    fontEmbedCss: fontEmbedCss, // Pass the fetched font CSS here
                 });
                 
                 onCaptureComplete(dataUrl);
 
-            } catch (e) {
+            } catch (e: any) {
                 console.error("Capture failed for view:", baseImageUrl, e);
                 // Signal failure by passing an empty string
                 onCaptureComplete('');
@@ -74,7 +80,7 @@ const CaptureComponent = ({
         };
 
         capture();
-    }, [baseImageUrl, design, width, height, themeFonts, fontEmbedCss, onCaptureComplete]);
+    }, [baseImageUrl, design, width, height, themeFonts, onCaptureComplete, fontEmbedCss]);
 
     return (
         <div ref={nodeRef} style={{ position: 'relative', width, height, fontFamily: themeFonts.bodyFont.css }}>
@@ -464,20 +470,19 @@ function MockupTool() {
 
         const fontUrl = `https://fonts.googleapis.com/css2?family=${fontMap[themeSettings.headlineFont].family.replace(/ /g, '+')}:wght@400;700&family=${fontMap[themeSettings.bodyFont].family.replace(/ /g, '+')}:wght@400;700&display=swap`;
         const fontCss = await fetch(fontUrl).then((res) => res.text());
-
-        const tempContainer = document.createElement('div');
-        tempContainer.style.position = 'fixed';
-        tempContainer.style.left = '-9999px';
-        tempContainer.style.top = '-9999px';
-        document.body.appendChild(tempContainer);
         
-        const tempRoot = createRoot(tempContainer);
+        const tempNode = document.createElement('div');
+        tempNode.style.position = 'fixed';
+        tempNode.style.top = '-9999px';
+        tempNode.style.left = '-9999px';
+        document.body.appendChild(tempNode);
+        const root = createRoot(tempNode);
 
         for (const imageUrl of allViews) {
             const designForView = designs[imageUrl] || { textElements: [], imageElements: [] };
             
-            const capturePromise = new Promise<string>((resolve) => {
-                tempRoot.render(
+            const capturePromise = new Promise<string>((resolve, reject) => {
+                 root.render(
                     <CaptureComponent 
                         baseImageUrl={imageUrl} 
                         design={designForView} 
@@ -485,21 +490,33 @@ function MockupTool() {
                         height={canvasRect.height}
                         themeFonts={{ headlineFont: fontMap[themeSettings.headlineFont], bodyFont: fontMap[themeSettings.bodyFont] }}
                         fontEmbedCss={fontCss}
-                        onCaptureComplete={(dataUrl) => resolve(dataUrl)}
+                        onCaptureComplete={(dataUrl) => {
+                            if(dataUrl) {
+                                resolve(dataUrl);
+                            } else {
+                                reject(new Error(`Failed to capture view for ${imageUrl}`));
+                            }
+                        }}
                     />
                 );
             });
             
-            const dataUrl = await capturePromise;
-            if (dataUrl) {
+            try {
+                const dataUrl = await capturePromise;
                 flattenedImages[imageUrl] = dataUrl;
-            } else {
-                 toast({ variant: 'destructive', title: 'Capture Failed', description: `Could not generate preview for one of the views.` });
+            } catch (error: any) {
+                console.error(error.message);
+                toast({ variant: 'destructive', title: 'Capture Failed', description: `Could not generate preview for one of the views. Please try again.` });
             }
         }
         
-        tempRoot.unmount();
-        document.body.removeChild(tempContainer);
+        root.unmount();
+        document.body.removeChild(tempNode);
+        
+        // Only proceed if all captures were successful
+        if (Object.keys(flattenedImages).length !== allViews.length) {
+            throw new Error("One or more product views failed to capture. Cannot proceed.");
+        }
 
         const designData = {
             productId: product.id,
@@ -512,12 +529,12 @@ function MockupTool() {
         localStorage.setItem('customDesign', JSON.stringify(designData));
         router.push('/design/preview');
 
-    } catch (e) {
+    } catch (e: any) {
         console.error("Failed to generate preview images", e);
         toast({
             variant: 'destructive',
             title: 'Preview Generation Failed',
-            description: 'Could not generate preview images. Please try again.',
+            description: e.message || 'Could not generate preview images. Please try again.',
         });
     } finally {
         setIsProcessing(false);
