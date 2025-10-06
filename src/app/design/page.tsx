@@ -6,7 +6,7 @@ import { Suspense, useEffect, useState, useRef, useMemo } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { createRoot } from 'react-dom/client';
 import { getProductById, getProducts } from '@/lib/data';
-import type { Product, Variant, DesignViewState, AllDesignsState, TextElement, ImageElement } from '@/lib/types';
+import type { Product, Variant, DesignViewState, AllDesignsState, TextElement, ImageElement, ThemeSettings } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
@@ -19,25 +19,25 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import * as htmlToImage from 'html-to-image';
 import { fontMap } from '@/lib/theme';
-import { getThemeSettings, type ThemeSettings } from '@/lib/settings';
+import { getThemeSettings } from '@/lib/settings';
 
-// A component to render a single design view for capture. It manages its own loading and capture process.
-const CaptureComponent = ({ 
-    baseImageUrl, 
-    design, 
-    width, 
-    height, 
+// This new component is fully self-contained. It manages its own loading and capture.
+const CaptureComponent = ({
+    baseImageUrl,
+    design,
+    width,
+    height,
     themeFonts,
     fontEmbedCss,
     onCaptureComplete,
-}: { 
-    baseImageUrl: string, 
-    design: DesignViewState, 
-    width: number, 
-    height: number, 
-    themeFonts: any,
-    fontEmbedCss: string,
-    onCaptureComplete: (dataUrl: string) => void
+}: {
+    baseImageUrl: string;
+    design: DesignViewState;
+    width: number;
+    height: number;
+    themeFonts: any;
+    fontEmbedCss: string;
+    onCaptureComplete: (dataUrl: string) => void;
 }) => {
     const nodeRef = useRef<HTMLDivElement>(null);
 
@@ -45,46 +45,38 @@ const CaptureComponent = ({
         const capture = async () => {
             if (!nodeRef.current) return;
 
-            // 1. Ensure all images (base and design) are fully loaded and decoded
-            const imageSources = [baseImageUrl, ...design.imageElements.map(el => el.src)];
-            try {
-                await Promise.all(imageSources.map(src => {
-                    return new Promise<void>((resolve, reject) => {
-                        const img = new window.Image();
-                        img.crossOrigin = 'anonymous';
-                        img.src = src;
-                        img.decode().then(() => resolve()).catch(() => {
-                           // Don't reject, just resolve. Some images might fail but we try to capture anyway.
-                           console.warn(`Could not load image for capture: ${src}`);
-                           resolve();
-                        });
-                    });
-                }));
+            const imageElements = Array.from(nodeRef.current.getElementsByTagName('img'));
+            const allImagePromises = imageElements.map(img => {
+                if (img.complete) return Promise.resolve();
+                return new Promise<void>((resolve, reject) => {
+                    img.onload = () => resolve();
+                    img.onerror = () => reject(new Error(`Failed to load image: ${img.src}`));
+                });
+            });
 
-                // 2. Capture the DOM node to a PNG
+            try {
+                // Wait for all images within the component to be fully loaded.
+                await Promise.all(allImagePromises);
+
+                // A short delay to ensure fonts and final rendering are complete.
+                await new Promise(resolve => setTimeout(resolve, 100));
+
                 const dataUrl = await htmlToImage.toPng(nodeRef.current, {
                     fetchRequestInit: { mode: 'cors', cache: 'no-cache' },
                     pixelRatio: 2,
                     width: width,
                     height: height,
-                    fontEmbedCss: fontEmbedCss,
+                    fontEmbedCss: fontEmbedCss, // Fix for cross-origin font error
                 });
-                
                 onCaptureComplete(dataUrl);
-
             } catch (e: any) {
                 console.error("Capture failed for view:", baseImageUrl, e);
-                // Signal failure by passing an empty string
-                onCaptureComplete('');
+                onCaptureComplete(''); // Signal failure with an empty string
             }
         };
 
-        // A short delay to ensure the browser has painted the component
-        const timeoutId = setTimeout(capture, 100);
-        
-        return () => clearTimeout(timeoutId);
-
-    }, [baseImageUrl, design, width, height, themeFonts, fontEmbedCss, onCaptureComplete]);
+        capture();
+    }, [baseImageUrl, design, width, height, fontEmbedCss, onCaptureComplete, themeFonts]);
 
     return (
         <div ref={nodeRef} style={{ position: 'relative', width, height, fontFamily: themeFonts.bodyFont.css }}>
@@ -92,8 +84,9 @@ const CaptureComponent = ({
                 src={baseImageUrl}
                 alt="Product Base"
                 fill
-                style={{objectFit:"contain"}}
+                style={{ objectFit: "contain" }}
                 crossOrigin="anonymous"
+                priority
             />
             {design.imageElements.map((imgEl, index) => (
                 <div key={imgEl.id} style={{
@@ -105,16 +98,16 @@ const CaptureComponent = ({
                     transform: `rotate(${imgEl.rotation}deg)`,
                     zIndex: index + 1,
                 }}>
-                    <Image 
-                        src={imgEl.src} 
-                        alt="" 
+                    <Image
+                        src={imgEl.src}
+                        alt=""
                         fill
-                        style={{objectFit:"contain"}}
+                        style={{ objectFit: "contain" }}
                         crossOrigin="anonymous"
                     />
                 </div>
             ))}
-             {design.textElements.map((txtEl, index) => (
+            {design.textElements.map((txtEl, index) => (
                 <div key={txtEl.id} style={{
                     position: 'absolute',
                     left: `${txtEl.position.x}px`,
@@ -166,18 +159,16 @@ function MockupTool() {
 
   const [thumbnailScale, setThumbnailScale] = useState(0.2);
 
-  // --- START: New state for sequential capture ---
-  const [capturingView, setCapturingView] = useState<{imageUrl: string, index: number} | null>(null);
-  const [capturedImages, setCapturedImages] = useState<{[imageUrl: string]: string}>({});
   const allViewsToCapture = useRef<string[]>([]);
-  // --- END: New state for sequential capture ---
+  const [capturedImages, setCapturedImages] = useState<{[imageUrl: string]: string}>({});
+  const [capturingView, setCapturingView] = useState<{imageUrl: string, index: number} | null>(null);
   
   useEffect(() => {
-    async function fetchThemeFonts() {
+    async function fetchThemeSettings() {
       const settings = await getThemeSettings();
       setThemeSettings(settings);
     }
-    fetchThemeFonts();
+    fetchThemeSettings();
   }, []); 
 
   useEffect(() => {
@@ -455,7 +446,7 @@ function MockupTool() {
       updateCurrentDesign({ imageElements: newImageElements as ImageElement[] });
   }
 
-  const handleNextStep = async () => {
+  const handleNextStep = () => {
     if (!product || !selectedSize || !canvasRef.current) {
         toast({
             variant: 'destructive',
@@ -472,35 +463,38 @@ function MockupTool() {
     if (allViewsToCapture.current.length > 0) {
       setCapturingView({imageUrl: allViewsToCapture.current[0], index: 0});
     } else {
-      // No views to capture, should not happen if product has images.
+      toast({ variant: 'destructive', title: 'No Views', description: 'This product has no images to design on.' });
       setIsProcessing(false);
     }
   };
 
-  const handleCaptureComplete = (imageUrl: string, dataUrl: string) => {
-    const nextIndex = (capturingView?.index ?? -1) + 1;
-    const newCapturedImages = {...capturedImages, [imageUrl]: dataUrl };
-    setCapturedImages(newCapturedImages);
+    const handleCaptureComplete = (imageUrl: string, dataUrl: string) => {
+        const nextIndex = (capturingView?.index ?? -1) + 1;
+        const newCapturedImages = { ...capturedImages, [imageUrl]: dataUrl };
 
-    if (nextIndex < allViewsToCapture.current.length) {
-      setCapturingView({ imageUrl: allViewsToCapture.current[nextIndex], index: nextIndex });
-    } else {
-      // All views captured, finalize the process
-      setCapturingView(null);
-      setIsProcessing(false);
-      
-      const designData = {
-          productId: product!.id,
-          selectedSize,
-          selectedColor,
-          productName: product!.name,
-          flattenedImages: newCapturedImages,
-      };
-      
-      localStorage.setItem('customDesign', JSON.stringify(designData));
-      router.push('/design/preview');
-    }
-  };
+        // Use functional updates to avoid stale state
+        setCapturedImages(prev => ({ ...prev, [imageUrl]: dataUrl }));
+
+        if (nextIndex < allViewsToCapture.current.length) {
+            // Set state for the next capture
+            setCapturingView({ imageUrl: allViewsToCapture.current[nextIndex], index: nextIndex });
+        } else {
+            // All views captured, finalize the process
+            setCapturingView(null);
+            setIsProcessing(false);
+            
+            const designData = {
+                productId: product!.id,
+                selectedSize,
+                selectedColor,
+                productName: product!.name,
+                flattenedImages: newCapturedImages,
+            };
+            
+            localStorage.setItem('customDesign', JSON.stringify(designData));
+            router.push('/design/preview');
+        }
+    };
 
   return (
     <div className="container mx-auto max-w-7xl px-4 py-8 md:py-12">
@@ -788,18 +782,16 @@ function MockupTool() {
       </div>
       {/* Hidden component for capturing */}
       {isProcessing && capturingView && themeSettings && canvasRef.current && (
-          <div style={{ position: 'fixed', top: '-9999px', left: '-9999px' }}>
-              <CaptureComponent
-                  key={capturingView.imageUrl} // CRITICAL: This forces re-mount
-                  baseImageUrl={capturingView.imageUrl}
-                  design={designs[capturingView.imageUrl] || { textElements: [], imageElements: [] }}
-                  width={canvasRef.current.offsetWidth}
-                  height={canvasRef.current.offsetHeight}
-                  themeFonts={{ headlineFont: fontMap[themeSettings.headlineFont], bodyFont: fontMap[themeSettings.bodyFont] }}
-                  fontEmbedCss="" // This will be fetched in handleNextStep
-                  onCaptureComplete={(dataUrl) => handleCaptureComplete(capturingView.imageUrl, dataUrl)}
-              />
-          </div>
+          <CaptureComponent
+              key={capturingView.imageUrl} // CRITICAL: This forces re-mount
+              baseImageUrl={capturingView.imageUrl}
+              design={designs[capturingView.imageUrl] || { textElements: [], imageElements: [] }}
+              width={canvasRef.current.offsetWidth}
+              height={canvasRef.current.offsetHeight}
+              themeFonts={{ headlineFont: fontMap[themeSettings.headlineFont], bodyFont: fontMap[themeSettings.bodyFont] }}
+              fontEmbedCss="" // This will be fetched in handleNextStep
+              onCaptureComplete={(dataUrl) => handleCaptureComplete(capturingView.imageUrl, dataUrl)}
+          />
       )}
     </div>
   );
