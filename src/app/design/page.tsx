@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import * as React from 'react';
@@ -22,66 +21,48 @@ import html2canvas from 'html2canvas';
 import { fontMap } from '@/lib/theme';
 import { getThemeSettings } from '@/lib/settings';
 
-const CaptureComponent = ({ baseImageUrl, design, width, height, onCaptureComplete }: { baseImageUrl: string, design: DesignViewState, width: number, height: number, onCaptureComplete: (dataUrl: string) => void }) => {
+const CaptureComponent = ({ baseImageUrl, design, width, height, onReady }: { baseImageUrl: string, design: DesignViewState, width: number, height: number, onReady: (node: HTMLElement) => void }) => {
     const nodeRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const capture = async () => {
             if (!nodeRef.current) {
-                 // This can happen if the component unmounts before capture.
-                 // We can't proceed, so we signal an error.
-                console.error('Capture failed for view:', baseImageUrl, 'DOM node is not available.');
-                onCaptureComplete('error');
+                 console.error('Capture failed for view:', baseImageUrl, 'DOM node is not available.');
+                onReady(document.createElement('div')); // send dummy element to resolve promise
                 return;
             }
 
-            // Create an array of all image sources to preload
             const imageSources = [baseImageUrl, ...design.imageElements.map(el => el.src)];
             
             try {
-                // Use Promise.all with .decode() to ensure all images are fully loaded
                 await Promise.all(imageSources.map(src => {
                     return new Promise<void>((resolve, reject) => {
                         const img = new window.Image();
-                        img.crossOrigin = 'anonymous'; // Important for CORS
+                        img.crossOrigin = 'anonymous';
                         img.src = src;
                         img.decode().then(() => resolve()).catch(reject);
                     });
                 }));
-
-                // Add a small delay to allow fonts to render, just in case
+                
                 await new Promise(resolve => setTimeout(resolve, 200));
                 
-                if (!nodeRef.current) {
-                    // Check again after the async delay
+                if (nodeRef.current) {
+                   onReady(nodeRef.current);
+                } else {
                     console.error('Capture failed for view:', baseImageUrl, 'DOM node became unavailable after delay.');
-                    onCaptureComplete('error');
-                    return;
+                     onReady(document.createElement('div')); // send dummy element to resolve promise
                 }
-
-
-                const canvas = await html2canvas(nodeRef.current, {
-                    useCORS: true, // This is crucial for external images
-                    backgroundColor: null, // Transparent background
-                    width: width,
-                    height: height,
-                    scale: 2, // Capture at higher resolution
-                });
-                
-                const dataUrl = canvas.toDataURL('image/png');
-                onCaptureComplete(dataUrl);
-
             } catch (error) {
                 console.error('Capture failed for view:', baseImageUrl, error);
-                onCaptureComplete('error'); // Signal completion with an error
+                onReady(document.createElement('div')); // send dummy element to resolve promise
             }
         };
 
         capture();
-    }, [baseImageUrl, design, width, height, onCaptureComplete]);
+    }, [baseImageUrl, design, onReady]);
     
     return (
-        <div ref={nodeRef} style={{ position: 'relative', width, height }}>
+        <div ref={nodeRef} style={{ position: 'relative', width, height, fontFamily: 'var(--font-body)' }}>
             <Image
                 src={baseImageUrl}
                 alt="Product Base"
@@ -135,6 +116,7 @@ function MockupTool() {
   
   const [product, setProduct] = useState<Product | null>(null);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [themeSettings, setThemeSettings] = useState<ThemeSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -156,10 +138,13 @@ function MockupTool() {
 
   const [thumbnailScale, setThumbnailScale] = useState(0.2);
 
-  const [capturingView, setCapturingView] = useState<{imageUrl: string, design: DesignViewState} | null>(null);
-  const [capturedImages, setCapturedImages] = useState<Record<string, string>>({});
-  const [completedCaptures, setCompletedCaptures] = useState(0);
-
+  useEffect(() => {
+    async function fetchThemeSettings() {
+      const settings = await getThemeSettings();
+      setThemeSettings(settings);
+    }
+    fetchThemeSettings();
+  }, []);
 
   useEffect(() => {
     const calculateScale = () => {
@@ -264,23 +249,6 @@ function MockupTool() {
         setActiveImageUrl(product.images[0]);
     }
   }, [selectedColor, colorVariant, product]);
-  
-  useEffect(() => {
-    if (isProcessing && product && completedCaptures === (product.images?.length || 0)) {
-        const designData = {
-            productId: product.id,
-            selectedSize,
-            selectedColor,
-            productName: product.name,
-            flattenedImages: capturedImages,
-        };
-        localStorage.setItem('customDesign', JSON.stringify(designData));
-        router.push('/design/preview');
-        setIsProcessing(false);
-        setCapturingView(null);
-    }
-}, [completedCaptures, isProcessing, product, capturedImages, router, selectedColor, selectedSize]);
-
 
   const handleProductSelect = (selectedProductId: string) => {
     const params = new URLSearchParams(searchParams);
@@ -464,53 +432,84 @@ function MockupTool() {
     }
     
     setIsProcessing(true);
-    setCapturedImages({});
-    setCompletedCaptures(0);
+    
+    try {
+        const flattenedImages: { [imageUrl: string]: string } = {};
+        const canvasRect = canvasRef.current.getBoundingClientRect();
+        const allViews = product.images || [];
 
-    const allViews = product.images || [];
-    if (allViews.length > 0) {
-        const firstView = allViews[0];
-        setCapturingView({
-            imageUrl: firstView,
-            design: designs[firstView] || { textElements: [], imageElements: [] }
+        for (const imageUrl of allViews) {
+            const designForView = designs[imageUrl] || { textElements: [], imageElements: [] };
+            
+            const capturePromise = new Promise<string>(async (resolve, reject) => {
+              const tempNode = document.createElement('div');
+              tempNode.style.position = 'fixed';
+              tempNode.style.top = '-9999px';
+              tempNode.style.left = '-9999px';
+              document.body.appendChild(tempNode);
+              
+              const root = createRoot(tempNode);
+
+              const onCaptureReady = async (node: HTMLElement) => {
+                  try {
+                      if (!node || !document.body.contains(node)) {
+                          throw new Error("DOM node not available for capture.");
+                      }
+                      const canvas = await html2canvas(node, {
+                        useCORS: true,
+                        backgroundColor: null,
+                        width: canvasRect.width,
+                        height: canvasRect.height,
+                        scale: 2,
+                      });
+                      resolve(canvas.toDataURL('image/png'));
+                  } catch (e) {
+                      reject(e);
+                  } finally {
+                      root.unmount();
+                      document.body.removeChild(tempNode);
+                  }
+              };
+
+              root.render(
+                <CaptureComponent
+                    baseImageUrl={imageUrl} 
+                    design={designForView} 
+                    width={canvasRect.width}
+                    height={canvasRect.height}
+                    onReady={onCaptureReady}
+                />
+              );
+            });
+            
+            flattenedImages[imageUrl] = await capturePromise;
+        }
+
+        const designData = {
+            productId: product.id,
+            selectedSize,
+            selectedColor,
+            productName: product.name,
+            flattenedImages,
+        };
+        localStorage.setItem('customDesign', JSON.stringify(designData));
+        router.push('/design/preview');
+
+    } catch (e: any) {
+        console.error("Failed during capture process", e);
+        toast({
+            variant: 'destructive',
+            title: 'Processing Failed',
+            description: e.message || 'Could not generate design previews. Please try again.',
+            duration: 7000,
         });
-    } else {
-        toast({ variant: 'destructive', title: 'No Product Images', description: 'This product has no images to design.' });
+    } finally {
         setIsProcessing(false);
-    }
-  };
-
-  const handleCaptureComplete = (dataUrl: string) => {
-    setCapturedImages(prev => ({...prev, [capturingView!.imageUrl]: dataUrl }));
-    setCompletedCaptures(prev => prev + 1);
-
-    const allViews = product!.images || [];
-    const currentIndex = allViews.indexOf(capturingView!.imageUrl);
-    const nextIndex = currentIndex + 1;
-
-    if (nextIndex < allViews.length) {
-        const nextViewUrl = allViews[nextIndex];
-        setCapturingView({
-            imageUrl: nextViewUrl,
-            design: designs[nextViewUrl] || { textElements: [], imageElements: [] }
-        });
     }
   };
 
 
   return (
-    <>
-    {isProcessing && capturingView && canvasRef.current && (
-        <div style={{ position: 'fixed', left: '-9999px', top: '-9999px' }} key={capturingView.imageUrl}>
-             <CaptureComponent
-                baseImageUrl={capturingView.imageUrl}
-                design={capturingView.design}
-                width={canvasRef.current.offsetWidth}
-                height={canvasRef.current.offsetHeight}
-                onCaptureComplete={handleCaptureComplete}
-            />
-        </div>
-    )}
     <div className="container mx-auto max-w-7xl px-4 py-8 md:py-12">
       <div className="flex items-center gap-4 mb-8">
         <Button variant="outline" size="icon" onClick={() => router.back()}>
@@ -795,7 +794,6 @@ function MockupTool() {
         </div>
       </div>
     </div>
-    </>
   );
 }
 
