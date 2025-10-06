@@ -27,7 +27,13 @@ const CaptureComponent = ({ baseImageUrl, design, width, height, onCaptureComple
 
     useEffect(() => {
         const capture = async () => {
-            if (!nodeRef.current) return;
+            if (!nodeRef.current) {
+                 // This can happen if the component unmounts before capture.
+                 // We can't proceed, so we signal an error.
+                console.error('Capture failed for view:', baseImageUrl, 'DOM node is not available.');
+                onCaptureComplete('error');
+                return;
+            }
 
             // Create an array of all image sources to preload
             const imageSources = [baseImageUrl, ...design.imageElements.map(el => el.src)];
@@ -45,6 +51,14 @@ const CaptureComponent = ({ baseImageUrl, design, width, height, onCaptureComple
 
                 // Add a small delay to allow fonts to render, just in case
                 await new Promise(resolve => setTimeout(resolve, 200));
+                
+                if (!nodeRef.current) {
+                    // Check again after the async delay
+                    console.error('Capture failed for view:', baseImageUrl, 'DOM node became unavailable after delay.');
+                    onCaptureComplete('error');
+                    return;
+                }
+
 
                 const canvas = await html2canvas(nodeRef.current, {
                     useCORS: true, // This is crucial for external images
@@ -144,7 +158,7 @@ function MockupTool() {
 
   const [capturingView, setCapturingView] = useState<{imageUrl: string, design: DesignViewState} | null>(null);
   const [capturedImages, setCapturedImages] = useState<Record<string, string>>({});
-  const [isCaptureComplete, setIsCaptureComplete] = useState(false);
+  const [completedCaptures, setCompletedCaptures] = useState(0);
 
 
   useEffect(() => {
@@ -252,21 +266,20 @@ function MockupTool() {
   }, [selectedColor, colorVariant, product]);
   
   useEffect(() => {
-    if (isCaptureComplete) {
-      const designData = {
-        productId: product!.id,
-        selectedSize,
-        selectedColor,
-        productName: product!.name,
-        flattenedImages: capturedImages,
-      };
-      localStorage.setItem('customDesign', JSON.stringify(designData));
-      router.push('/design/preview');
-      setIsProcessing(false);
-      setCapturingView(null);
-      setIsCaptureComplete(false); // Reset for next time
+    if (isProcessing && product && completedCaptures === (product.images?.length || 0)) {
+        const designData = {
+            productId: product.id,
+            selectedSize,
+            selectedColor,
+            productName: product.name,
+            flattenedImages: capturedImages,
+        };
+        localStorage.setItem('customDesign', JSON.stringify(designData));
+        router.push('/design/preview');
+        setIsProcessing(false);
+        setCapturingView(null);
     }
-  }, [isCaptureComplete, capturedImages, product, selectedColor, selectedSize, router]);
+}, [completedCaptures, isProcessing, product, capturedImages, router, selectedColor, selectedSize]);
 
 
   const handleProductSelect = (selectedProductId: string) => {
@@ -451,7 +464,8 @@ function MockupTool() {
     }
     
     setIsProcessing(true);
-    setCapturedImages({}); // Reset previous captures
+    setCapturedImages({});
+    setCompletedCaptures(0);
 
     const allViews = product.images || [];
     if (allViews.length > 0) {
@@ -467,33 +481,28 @@ function MockupTool() {
   };
 
   const handleCaptureComplete = (dataUrl: string) => {
-    if (capturingView) {
-        const currentViewUrl = capturingView.imageUrl;
-        const newCapturedImages = { ...capturedImages, [currentViewUrl]: dataUrl };
-        setCapturedImages(newCapturedImages);
-        
-        const allViews = product!.images || [];
-        const currentIndex = allViews.indexOf(currentViewUrl);
-        const nextIndex = currentIndex + 1;
+    setCapturedImages(prev => ({...prev, [capturingView!.imageUrl]: dataUrl }));
+    setCompletedCaptures(prev => prev + 1);
 
-        if (nextIndex < allViews.length) {
-            const nextViewUrl = allViews[nextIndex];
-            setCapturingView({
-                imageUrl: nextViewUrl,
-                design: designs[nextViewUrl] || { textElements: [], imageElements: [] }
-            });
-        } else {
-            setIsCaptureComplete(true);
-        }
+    const allViews = product!.images || [];
+    const currentIndex = allViews.indexOf(capturingView!.imageUrl);
+    const nextIndex = currentIndex + 1;
+
+    if (nextIndex < allViews.length) {
+        const nextViewUrl = allViews[nextIndex];
+        setCapturingView({
+            imageUrl: nextViewUrl,
+            design: designs[nextViewUrl] || { textElements: [], imageElements: [] }
+        });
     }
-};
+  };
+
 
   return (
     <>
-    {capturingView && canvasRef.current && (
-        <div style={{ position: 'fixed', left: '-9999px', top: '-9999px' }}>
+    {isProcessing && capturingView && canvasRef.current && (
+        <div style={{ position: 'fixed', left: '-9999px', top: '-9999px' }} key={capturingView.imageUrl}>
              <CaptureComponent
-                key={capturingView.imageUrl} 
                 baseImageUrl={capturingView.imageUrl}
                 design={capturingView.design}
                 width={canvasRef.current.offsetWidth}
