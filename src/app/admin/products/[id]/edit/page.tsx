@@ -279,7 +279,11 @@ export default function EditProductPage() {
   }
 
   const handleImageDrop = () => {
-    if (dragItem.current === null || dragOverItem.current === null) return;
+    if (dragItem.current === null || dragOverItem.current === null || dragItem.current === dragOverItem.current) {
+        dragItem.current = null;
+        dragOverItem.current = null;
+        return;
+    }
     
     const currentImages = [...imagePreviews];
     const draggedItemContent = currentImages.splice(dragItem.current, 1)[0];
@@ -831,7 +835,7 @@ export default function EditProductPage() {
                          <CardContent>
                             <div className="space-y-4">
                                 {imagePreviews.length > 0 && (
-                                     <div className="aspect-video w-full rounded-md border-2 border-dashed border-muted-foreground/40 flex items-center justify-center text-center relative">
+                                     <div className="aspect-video w-full rounded-md border-2 border-dashed border-muted-foreground/40 flex items-center justify-center relative">
                                         <Image src={imagePreviews[0]} alt="Primary product preview" fill className="object-contain p-2" />
                                      </div>
                                 )}
@@ -931,7 +935,7 @@ export default function EditProductPage() {
                                 type="text"
                                 placeholder="delete"
                                 value={deleteConfirmation}
-                                onChange={(e) => setDeleteConfirmation(e.target.value)}
+                                onChange={(e) => setDeleteConfirmation(e.target.value.toLowerCase())}
                                 className="border-destructive focus-visible:ring-destructive"
                             />
                         </div>
@@ -960,5 +964,7 @@ export default function EditProductPage() {
     </div>
   );
 }
+
+    
 
     

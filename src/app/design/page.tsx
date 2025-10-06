@@ -112,6 +112,7 @@ function MockupTool() {
   const [themeFonts, setThemeFonts] = useState({ headlineFont: fontMap['poppins'], bodyFont: fontMap['pt-sans']});
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedColor, setSelectedColor] = useState<string>('');
   const [selectedSize, setSelectedSize] = useState<string>('');
@@ -339,6 +340,7 @@ function MockupTool() {
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      setIsUploading(true);
       const reader = new FileReader();
       reader.onload = (e) => {
         const img = new window.Image();
@@ -354,6 +356,7 @@ function MockupTool() {
                 rotation: 0
             };
             updateCurrentDesign({ imageElements: [...currentDesign.imageElements, newImage] });
+            setIsUploading(false);
         };
         img.src = e.target?.result as string;
       };
@@ -630,9 +633,9 @@ function MockupTool() {
             </CardContent>
           </Card>
 
-           <Button size="lg" className="w-full" onClick={handleNextStep} disabled={isProcessing}>
-            {isProcessing && <Loader2 className="animate-spin mr-2" />}
-             {isProcessing ? 'Processing...' : 'Preview & Finish'} <ArrowRight className="ml-2" />
+           <Button size="lg" className="w-full" onClick={handleNextStep} disabled={isProcessing || isUploading}>
+            {(isProcessing || isUploading) && <Loader2 className="animate-spin mr-2" />}
+             {isProcessing ? 'Processing...' : isUploading ? 'Uploading...' : 'Preview & Finish'} <ArrowRight className="ml-2" />
            </Button>
         </div>
 
@@ -802,3 +805,5 @@ export default function DesignPage() {
         </Suspense>
     )
 }
+
+    

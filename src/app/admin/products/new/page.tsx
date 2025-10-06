@@ -263,7 +263,11 @@ export default function NewProductPage() {
   }
 
   const handleImageDrop = () => {
-    if (dragItem.current === null || dragOverItem.current === null) return;
+    if (dragItem.current === null || dragOverItem.current === null || dragItem.current === dragOverItem.current) {
+        dragItem.current = null;
+        dragOverItem.current = null;
+        return;
+    }
     
     const currentImages = [...imagePreviews];
     const draggedItemContent = currentImages.splice(dragItem.current, 1)[0];
@@ -357,8 +361,8 @@ export default function NewProductPage() {
             const settledImages = await Promise.allSettled(imagePromises);
 
             const successfulUrls = settledImages
-                .filter(res => res.status === 'fulfilled')
-                .map(res => (res as PromiseFulfilledResult<{newUrl: string}>).value.newUrl);
+                .filter((res): res is PromiseFulfilledResult<{ newUrl: string }> => res.status === 'fulfilled')
+                .map(res => res.value.newUrl);
             
             const failedCount = settledImages.length - successfulUrls.length;
 
@@ -969,3 +973,5 @@ export default function NewProductPage() {
     </div>
   );
 }
+
+    
