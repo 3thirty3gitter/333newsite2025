@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -17,73 +18,64 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import * as htmlToImage from 'html-to-image';
+import html2canvas from 'html2canvas';
 import { fontMap } from '@/lib/theme';
 import { getThemeSettings } from '@/lib/settings';
 
-
-type CaptureComponentProps = {
-    view: {
-        imageUrl: string;
-        design: DesignViewState;
-    };
-    width: number;
-    height: number;
-    themeSettings: ThemeSettings | null;
-    onCaptureComplete: (imageUrl: string, dataUrl: string) => void;
-};
-
-const CaptureComponent = ({ view, width, height, themeSettings, onCaptureComplete }: CaptureComponentProps) => {
+const CaptureComponent = ({ baseImageUrl, design, width, height, onCaptureComplete }: { baseImageUrl: string, design: DesignViewState, width: number, height: number, onCaptureComplete: (dataUrl: string) => void }) => {
     const nodeRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const capture = async () => {
-            if (!nodeRef.current || !themeSettings) return;
+            if (!nodeRef.current) return;
 
+            // Create an array of all image sources to preload
+            const imageSources = [baseImageUrl, ...design.imageElements.map(el => el.src)];
+            
             try {
-                // Ensure all images are loaded before capture
-                const images = Array.from(nodeRef.current.getElementsByTagName('img'));
-                await Promise.all(images.map(img => {
-                    if (img.complete) return Promise.resolve();
-                    return new Promise(resolve => { img.onload = img.onerror = resolve; });
+                // Use Promise.all with .decode() to ensure all images are fully loaded
+                await Promise.all(imageSources.map(src => {
+                    return new Promise<void>((resolve, reject) => {
+                        const img = new window.Image();
+                        img.crossOrigin = 'anonymous'; // Important for CORS
+                        img.src = src;
+                        img.decode().then(() => resolve()).catch(reject);
+                    });
                 }));
-                
-                // Add a small delay to allow fonts to render
-                await new Promise(resolve => setTimeout(resolve, 300));
 
-                const fontUrl = `https://fonts.googleapis.com/css2?family=${fontMap[themeSettings.headlineFont].family.replace(/ /g, '+')}:wght@400;700&family=${fontMap[themeSettings.bodyFont].family.replace(/ /g, '+')}:wght@400;700&display=swap`;
-                const fontCss = await fetch(fontUrl).then((res) => res.text());
+                // Add a small delay to allow fonts to render, just in case
+                await new Promise(resolve => setTimeout(resolve, 200));
 
-                const dataUrl = await htmlToImage.toPng(nodeRef.current, {
-                    fetchRequestInit: { mode: 'cors', cache: 'no-cache' },
-                    pixelRatio: 2,
+                const canvas = await html2canvas(nodeRef.current, {
+                    useCORS: true, // This is crucial for external images
+                    backgroundColor: null, // Transparent background
                     width: width,
                     height: height,
-                    fontEmbedCss: fontCss,
+                    scale: 2, // Capture at higher resolution
                 });
+                
+                const dataUrl = canvas.toDataURL('image/png');
+                onCaptureComplete(dataUrl);
 
-                onCaptureComplete(view.imageUrl, dataUrl);
             } catch (error) {
-                console.error('Capture failed for view:', view.imageUrl, error);
-                onCaptureComplete(view.imageUrl, 'error'); // Signal completion even on error
+                console.error('Capture failed for view:', baseImageUrl, error);
+                onCaptureComplete('error'); // Signal completion with an error
             }
         };
 
         capture();
-    }, [view, width, height, themeSettings, onCaptureComplete]);
+    }, [baseImageUrl, design, width, height, onCaptureComplete]);
     
-    if (!themeSettings) return null;
-
     return (
-        <div ref={nodeRef} style={{ position: 'relative', width, height, fontFamily: fontMap[themeSettings.bodyFont].css }}>
+        <div ref={nodeRef} style={{ position: 'relative', width, height }}>
             <Image
-                src={view.imageUrl}
+                src={baseImageUrl}
                 alt="Product Base"
                 fill
                 style={{objectFit:"contain"}}
                 crossOrigin="anonymous"
             />
-            {view.design.imageElements.map((imgEl) => (
+            {design.imageElements.map((imgEl) => (
                 <div key={imgEl.id} style={{
                     position: 'absolute',
                     left: `${imgEl.position.x}px`,
@@ -101,7 +93,7 @@ const CaptureComponent = ({ view, width, height, themeSettings, onCaptureComplet
                     />
                 </div>
             ))}
-            {view.design.textElements.map((txtEl) => (
+            {design.textElements.map((txtEl) => (
                 <div key={txtEl.id} style={{
                     position: 'absolute',
                     left: `${txtEl.position.x}px`,
@@ -129,7 +121,6 @@ function MockupTool() {
   
   const [product, setProduct] = useState<Product | null>(null);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
-  const [themeSettings, setThemeSettings] = useState<ThemeSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -151,15 +142,9 @@ function MockupTool() {
 
   const [thumbnailScale, setThumbnailScale] = useState(0.2);
 
-  const [capturingView, setCapturingView] = useState<CaptureComponentProps['view'] | null>(null);
+  const [capturingView, setCapturingView] = useState<{imageUrl: string, design: DesignViewState} | null>(null);
+  const [capturedImages, setCapturedImages] = useState<Record<string, string>>({});
 
-  useEffect(() => {
-    async function fetchThemeSettings() {
-      const settings = await getThemeSettings();
-      setThemeSettings(settings);
-    }
-    fetchThemeSettings();
-  }, []); 
 
   useEffect(() => {
     const calculateScale = () => {
@@ -447,61 +432,68 @@ function MockupTool() {
     }
     
     setIsProcessing(true);
-    const allViews = product.images || [];
-    const capturedImages: Record<string, string> = {};
+    setCapturedImages({}); // Reset previous captures
 
-    const processView = (index: number) => {
-        if (index >= allViews.length) {
-            // All views processed, finalize
+    const allViews = product.images || [];
+    if (allViews.length > 0) {
+        const firstView = allViews[0];
+        setCapturingView({
+            imageUrl: firstView,
+            design: designs[firstView] || { textElements: [], imageElements: [] }
+        });
+    } else {
+        toast({ variant: 'destructive', title: 'No Product Images', description: 'This product has no images to design.' });
+        setIsProcessing(false);
+    }
+  };
+
+  const handleCaptureComplete = (dataUrl: string) => {
+    const currentViewUrl = capturingView!.imageUrl;
+
+    setCapturedImages(prev => {
+        const updatedImages = { ...prev, [currentViewUrl]: dataUrl };
+        
+        const allViews = product!.images || [];
+        const currentIndex = allViews.indexOf(currentViewUrl);
+        const nextIndex = currentIndex + 1;
+
+        if (nextIndex < allViews.length) {
+            // Schedule the next capture
+            const nextViewUrl = allViews[nextIndex];
+            setCapturingView({
+                imageUrl: nextViewUrl,
+                design: designs[nextViewUrl] || { textElements: [], imageElements: [] }
+            });
+        } else {
+            // All captures are complete
             const designData = {
-                productId: product.id,
+                productId: product!.id,
                 selectedSize,
                 selectedColor,
-                productName: product.name,
-                flattenedImages: capturedImages,
+                productName: product!.name,
+                flattenedImages: updatedImages,
             };
             localStorage.setItem('customDesign', JSON.stringify(designData));
             router.push('/design/preview');
             setIsProcessing(false);
             setCapturingView(null);
-            return;
         }
-
-        const imageUrl = allViews[index];
-        const designForView = designs[imageUrl] || { textElements: [], imageElements: [] };
         
-        setCapturingView({
-            imageUrl,
-            design: designForView
-        });
-    };
-    
-    const handleCaptureComplete = (imageUrl: string, dataUrl: string) => {
-        const currentViewIndex = allViews.findIndex(url => url === imageUrl);
-        capturedImages[imageUrl] = dataUrl;
-
-        // Process next view
-        setTimeout(() => processView(currentViewIndex + 1), 0);
-    };
-    
-    // Set up the listener function in the window object
-    (window as any).onCaptureComplete = handleCaptureComplete;
-
-    // Start the process
-    processView(0);
+        return updatedImages;
+    });
   };
 
   return (
     <>
     {capturingView && canvasRef.current && (
         <div style={{ position: 'fixed', left: '-9999px', top: '-9999px' }}>
-            <CaptureComponent
-                key={capturingView.imageUrl}
-                view={capturingView}
+             <CaptureComponent
+                key={capturingView.imageUrl} // Change key to force re-mount
+                baseImageUrl={capturingView.imageUrl}
+                design={capturingView.design}
                 width={canvasRef.current.offsetWidth}
                 height={canvasRef.current.offsetHeight}
-                themeSettings={themeSettings}
-                onCaptureComplete={(imageUrl, dataUrl) => (window as any).onCaptureComplete(imageUrl, dataUrl)}
+                onCaptureComplete={handleCaptureComplete}
             />
         </div>
     )}
@@ -721,7 +713,7 @@ function MockupTool() {
                           </div>
                           <div 
                             className="absolute -right-1 -bottom-1 w-4 h-4 bg-primary rounded-full border-2 border-white cursor-se-resize opacity-0 group-hover:opacity-100"
-                            onMouseDown={(e) => handleResizeMouseDown(e, imgEl.id)}
+                            onMouseDown={(e) => handleResizeMouseDown(e, txtEl.id)}
                           />
                         </div>
                     ))}
