@@ -21,42 +21,69 @@ import * as htmlToImage from 'html-to-image';
 import { fontMap } from '@/lib/theme';
 import { getThemeSettings } from '@/lib/settings';
 
-// A component to render a single design view for capture, without any interactive elements
-const CaptureComponent = ({ 
-    baseImageUrl, 
-    design, 
-    width, 
-    height, 
-    onReady, 
-    themeFonts 
-}: { 
-    baseImageUrl: string, 
-    design: DesignViewState, 
-    width: number, 
-    height: number, 
-    onReady: (node: HTMLElement) => void, 
-    themeFonts: any 
-}) => {
+
+type CaptureComponentProps = {
+    view: {
+        imageUrl: string;
+        design: DesignViewState;
+    };
+    width: number;
+    height: number;
+    themeSettings: ThemeSettings | null;
+    onCaptureComplete: (imageUrl: string, dataUrl: string) => void;
+};
+
+const CaptureComponent = ({ view, width, height, themeSettings, onCaptureComplete }: CaptureComponentProps) => {
     const nodeRef = useRef<HTMLDivElement>(null);
-    const [isBaseImageLoaded, setIsBaseImageLoaded] = useState(false);
-    
+
     useEffect(() => {
-        if (isBaseImageLoaded && nodeRef.current) {
-            onReady(nodeRef.current);
-        }
-    }, [isBaseImageLoaded, onReady]);
+        const capture = async () => {
+            if (!nodeRef.current || !themeSettings) return;
+
+            try {
+                // Ensure all images are loaded before capture
+                const images = Array.from(nodeRef.current.getElementsByTagName('img'));
+                await Promise.all(images.map(img => {
+                    if (img.complete) return Promise.resolve();
+                    return new Promise(resolve => { img.onload = img.onerror = resolve; });
+                }));
+                
+                // Add a small delay to allow fonts to render
+                await new Promise(resolve => setTimeout(resolve, 300));
+
+                const fontUrl = `https://fonts.googleapis.com/css2?family=${fontMap[themeSettings.headlineFont].family.replace(/ /g, '+')}:wght@400;700&family=${fontMap[themeSettings.bodyFont].family.replace(/ /g, '+')}:wght@400;700&display=swap`;
+                const fontCss = await fetch(fontUrl).then((res) => res.text());
+
+                const dataUrl = await htmlToImage.toPng(nodeRef.current, {
+                    fetchRequestInit: { mode: 'cors', cache: 'no-cache' },
+                    pixelRatio: 2,
+                    width: width,
+                    height: height,
+                    fontEmbedCss: fontCss,
+                });
+
+                onCaptureComplete(view.imageUrl, dataUrl);
+            } catch (error) {
+                console.error('Capture failed for view:', view.imageUrl, error);
+                onCaptureComplete(view.imageUrl, 'error'); // Signal completion even on error
+            }
+        };
+
+        capture();
+    }, [view, width, height, themeSettings, onCaptureComplete]);
+    
+    if (!themeSettings) return null;
 
     return (
-        <div ref={nodeRef} style={{ position: 'relative', width, height, fontFamily: themeFonts.bodyFont.css }}>
+        <div ref={nodeRef} style={{ position: 'relative', width, height, fontFamily: fontMap[themeSettings.bodyFont].css }}>
             <Image
-                src={baseImageUrl}
+                src={view.imageUrl}
                 alt="Product Base"
                 fill
                 style={{objectFit:"contain"}}
                 crossOrigin="anonymous"
-                onLoad={() => setIsBaseImageLoaded(true)}
             />
-            {design.imageElements.map((imgEl, index) => (
+            {view.design.imageElements.map((imgEl) => (
                 <div key={imgEl.id} style={{
                     position: 'absolute',
                     left: `${imgEl.position.x}px`,
@@ -64,7 +91,6 @@ const CaptureComponent = ({
                     width: `${imgEl.size.width}px`,
                     height: `${imgEl.size.height}px`,
                     transform: `rotate(${imgEl.rotation}deg)`,
-                    zIndex: index + 1,
                 }}>
                     <Image
                         src={imgEl.src}
@@ -75,17 +101,15 @@ const CaptureComponent = ({
                     />
                 </div>
             ))}
-            {design.textElements.map((txtEl, index) => (
+            {view.design.textElements.map((txtEl) => (
                 <div key={txtEl.id} style={{
                     position: 'absolute',
                     left: `${txtEl.position.x}px`,
                     top: `${txtEl.position.y}px`,
                     fontSize: `${txtEl.fontSize}px`,
                     color: '#000000',
-                    fontFamily: 'var(--font-body)',
                     textShadow: '1px 1px 2px #ffffff',
                     transform: `rotate(${txtEl.rotation}deg)`,
-                    zIndex: design.imageElements.length + index + 1,
                     whiteSpace: 'nowrap',
                 }}>
                     {txtEl.text}
@@ -126,6 +150,8 @@ function MockupTool() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [thumbnailScale, setThumbnailScale] = useState(0.2);
+
+  const [capturingView, setCapturingView] = useState<CaptureComponentProps['view'] | null>(null);
 
   useEffect(() => {
     async function fetchThemeSettings() {
@@ -421,91 +447,64 @@ function MockupTool() {
     }
     
     setIsProcessing(true);
+    const allViews = product.images || [];
+    const capturedImages: Record<string, string> = {};
 
-    if (!themeSettings) {
-        toast({ variant: 'destructive', title: 'Theme not loaded', description: 'Theme settings could not be loaded. Please refresh.' });
-        setIsProcessing(false);
-        return;
-    }
-    
-    try {
-        const flattenedImages: { [imageUrl: string]: string } = {};
-        const canvasRect = canvasRef.current.getBoundingClientRect();
-        const allViews = product.images || [];
-
-        const fontUrl = `https://fonts.googleapis.com/css2?family=${fontMap[themeSettings.headlineFont].family.replace(/ /g, '+')}:wght@400;700&family=${fontMap[themeSettings.bodyFont].family.replace(/ /g, '+')}:wght@400;700&display=swap`;
-        const fontCss = await fetch(fontUrl).then((res) => res.text());
-
-        for (const imageUrl of allViews) {
-            const designForView = designs[imageUrl] || { textElements: [], imageElements: [] };
-            
-            const capturePromise = new Promise<string>(async (resolve, reject) => {
-              const tempNode = document.createElement('div');
-              // Render the component off-screen
-              tempNode.style.position = 'fixed';
-              tempNode.style.top = '-9999px';
-              tempNode.style.left = '-9999px';
-              document.body.appendChild(tempNode);
-              const root = createRoot(tempNode);
-
-              const onCaptureReady = async (node: HTMLElement) => {
-                  try {
-                      const dataUrl = await htmlToImage.toPng(node, {
-                          fetchRequestInit: { mode: 'cors', cache: 'no-cache' },
-                          pixelRatio: 2,
-                          width: canvasRect.width,
-                          height: canvasRect.height,
-                          fontEmbedCss: fontCss,
-                      });
-                      resolve(dataUrl);
-                  } catch (e) {
-                      reject(e);
-                  } finally {
-                      root.unmount();
-                      document.body.removeChild(tempNode);
-                  }
-              };
-
-              root.render(
-                <CaptureComponent
-                    key={imageUrl}
-                    baseImageUrl={imageUrl} 
-                    design={designForView} 
-                    width={canvasRect.width}
-                    height={canvasRect.height}
-                    onReady={onCaptureReady}
-                    themeFonts={{ headlineFont: fontMap[themeSettings.headlineFont], bodyFont: fontMap[themeSettings.bodyFont] }}
-                />
-              );
-            });
-            flattenedImages[imageUrl] = await capturePromise;
+    const processView = (index: number) => {
+        if (index >= allViews.length) {
+            // All views processed, finalize
+            const designData = {
+                productId: product.id,
+                selectedSize,
+                selectedColor,
+                productName: product.name,
+                flattenedImages: capturedImages,
+            };
+            localStorage.setItem('customDesign', JSON.stringify(designData));
+            router.push('/design/preview');
+            setIsProcessing(false);
+            setCapturingView(null);
+            return;
         }
 
-        const designData = {
-            productId: product.id,
-            selectedSize,
-            selectedColor,
-            productName: product.name,
-            flattenedImages,
-        };
+        const imageUrl = allViews[index];
+        const designForView = designs[imageUrl] || { textElements: [], imageElements: [] };
         
-        localStorage.setItem('customDesign', JSON.stringify(designData));
-        router.push('/design/preview');
-
-    } catch (e: any) {
-        console.error("Failed during design capture:", e);
-        toast({
-            variant: "destructive",
-            title: "Processing Failed",
-            description: e.message || "Could not generate design preview. Please try again.",
-            duration: 7000,
+        setCapturingView({
+            imageUrl,
+            design: designForView
         });
-    } finally {
-        setIsProcessing(false);
-    }
+    };
+    
+    const handleCaptureComplete = (imageUrl: string, dataUrl: string) => {
+        const currentViewIndex = allViews.findIndex(url => url === imageUrl);
+        capturedImages[imageUrl] = dataUrl;
+
+        // Process next view
+        setTimeout(() => processView(currentViewIndex + 1), 0);
+    };
+    
+    // Set up the listener function in the window object
+    (window as any).onCaptureComplete = handleCaptureComplete;
+
+    // Start the process
+    processView(0);
   };
 
   return (
+    <>
+    {capturingView && canvasRef.current && (
+        <div style={{ position: 'fixed', left: '-9999px', top: '-9999px' }}>
+            <CaptureComponent
+                key={capturingView.imageUrl}
+                view={capturingView}
+                width={canvasRef.current.offsetWidth}
+                height={canvasRef.current.offsetHeight}
+                themeSettings={themeSettings}
+                onCaptureComplete={(imageUrl, dataUrl) => (window as any).onCaptureComplete(imageUrl, dataUrl)}
+            />
+        </div>
+    )}
     <div className="container mx-auto max-w-7xl px-4 py-8 md:py-12">
       <div className="flex items-center gap-4 mb-8">
         <Button variant="outline" size="icon" onClick={() => router.back()}>
@@ -790,6 +789,7 @@ function MockupTool() {
         </div>
       </div>
     </div>
+    </>
   );
 }
 
