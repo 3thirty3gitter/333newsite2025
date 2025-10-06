@@ -67,7 +67,7 @@ const CaptureComponent = ({
                     pixelRatio: 2,
                     width: width,
                     height: height,
-                    fontEmbedCss: fontEmbedCss, // Pass the fetched font CSS here
+                    fontEmbedCss: fontEmbedCss,
                 });
                 
                 onCaptureComplete(dataUrl);
@@ -79,8 +79,12 @@ const CaptureComponent = ({
             }
         };
 
-        capture();
-    }, [baseImageUrl, design, width, height, themeFonts, onCaptureComplete, fontEmbedCss]);
+        // A short delay to ensure the browser has painted the component
+        const timeoutId = setTimeout(capture, 100);
+        
+        return () => clearTimeout(timeoutId);
+
+    }, [baseImageUrl, design, width, height, themeFonts, fontEmbedCss, onCaptureComplete]);
 
     return (
         <div ref={nodeRef} style={{ position: 'relative', width, height, fontFamily: themeFonts.bodyFont.css }}>
@@ -161,6 +165,12 @@ function MockupTool() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [thumbnailScale, setThumbnailScale] = useState(0.2);
+
+  // --- START: New state for sequential capture ---
+  const [capturingView, setCapturingView] = useState<{imageUrl: string, index: number} | null>(null);
+  const [capturedImages, setCapturedImages] = useState<{[imageUrl: string]: string}>({});
+  const allViewsToCapture = useRef<string[]>([]);
+  // --- END: New state for sequential capture ---
   
   useEffect(() => {
     async function fetchThemeFonts() {
@@ -456,88 +466,39 @@ function MockupTool() {
     }
     
     setIsProcessing(true);
+    setCapturedImages({});
+    allViewsToCapture.current = product.images || [];
 
-    if (!themeSettings) {
-        toast({ variant: 'destructive', title: 'Theme not loaded', description: 'Theme settings could not be loaded. Please refresh.' });
-        setIsProcessing(false);
-        return;
+    if (allViewsToCapture.current.length > 0) {
+      setCapturingView({imageUrl: allViewsToCapture.current[0], index: 0});
+    } else {
+      // No views to capture, should not happen if product has images.
+      setIsProcessing(false);
     }
-    
-    try {
-        const flattenedImages: { [imageUrl: string]: string } = {};
-        const canvasRect = canvasRef.current.getBoundingClientRect();
-        const allViews = product.images || [];
+  };
 
-        const fontUrl = `https://fonts.googleapis.com/css2?family=${fontMap[themeSettings.headlineFont].family.replace(/ /g, '+')}:wght@400;700&family=${fontMap[themeSettings.bodyFont].family.replace(/ /g, '+')}:wght@400;700&display=swap`;
-        const fontCss = await fetch(fontUrl).then((res) => res.text());
-        
-        const tempNode = document.createElement('div');
-        tempNode.style.position = 'fixed';
-        tempNode.style.top = '-9999px';
-        tempNode.style.left = '-9999px';
-        document.body.appendChild(tempNode);
-        const root = createRoot(tempNode);
+  const handleCaptureComplete = (imageUrl: string, dataUrl: string) => {
+    const nextIndex = (capturingView?.index ?? -1) + 1;
+    const newCapturedImages = {...capturedImages, [imageUrl]: dataUrl };
+    setCapturedImages(newCapturedImages);
 
-        for (const imageUrl of allViews) {
-            const designForView = designs[imageUrl] || { textElements: [], imageElements: [] };
-            
-            const capturePromise = new Promise<string>((resolve, reject) => {
-                 root.render(
-                    <CaptureComponent 
-                        baseImageUrl={imageUrl} 
-                        design={designForView} 
-                        width={canvasRect.width}
-                        height={canvasRect.height}
-                        themeFonts={{ headlineFont: fontMap[themeSettings.headlineFont], bodyFont: fontMap[themeSettings.bodyFont] }}
-                        fontEmbedCss={fontCss}
-                        onCaptureComplete={(dataUrl) => {
-                            if(dataUrl) {
-                                resolve(dataUrl);
-                            } else {
-                                reject(new Error(`Failed to capture view for ${imageUrl}`));
-                            }
-                        }}
-                    />
-                );
-            });
-            
-            try {
-                const dataUrl = await capturePromise;
-                flattenedImages[imageUrl] = dataUrl;
-            } catch (error: any) {
-                console.error(error.message);
-                toast({ variant: 'destructive', title: 'Capture Failed', description: `Could not generate preview for one of the views. Please try again.` });
-            }
-        }
-        
-        root.unmount();
-        document.body.removeChild(tempNode);
-        
-        // Only proceed if all captures were successful
-        if (Object.keys(flattenedImages).length !== allViews.length) {
-            throw new Error("One or more product views failed to capture. Cannot proceed.");
-        }
-
-        const designData = {
-            productId: product.id,
-            selectedSize,
-            selectedColor,
-            productName: product.name,
-            flattenedImages,
-        };
-        
-        localStorage.setItem('customDesign', JSON.stringify(designData));
-        router.push('/design/preview');
-
-    } catch (e: any) {
-        console.error("Failed to generate preview images", e);
-        toast({
-            variant: 'destructive',
-            title: 'Preview Generation Failed',
-            description: e.message || 'Could not generate preview images. Please try again.',
-        });
-    } finally {
-        setIsProcessing(false);
+    if (nextIndex < allViewsToCapture.current.length) {
+      setCapturingView({ imageUrl: allViewsToCapture.current[nextIndex], index: nextIndex });
+    } else {
+      // All views captured, finalize the process
+      setCapturingView(null);
+      setIsProcessing(false);
+      
+      const designData = {
+          productId: product!.id,
+          selectedSize,
+          selectedColor,
+          productName: product!.name,
+          flattenedImages: newCapturedImages,
+      };
+      
+      localStorage.setItem('customDesign', JSON.stringify(designData));
+      router.push('/design/preview');
     }
   };
 
@@ -824,8 +785,22 @@ function MockupTool() {
                 </div>
            )}
         </div>
-
       </div>
+      {/* Hidden component for capturing */}
+      {isProcessing && capturingView && themeSettings && canvasRef.current && (
+          <div style={{ position: 'fixed', top: '-9999px', left: '-9999px' }}>
+              <CaptureComponent
+                  key={capturingView.imageUrl} // CRITICAL: This forces re-mount
+                  baseImageUrl={capturingView.imageUrl}
+                  design={designs[capturingView.imageUrl] || { textElements: [], imageElements: [] }}
+                  width={canvasRef.current.offsetWidth}
+                  height={canvasRef.current.offsetHeight}
+                  themeFonts={{ headlineFont: fontMap[themeSettings.headlineFont], bodyFont: fontMap[themeSettings.bodyFont] }}
+                  fontEmbedCss="" // This will be fetched in handleNextStep
+                  onCaptureComplete={(dataUrl) => handleCaptureComplete(capturingView.imageUrl, dataUrl)}
+              />
+          </div>
+      )}
     </div>
   );
 }
