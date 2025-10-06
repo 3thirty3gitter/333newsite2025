@@ -6,7 +6,7 @@ import { Suspense, useEffect, useState, useRef, useMemo } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { createRoot } from 'react-dom/client';
 import { getProductById, getProducts } from '@/lib/data';
-import type { Product, DesignViewState, AllDesignsState, TextElement, ImageElement } from '@/lib/types';
+import type { Product, DesignViewState, AllDesignsState, TextElement, ImageElement, ThemeSettings } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
@@ -19,108 +19,80 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import * as htmlToImage from 'html-to-image';
 import { fontMap } from '@/lib/theme';
-import { getThemeSettings, type ThemeSettings } from '@/lib/settings';
+import { getThemeSettings } from '@/lib/settings';
 
-const CaptureComponent = ({
-  baseImageUrl,
-  design,
-  width,
-  height,
-  onReady,
-  themeFonts,
-  fontEmbedCss,
-}: {
-  baseImageUrl: string;
-  design: DesignViewState;
-  width: number;
-  height: number;
-  onReady: (node: HTMLElement) => void;
-  themeFonts: any;
-  fontEmbedCss: string;
+// A component to render a single design view for capture, without any interactive elements
+const CaptureComponent = ({ 
+    baseImageUrl, 
+    design, 
+    width, 
+    height, 
+    onReady, 
+    themeFonts 
+}: { 
+    baseImageUrl: string, 
+    design: DesignViewState, 
+    width: number, 
+    height: number, 
+    onReady: (node: HTMLElement) => void, 
+    themeFonts: any 
 }) => {
-  const nodeRef = useRef<HTMLDivElement>(null);
+    const nodeRef = useRef<HTMLDivElement>(null);
+    const [isBaseImageLoaded, setIsBaseImageLoaded] = useState(false);
+    
+    useEffect(() => {
+        if (isBaseImageLoaded && nodeRef.current) {
+            onReady(nodeRef.current);
+        }
+    }, [isBaseImageLoaded, onReady]);
 
-  useEffect(() => {
-    const capture = async () => {
-      if (!nodeRef.current) return;
-
-      const allImageSources = [baseImageUrl, ...design.imageElements.map(el => el.src)];
-      
-      try {
-        await Promise.all(allImageSources.map(src => {
-            return new Promise<void>((resolve, reject) => {
-                const img = new window.Image();
-                img.crossOrigin = 'anonymous';
-                img.src = src;
-                img.decode().then(() => resolve()).catch(reject);
-            });
-        }));
-
-        const dataUrl = await htmlToImage.toPng(nodeRef.current, {
-            fetchRequestInit: { mode: 'cors', cache: 'no-cache' },
-            pixelRatio: 2,
-            width: width,
-            height: height,
-            fontEmbedCss: fontEmbedCss,
-        });
-        
-        onReady(dataUrl as unknown as HTMLElement);
-
-      } catch (error) {
-        console.error('Capture failed', error);
-        onReady(null as any); // Signal failure
-      }
-    };
-
-    capture();
-  }, [baseImageUrl, design, width, height, onReady, fontEmbedCss]);
-
-  return (
-    <div ref={nodeRef} style={{ position: 'relative', width, height, fontFamily: themeFonts.bodyFont.css }}>
-      <Image
-        src={baseImageUrl}
-        alt="Product Base"
-        fill
-        style={{ objectFit: 'contain' }}
-        crossOrigin="anonymous"
-      />
-      {design.imageElements.map((imgEl, index) => (
-        <div key={imgEl.id} style={{
-          position: 'absolute',
-          left: `${imgEl.position.x}px`,
-          top: `${imgEl.position.y}px`,
-          width: `${imgEl.size.width}px`,
-          height: `${imgEl.size.height}px`,
-          transform: `rotate(${imgEl.rotation}deg)`,
-          zIndex: index + 1,
-        }}>
-          <Image
-            src={imgEl.src}
-            alt=""
-            fill
-            style={{ objectFit: 'contain' }}
-            crossOrigin="anonymous"
-          />
+    return (
+        <div ref={nodeRef} style={{ position: 'relative', width, height, fontFamily: themeFonts.bodyFont.css }}>
+            <Image
+                src={baseImageUrl}
+                alt="Product Base"
+                fill
+                style={{objectFit:"contain"}}
+                crossOrigin="anonymous"
+                onLoad={() => setIsBaseImageLoaded(true)}
+            />
+            {design.imageElements.map((imgEl, index) => (
+                <div key={imgEl.id} style={{
+                    position: 'absolute',
+                    left: `${imgEl.position.x}px`,
+                    top: `${imgEl.position.y}px`,
+                    width: `${imgEl.size.width}px`,
+                    height: `${imgEl.size.height}px`,
+                    transform: `rotate(${imgEl.rotation}deg)`,
+                    zIndex: index + 1,
+                }}>
+                    <Image
+                        src={imgEl.src}
+                        alt="" 
+                        fill
+                        style={{objectFit:"contain"}}
+                        crossOrigin="anonymous"
+                    />
+                </div>
+            ))}
+            {design.textElements.map((txtEl, index) => (
+                <div key={txtEl.id} style={{
+                    position: 'absolute',
+                    left: `${txtEl.position.x}px`,
+                    top: `${txtEl.position.y}px`,
+                    fontSize: `${txtEl.fontSize}px`,
+                    color: '#000000',
+                    fontFamily: 'var(--font-body)',
+                    textShadow: '1px 1px 2px #ffffff',
+                    transform: `rotate(${txtEl.rotation}deg)`,
+                    zIndex: design.imageElements.length + index + 1,
+                    whiteSpace: 'nowrap',
+                }}>
+                    {txtEl.text}
+                </div>
+            ))}
         </div>
-      ))}
-      {design.textElements.map((txtEl, index) => (
-        <div key={txtEl.id} style={{
-          position: 'absolute',
-          left: `${txtEl.position.x}px`,
-          top: `${txtEl.position.y}px`,
-          fontSize: `${txtEl.fontSize}px`,
-          color: '#000000',
-          fontFamily: 'var(--font-body)',
-          textShadow: '1px 1px 2px #ffffff',
-          transform: `rotate(${txtEl.rotation}deg)`,
-          zIndex: design.imageElements.length + index + 1,
-          whiteSpace: 'nowrap',
-        }}>
-          {txtEl.text}
-        </div>
-      ))}
-    </div>
-  );
+    );
 };
 
 
@@ -449,7 +421,7 @@ function MockupTool() {
     }
     
     setIsProcessing(true);
-    
+
     if (!themeSettings) {
         toast({ variant: 'destructive', title: 'Theme not loaded', description: 'Theme settings could not be loaded. Please refresh.' });
         setIsProcessing(false);
@@ -467,39 +439,46 @@ function MockupTool() {
         for (const imageUrl of allViews) {
             const designForView = designs[imageUrl] || { textElements: [], imageElements: [] };
             
-            const dataUrl = await new Promise<string | null>((resolve) => {
-                const tempNode = document.createElement('div');
-                tempNode.style.position = 'fixed';
-                tempNode.style.top = '-9999px';
-                tempNode.style.left = '-9999px';
-                document.body.appendChild(tempNode);
-                
-                const root = createRoot(tempNode);
+            const capturePromise = new Promise<string>(async (resolve, reject) => {
+              const tempNode = document.createElement('div');
+              // Render the component off-screen
+              tempNode.style.position = 'fixed';
+              tempNode.style.top = '-9999px';
+              tempNode.style.left = '-9999px';
+              document.body.appendChild(tempNode);
+              const root = createRoot(tempNode);
 
-                const onCaptureReady = (capturedUrl: string | null) => {
-                    resolve(capturedUrl);
-                    root.unmount();
-                    document.body.removeChild(tempNode);
-                };
+              const onCaptureReady = async (node: HTMLElement) => {
+                  try {
+                      const dataUrl = await htmlToImage.toPng(node, {
+                          fetchRequestInit: { mode: 'cors', cache: 'no-cache' },
+                          pixelRatio: 2,
+                          width: canvasRect.width,
+                          height: canvasRect.height,
+                          fontEmbedCss: fontCss,
+                      });
+                      resolve(dataUrl);
+                  } catch (e) {
+                      reject(e);
+                  } finally {
+                      root.unmount();
+                      document.body.removeChild(tempNode);
+                  }
+              };
 
-                root.render(
-                    React.createElement(CaptureComponent, {
-                        baseImageUrl: imageUrl,
-                        design: designForView,
-                        width: canvasRect.width,
-                        height: canvasRect.height,
-                        onReady: onCaptureReady,
-                        themeFonts: { headlineFont: fontMap[themeSettings.headlineFont], bodyFont: fontMap[themeSettings.bodyFont] },
-                        fontEmbedCss: fontCss,
-                    })
-                );
+              root.render(
+                <CaptureComponent
+                    key={imageUrl}
+                    baseImageUrl={imageUrl} 
+                    design={designForView} 
+                    width={canvasRect.width}
+                    height={canvasRect.height}
+                    onReady={onCaptureReady}
+                    themeFonts={{ headlineFont: fontMap[themeSettings.headlineFont], bodyFont: fontMap[themeSettings.bodyFont] }}
+                />
+              );
             });
-            
-            if (dataUrl) {
-                flattenedImages[imageUrl] = dataUrl;
-            } else {
-                throw new Error(`Failed to capture view for ${imageUrl}`);
-            }
+            flattenedImages[imageUrl] = await capturePromise;
         }
 
         const designData = {
