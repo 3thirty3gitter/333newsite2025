@@ -144,6 +144,7 @@ function MockupTool() {
 
   const [capturingView, setCapturingView] = useState<{imageUrl: string, design: DesignViewState} | null>(null);
   const [capturedImages, setCapturedImages] = useState<Record<string, string>>({});
+  const [isCaptureComplete, setIsCaptureComplete] = useState(false);
 
 
   useEffect(() => {
@@ -249,6 +250,24 @@ function MockupTool() {
         setActiveImageUrl(product.images[0]);
     }
   }, [selectedColor, colorVariant, product]);
+  
+  useEffect(() => {
+    if (isCaptureComplete) {
+      const designData = {
+        productId: product!.id,
+        selectedSize,
+        selectedColor,
+        productName: product!.name,
+        flattenedImages: capturedImages,
+      };
+      localStorage.setItem('customDesign', JSON.stringify(designData));
+      router.push('/design/preview');
+      setIsProcessing(false);
+      setCapturingView(null);
+      setIsCaptureComplete(false); // Reset for next time
+    }
+  }, [isCaptureComplete, capturedImages, product, selectedColor, selectedSize, router]);
+
 
   const handleProductSelect = (selectedProductId: string) => {
     const params = new URLSearchParams(searchParams);
@@ -448,47 +467,33 @@ function MockupTool() {
   };
 
   const handleCaptureComplete = (dataUrl: string) => {
-    const currentViewUrl = capturingView!.imageUrl;
-
-    setCapturedImages(prev => {
-        const updatedImages = { ...prev, [currentViewUrl]: dataUrl };
+    if (capturingView) {
+        const currentViewUrl = capturingView.imageUrl;
+        const newCapturedImages = { ...capturedImages, [currentViewUrl]: dataUrl };
+        setCapturedImages(newCapturedImages);
         
         const allViews = product!.images || [];
         const currentIndex = allViews.indexOf(currentViewUrl);
         const nextIndex = currentIndex + 1;
 
         if (nextIndex < allViews.length) {
-            // Schedule the next capture
             const nextViewUrl = allViews[nextIndex];
             setCapturingView({
                 imageUrl: nextViewUrl,
                 design: designs[nextViewUrl] || { textElements: [], imageElements: [] }
             });
         } else {
-            // All captures are complete
-            const designData = {
-                productId: product!.id,
-                selectedSize,
-                selectedColor,
-                productName: product!.name,
-                flattenedImages: updatedImages,
-            };
-            localStorage.setItem('customDesign', JSON.stringify(designData));
-            router.push('/design/preview');
-            setIsProcessing(false);
-            setCapturingView(null);
+            setIsCaptureComplete(true);
         }
-        
-        return updatedImages;
-    });
-  };
+    }
+};
 
   return (
     <>
     {capturingView && canvasRef.current && (
         <div style={{ position: 'fixed', left: '-9999px', top: '-9999px' }}>
              <CaptureComponent
-                key={capturingView.imageUrl} // Change key to force re-mount
+                key={capturingView.imageUrl} 
                 baseImageUrl={capturingView.imageUrl}
                 design={capturingView.design}
                 width={canvasRef.current.offsetWidth}
