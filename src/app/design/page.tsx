@@ -21,32 +21,69 @@ import * as htmlToImage from 'html-to-image';
 import { fontMap } from '@/lib/theme';
 import { getThemeSettings, type ThemeSettings } from '@/lib/settings';
 
-// A component to render a single design view for capture, without any interactive elements
-const CaptureComponent = ({ baseImageUrl, design, width, height, onReady, themeFonts }: { baseImageUrl: string, design: DesignViewState, width: number, height: number, onReady: (node: HTMLElement) => void, themeFonts: any }) => {
+const CaptureComponent = ({ 
+    baseImageUrl, 
+    design, 
+    width, 
+    height, 
+    themeFonts,
+    fontEmbedCss,
+    onCaptureComplete 
+}: { 
+    baseImageUrl: string, 
+    design: DesignViewState, 
+    width: number, 
+    height: number, 
+    themeFonts: any,
+    fontEmbedCss: string,
+    onCaptureComplete: (dataUrl: string) => void
+}) => {
     const nodeRef = useRef<HTMLDivElement>(null);
-    const [isBaseImageLoaded, setIsBaseImageLoaded] = useState(false);
 
-    const handleBaseImageLoad = () => {
-        setIsBaseImageLoaded(true);
-    };
-    
     useEffect(() => {
-        if (isBaseImageLoaded) {
-            if (nodeRef.current) {
-                onReady(nodeRef.current);
+        const capture = async () => {
+            if (!nodeRef.current) return;
+
+            const imageSources = [baseImageUrl, ...design.imageElements.map(el => el.src)];
+            
+            try {
+                await Promise.all(imageSources.map(src => {
+                    return new Promise<void>((resolve, reject) => {
+                        const img = new window.Image();
+                        img.crossOrigin = 'anonymous';
+                        img.src = src;
+                        img.decode().then(() => resolve()).catch(reject);
+                    });
+                }));
+
+                const dataUrl = await htmlToImage.toPng(nodeRef.current, {
+                    fetchRequestInit: { mode: 'cors', cache: 'no-cache' },
+                    pixelRatio: 2,
+                    width: width,
+                    height: height,
+                    fontEmbedCss: fontEmbedCss,
+                });
+                
+                onCaptureComplete(dataUrl);
+
+            } catch (e) {
+                console.error("Capture failed for view:", baseImageUrl, e);
+                // Signal failure by passing an empty string
+                onCaptureComplete('');
             }
-        }
-    }, [isBaseImageLoaded, onReady]);
+        };
+
+        capture();
+    }, [baseImageUrl, design, width, height, themeFonts, fontEmbedCss, onCaptureComplete]);
 
     return (
-        <div ref={nodeRef} style={{ position: 'relative', width, height, fontFamily: themeFonts.bodyFont.css }} key={baseImageUrl}>
+        <div ref={nodeRef} style={{ position: 'relative', width, height, fontFamily: themeFonts.bodyFont.css }}>
             <Image
                 src={baseImageUrl}
                 alt="Product Base"
                 fill
                 style={{objectFit:"contain"}}
                 crossOrigin="anonymous"
-                onLoad={handleBaseImageLoad}
             />
             {design.imageElements.map((imgEl, index) => (
                 <div key={imgEl.id} style={{
@@ -63,6 +100,7 @@ const CaptureComponent = ({ baseImageUrl, design, width, height, onReady, themeF
                         alt="" 
                         fill
                         style={{objectFit:"contain"}}
+                        crossOrigin="anonymous"
                     />
                 </div>
             ))}
@@ -427,60 +465,42 @@ function MockupTool() {
         const fontUrl = `https://fonts.googleapis.com/css2?family=${fontMap[themeSettings.headlineFont].family.replace(/ /g, '+')}:wght@400;700&family=${fontMap[themeSettings.bodyFont].family.replace(/ /g, '+')}:wght@400;700&display=swap`;
         const fontCss = await fetch(fontUrl).then((res) => res.text());
 
+        const tempContainer = document.createElement('div');
+        tempContainer.style.position = 'fixed';
+        tempContainer.style.left = '-9999px';
+        tempContainer.style.top = '-9999px';
+        document.body.appendChild(tempContainer);
+        
+        const tempRoot = createRoot(tempContainer);
+
         for (const imageUrl of allViews) {
             const designForView = designs[imageUrl] || { textElements: [], imageElements: [] };
             
-            // Create an array of all image sources to preload
-            const imageSources = [imageUrl, ...designForView.imageElements.map(el => el.src)];
-            
-            // Use Promise.all with .decode() to ensure all images are fully loaded
-            await Promise.all(imageSources.map(src => {
-                return new Promise((resolve, reject) => {
-                    const img = new window.Image();
-                    img.crossOrigin = 'anonymous'; // Important for CORS
-                    img.src = src;
-                    img.decode().then(resolve).catch(reject);
-                });
-            }));
-
-            // Now that all images are loaded, we can capture
-            const capturePromise = new Promise<string>(async (resolve, reject) => {
-              const tempNode = document.createElement('div');
-              // Render the component off-screen
-              tempNode.style.position = 'fixed';
-              tempNode.style.top = '-9999px';
-              tempNode.style.left = '-9999px';
-              document.body.appendChild(tempNode);
-              const root = createRoot(tempNode);
-
-              const onCaptureReady = async (node: HTMLElement) => {
-                  try {
-                      const dataUrl = await htmlToImage.toPng(node, {
-                          fetchRequestInit: { mode: 'cors', cache: 'no-cache' },
-                          pixelRatio: 2,
-                          width: canvasRect.width,
-                          height: canvasRect.height,
-                          fontEmbedCss: fontCss,
-                      });
-                      resolve(dataUrl);
-                  } catch (e) {
-                      reject(e);
-                  } finally {
-                      root.unmount();
-                      document.body.removeChild(tempNode);
-                  }
-              };
-
-              root.render(
-                <CaptureComponent
-                    baseImageUrl={imageUrl} design={designForView} width={canvasRect.width} height={canvasRect.height} onReady={onCaptureReady}
-                    themeFonts={{ headlineFont: fontMap[themeSettings.headlineFont], bodyFont: fontMap[themeSettings.bodyFont] }}
-                />
-              );
+            const capturePromise = new Promise<string>((resolve) => {
+                tempRoot.render(
+                    <CaptureComponent 
+                        baseImageUrl={imageUrl} 
+                        design={designForView} 
+                        width={canvasRect.width}
+                        height={canvasRect.height}
+                        themeFonts={{ headlineFont: fontMap[themeSettings.headlineFont], bodyFont: fontMap[themeSettings.bodyFont] }}
+                        fontEmbedCss={fontCss}
+                        onCaptureComplete={(dataUrl) => resolve(dataUrl)}
+                    />
+                );
             });
-            flattenedImages[imageUrl] = await capturePromise;
+            
+            const dataUrl = await capturePromise;
+            if (dataUrl) {
+                flattenedImages[imageUrl] = dataUrl;
+            } else {
+                 toast({ variant: 'destructive', title: 'Capture Failed', description: `Could not generate preview for one of the views.` });
+            }
         }
         
+        tempRoot.unmount();
+        document.body.removeChild(tempContainer);
+
         const designData = {
             productId: product.id,
             selectedSize,
@@ -629,7 +649,7 @@ function MockupTool() {
 
            <Button size="lg" className="w-full" onClick={handleNextStep} disabled={isProcessing || isUploading}>
             {(isProcessing || isUploading) && <Loader2 className="animate-spin mr-2" />}
-             {isProcessing ? 'Processing...' : isUploading ? 'Uploading...' : 'Preview & Finish'} <ArrowRight className="ml-2" />
+             {isProcessing ? 'Processing...' : isUploading ? 'Uploading...' : 'Preview &amp; Finish'} <ArrowRight className="ml-2" />
            </Button>
         </div>
 
