@@ -1,12 +1,11 @@
 
-
 'use client';
 
 import { Suspense, useEffect, useState, useRef, useMemo } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { createRoot } from 'react-dom/client';
 import { getProductById, getProducts } from '@/lib/data';
-import type { Product, Variant, DesignViewState, AllDesignsState, TextElement, ImageElement, ThemeSettings } from '@/lib/types';
+import type { Product, Variant, DesignViewState, AllDesignsState, TextElement, ImageElement } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
@@ -19,7 +18,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import * as htmlToImage from 'html-to-image';
 import { fontMap } from '@/lib/theme';
-import { getThemeSettings } from '@/lib/settings';
+import { getThemeSettings, type ThemeSettings } from '@/lib/settings';
 
 // This new component is fully self-contained. It manages its own loading and capture.
 const CaptureComponent = ({
@@ -27,59 +26,43 @@ const CaptureComponent = ({
     design,
     width,
     height,
-    themeFonts,
-    fontEmbedCss,
-    onCaptureComplete,
+    onReady,
 }: {
     baseImageUrl: string;
     design: DesignViewState;
     width: number;
     height: number;
-    themeFonts: any;
-    fontEmbedCss: string;
-    onCaptureComplete: (dataUrl: string) => void;
+    onReady: () => void;
 }) => {
     const nodeRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        const capture = async () => {
-            if (!nodeRef.current) return;
-
-            const imageElements = Array.from(nodeRef.current.getElementsByTagName('img'));
-            const allImagePromises = imageElements.map(img => {
-                if (img.complete) return Promise.resolve();
-                return new Promise<void>((resolve, reject) => {
-                    img.onload = () => resolve();
-                    img.onerror = () => reject(new Error(`Failed to load image: ${img.src}`));
-                });
+        const imageSources = [baseImageUrl, ...design.imageElements.map(el => el.src)];
+        const imagePromises = imageSources.map(src => {
+            return new Promise<void>((resolve, reject) => {
+                const img = new window.Image();
+                img.crossOrigin = 'anonymous';
+                img.src = src;
+                img.decode().then(() => resolve()).catch(() => reject(new Error(`Failed to load image: ${src}`)));
             });
+        });
 
-            try {
-                // Wait for all images within the component to be fully loaded.
-                await Promise.all(allImagePromises);
-
-                // A short delay to ensure fonts and final rendering are complete.
-                await new Promise(resolve => setTimeout(resolve, 100));
-
-                const dataUrl = await htmlToImage.toPng(nodeRef.current, {
-                    fetchRequestInit: { mode: 'cors', cache: 'no-cache' },
-                    pixelRatio: 2,
-                    width: width,
-                    height: height,
-                    fontEmbedCss: fontEmbedCss, // Fix for cross-origin font error
-                });
-                onCaptureComplete(dataUrl);
-            } catch (e: any) {
-                console.error("Capture failed for view:", baseImageUrl, e);
-                onCaptureComplete(''); // Signal failure with an empty string
-            }
-        };
-
-        capture();
-    }, [baseImageUrl, design, width, height, fontEmbedCss, onCaptureComplete, themeFonts]);
+        Promise.all(imagePromises)
+            .then(() => {
+                // Short delay to ensure final rendering after images are decoded
+                setTimeout(() => {
+                    onReady();
+                }, 100);
+            })
+            .catch(error => {
+                console.error("Error loading images for capture:", error);
+                // Still call onReady to not hang the process, maybe capture will partially succeed
+                onReady();
+            });
+    }, [baseImageUrl, design, onReady]);
 
     return (
-        <div ref={nodeRef} style={{ position: 'relative', width, height, fontFamily: themeFonts.bodyFont.css }}>
+        <div ref={nodeRef} style={{ position: 'relative', width, height }}>
             <Image
                 src={baseImageUrl}
                 alt="Product Base"
@@ -159,10 +142,6 @@ function MockupTool() {
 
   const [thumbnailScale, setThumbnailScale] = useState(0.2);
 
-  const allViewsToCapture = useRef<string[]>([]);
-  const [capturedImages, setCapturedImages] = useState<{[imageUrl: string]: string}>({});
-  const [capturingView, setCapturingView] = useState<{imageUrl: string, index: number} | null>(null);
-  
   useEffect(() => {
     async function fetchThemeSettings() {
       const settings = await getThemeSettings();
@@ -446,7 +425,7 @@ function MockupTool() {
       updateCurrentDesign({ imageElements: newImageElements as ImageElement[] });
   }
 
-  const handleNextStep = () => {
+  const handleNextStep = async () => {
     if (!product || !selectedSize || !canvasRef.current) {
         toast({
             variant: 'destructive',
@@ -457,44 +436,90 @@ function MockupTool() {
     }
     
     setIsProcessing(true);
-    setCapturedImages({});
-    allViewsToCapture.current = product.images || [];
+    
+    if (!themeSettings) {
+        toast({ variant: 'destructive', title: 'Theme not loaded', description: 'Theme settings could not be loaded. Please refresh.' });
+        setIsProcessing(false);
+        return;
+    }
+    
+    try {
+        const canvasRect = canvasRef.current.getBoundingClientRect();
+        const flattenedImages: { [imageUrl: string]: string } = {};
+        const allViews = product.images || [];
 
-    if (allViewsToCapture.current.length > 0) {
-      setCapturingView({imageUrl: allViewsToCapture.current[0], index: 0});
-    } else {
-      toast({ variant: 'destructive', title: 'No Views', description: 'This product has no images to design on.' });
-      setIsProcessing(false);
+        const headlineFont = fontMap[themeSettings.headlineFont] || fontMap['poppins'];
+        const bodyFont = fontMap[themeSettings.bodyFont] || fontMap['pt-sans'];
+        const fontUrl = `https://fonts.googleapis.com/css2?family=${headlineFont.family.replace(/ /g, '+')}:wght@400;700&family=${bodyFont.family.replace(/ /g, '+')}:wght@400;700&display=swap`;
+        const fontCss = await fetch(fontUrl).then(res => res.text()).catch(() => '');
+
+        for (const imageUrl of allViews) {
+            const capturePromise = new Promise<string>((resolve, reject) => {
+                const designForView = designs[imageUrl] || { textElements: [], imageElements: [] };
+                
+                const tempNode = document.createElement('div');
+                tempNode.style.position = 'fixed';
+                tempNode.style.left = '-9999px'; // Render off-screen
+                document.body.appendChild(tempNode);
+                const root = createRoot(tempNode);
+
+                const onCaptureReady = async () => {
+                    if (!tempNode) return;
+                    try {
+                        const dataUrl = await htmlToImage.toPng(tempNode.firstChild as HTMLElement, {
+                            fetchRequestInit: { mode: 'cors', cache: 'no-cache' },
+                            pixelRatio: 2,
+                            width: canvasRect.width,
+                            height: canvasRect.height,
+                            fontEmbedCss: fontCss,
+                        });
+                        resolve(dataUrl);
+                    } catch (e) {
+                        reject(e);
+                    } finally {
+                        root.unmount();
+                        document.body.removeChild(tempNode);
+                    }
+                };
+
+                root.render(
+                    React.createElement('div', { style: { fontFamily: bodyFont.css } },
+                        <CaptureComponent 
+                            baseImageUrl={imageUrl} 
+                            design={designForView} 
+                            width={canvasRect.width}
+                            height={canvasRect.height}
+                            onReady={onCaptureReady}
+                        />
+                    )
+                );
+            });
+            flattenedImages[imageUrl] = await capturePromise;
+        }
+
+        const designData = {
+            productId: product.id,
+            selectedSize,
+            selectedColor,
+            productName: product.name,
+            flattenedImages,
+        };
+        
+        localStorage.setItem('customDesign', JSON.stringify(designData));
+        router.push('/design/preview');
+
+    } catch (e: any) {
+        console.error("Failed during design capture:", e);
+        toast({
+            variant: "destructive",
+            title: "Processing Failed",
+            description: e.message || "Could not generate design preview. Please try again.",
+            duration: 7000,
+        });
+    } finally {
+        setIsProcessing(false);
     }
   };
-
-    const handleCaptureComplete = (imageUrl: string, dataUrl: string) => {
-        const nextIndex = (capturingView?.index ?? -1) + 1;
-        const newCapturedImages = { ...capturedImages, [imageUrl]: dataUrl };
-
-        // Use functional updates to avoid stale state
-        setCapturedImages(prev => ({ ...prev, [imageUrl]: dataUrl }));
-
-        if (nextIndex < allViewsToCapture.current.length) {
-            // Set state for the next capture
-            setCapturingView({ imageUrl: allViewsToCapture.current[nextIndex], index: nextIndex });
-        } else {
-            // All views captured, finalize the process
-            setCapturingView(null);
-            setIsProcessing(false);
-            
-            const designData = {
-                productId: product!.id,
-                selectedSize,
-                selectedColor,
-                productName: product!.name,
-                flattenedImages: newCapturedImages,
-            };
-            
-            localStorage.setItem('customDesign', JSON.stringify(designData));
-            router.push('/design/preview');
-        }
-    };
 
   return (
     <div className="container mx-auto max-w-7xl px-4 py-8 md:py-12">
@@ -621,7 +646,7 @@ function MockupTool() {
 
            <Button size="lg" className="w-full" onClick={handleNextStep} disabled={isProcessing || isUploading}>
             {(isProcessing || isUploading) && <Loader2 className="animate-spin mr-2" />}
-             {isProcessing ? 'Processing...' : isUploading ? 'Uploading...' : 'Preview &amp; Finish'} <ArrowRight className="ml-2" />
+             {isProcessing ? 'Processing...' : 'Preview &amp; Finish'} <ArrowRight className="ml-2" />
            </Button>
         </div>
 
@@ -780,19 +805,6 @@ function MockupTool() {
            )}
         </div>
       </div>
-      {/* Hidden component for capturing */}
-      {isProcessing && capturingView && themeSettings && canvasRef.current && (
-          <CaptureComponent
-              key={capturingView.imageUrl} // CRITICAL: This forces re-mount
-              baseImageUrl={capturingView.imageUrl}
-              design={designs[capturingView.imageUrl] || { textElements: [], imageElements: [] }}
-              width={canvasRef.current.offsetWidth}
-              height={canvasRef.current.offsetHeight}
-              themeFonts={{ headlineFont: fontMap[themeSettings.headlineFont], bodyFont: fontMap[themeSettings.bodyFont] }}
-              fontEmbedCss="" // This will be fetched in handleNextStep
-              onCaptureComplete={(dataUrl) => handleCaptureComplete(capturingView.imageUrl, dataUrl)}
-          />
-      )}
     </div>
   );
 }
