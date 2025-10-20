@@ -2,10 +2,10 @@
 'use server';
 
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from './firebase';
+import { dbAdmin } from './firebase'; // Import dbAdmin for server-side operations
 import type { ThemeSettings } from './types';
 
-const settingsDocRef = doc(db, 'config', 'theme');
+const settingsDocRef = doc(dbAdmin, 'config', 'theme'); // Use dbAdmin here
 
 const defaultSettings: ThemeSettings = {
   palette: 'default',
