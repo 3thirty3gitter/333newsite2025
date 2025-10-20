@@ -3,12 +3,7 @@
 # dependencies
 /node_modules
 /.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
+.pnp.js
 
 # testing
 /coverage
@@ -23,23 +18,29 @@
 # misc
 .DS_Store
 *.pem
-
-# debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.pnpm-debug.log*
+.env*.local
+
+# local env files
+.env
+.env.development
+.env.test
+.env.production
 
 # vercel
 .vercel
 
-# typescript
-*.tsbuildinfo
-next-env.d.ts
-
-.genkit/*
-.env*
-
 # firebase
+.firebase
+*.log
 firebase-debug.log
-firestore-debug.log
+.token
+
+# Environment variables
+.env.local
+.env.development.local
+.env.production.local
+.env
+/commercecraft-g9ur4-firebase-adminsdk-fbsvc-a8f767606f
